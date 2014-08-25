@@ -17,7 +17,7 @@ class GeoData(object):
     # Variables
     # data - This is a dictionary with strings for keys only. The strings are the names of the
     def __init__(self,readmethod,inputs):
-        (self.data,self.datanames,self.coordnames,self.sensorloc) = readmethod(inputs)
+        (self.data,self.datanames,self.coordnames,self.dataloc,self.sensorloc,self.times) = readmethod(inputs)
         
     def write_h5(self,filename):
         h5file = tables.openFile(filename, mode = "w", title = "GeoData Out")
