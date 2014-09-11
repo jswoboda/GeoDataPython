@@ -1,8 +1,13 @@
 #!/usr/bin/env python
 """
-Created on Wed Aug 20 09:53:11 2014
+setup.py
+This is the setup file for the GeoData python package.
+To install as a package in development type 
+python setup.py develop
+To uninstall type
+python setup.py develop --uninstall
 
-@author: Bodangles
+@author: John Swoboda
 """
 import os, inspect
 try:
