@@ -26,6 +26,12 @@ class GeoData(object):
     def __init__(self,readmethod,inputs):
         '''This will create an instance of the GeoData class by giving it a read method and the inputs in a tuple'''
         (self.data,self.coordnames,self.dataloc,self.sensorloc,self.times) = readmethod(*inputs)
+        # Assert that the data types are correct
+        assert type(self.data) is dict,"data needs to be a dictionary"
+        assert type(self.coordnames) is str, "coordnames needs to be a string"
+        assert type(self.dataloc) is np.ndarray,"dataloc needs to be a numpy array"
+        assert type(self.sensorloc) is np.ndarray,"sensorloc needs to be a numpy array"
+        assert type(self.times) is np.ndarray,"times needs to be a numpy array"
     
     def __eq__(self,self2):
         '''This is the == operator. '''
