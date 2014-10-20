@@ -30,14 +30,22 @@ class GeoData(object):
         assert type(self.data) is dict,"data needs to be a dictionary"
         assert type(self.coordnames) is str, "coordnames needs to be a string"
         assert type(self.dataloc) is np.ndarray,"dataloc needs to be a numpy array"
+        assert is_numeric(self.dataloc), "dataloc needs to be a numeric array"
         assert type(self.sensorloc) is np.ndarray,"sensorloc needs to be a numpy array"
+        assert is_numeric(self.sensorloc), "sensorloc needs to be a numeric array"
         assert type(self.times) is np.ndarray,"times needs to be a numpy array"
-    
+        assert is_numeric(self.times), "times needs to be a numeric array"
+        
+    @staticmethod   
+    def read_h5(filename):
+        """ Static method for this"""
+        return GeoData(read_h5_main,[filename])
+        
     def __eq__(self,self2):
         '''This is the == operator. '''
         # Check the data dictionary
         datakeys = self.data.keys()
-        if datakeys !=self2.data.keys():
+        if set(datakeys) !=set(self2.data.keys()):
             return False
         
         for ikey in datakeys:
@@ -49,22 +57,24 @@ class GeoData(object):
         if self.coordnames!=self2.coordnames:
             return False
         # Look at the data location
+#        pdb.set_trace()
         a = np.ma.array(self.dataloc,mask=np.isnan(self.dataloc))
-        b = np.ma.array(self2.dataloc,mask=np.isnan(self2.dataloc))
-        if not np.ma.allequal(a,b):
+        blah = np.ma.array(self2.dataloc,mask=np.isnan(self2.dataloc))
+        if not np.ma.allequal(a,blah):
             return False
         # Look at the sensor location
         a = np.ma.array(self.sensorloc,mask=np.isnan(self.sensorloc))
-        b = np.ma.array(self2.sensorloc,mask=np.isnan(self2.sensorloc))
-        if not np.ma.allequal(self.sensorloc,self2.sensorloc):
+        blah = np.ma.array(self2.sensorloc,mask=np.isnan(self2.sensorloc))
+        if not np.ma.allequal(a,blah):
             return False
         # Look at the times
         a = np.ma.array(self.times,mask=np.isnan(self.times))
-        b = np.ma.array(self2.times,mask=np.isnan(self2.times))
-        if not np.ma.allequal(self.times,self2.times):
+        blah = np.ma.array(self2.times,mask=np.isnan(self2.times))
+        if not np.ma.allequal(a,blah):
             return False
         
         return True
+        
         
     def __ne__(self,self2):
         '''This is the != operator. '''
@@ -102,9 +112,13 @@ class GeoData(object):
             pdb.set_trace()
             print e
             sys.exit()
+            
+def is_numeric(obj):
+    attrs = ['__add__', '__sub__', '__mul__', '__div__', '__pow__']
+    return all(hasattr(obj, attr) for attr in attrs)
 # TODO might want to make this private method   
 # currently just give this to the init function and it will create a class instance.
-def read_h5(filename):
+def read_h5_main(filename):
     ''' Read in the structured h5 file.'''
     h5file=tables.openFile(filename)
     output={}

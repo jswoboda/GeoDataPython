@@ -32,11 +32,11 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     try:
         el1 = all_data['el1']
     except ValueError:
-        el1 = ['NaN']*len(list(alt))
+        el1 = np.nan *np.ones(len(list(alt)))
     try:       
         azm = all_data['azm']
     except ValueError:        
-        azm = ['NaN']*len(list(alt))   
+        azm = np.nan *np.ones(len(list(alt)))  
     for i in range(len(alt)):
         all_loc.append([alt[i], el1[i], azm[i]])
 
@@ -72,11 +72,11 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     lat = sensor_data[7][1]
     lon = sensor_data[8][1]
     sensor_alt = sensor_data[9][1]
-    sensorloc = np.array([lat,lon,sensor_alt])
+    sensorloc = np.array([lat,lon,sensor_alt],dtype='f')
     #sensor_type = "Sondrestrom"
     coordnames = 'Spherical'
     
-    return (data,coordnames,dataloc,sensorloc,times)
+    return (data,coordnames,np.array(dataloc,dtype='f'),sensorloc,times)
     
     
 #data, coordnames, dataloc, sensorloc, times, sensor_type = readMad_hdf5('/Users/anna/Research/Ionosphere/2008WorldDaysPDB/son081001g.001.hdf5', ['ti', 'dti', 'nel'])
