@@ -128,9 +128,13 @@ def read_h5_main(filename):
         for array in h5file.listNodes(group, classname = 'Array'):
             output[group._v_pathname][array.name]=array.read()
     h5file.close()
+    #pdb.set_trace()
+    # find the base paths which could be dictionaries or the base directory
     outarr = [pathparts(ipath) for ipath in output.keys() if len(pathparts(ipath))>0]
     outlist = []
+    basekeys  = output[posixpath.sep].keys()
     # Determine assign the entries to each entry in the list of variables.
+    # Have to do this in order because of the input being a list instead of a dictionary
     for ivar in VARNAMES:
         dictout = False
         for npath,ipath in enumerate(outarr):
@@ -140,7 +144,7 @@ def read_h5_main(filename):
                 break
         if dictout:
             continue
-        basekeys  = output[posixpath.sep].keys()
+        
         for ikeys in basekeys:
             if ikeys==ivar:
                 outlist.append(output[posixpath.sep][ikeys])
@@ -160,7 +164,7 @@ def readSRI_h5(filename,paramstr,timelims = None):
     # Get the times and time lims
     times = h5file.getNode('/Time/UnixTime').read()
     nt = times.shape[0]
-    if timelims !=None:
+    if timelims is not None:
         timelog = times[:,0]>= timelims[0] and times[:,1]<timelims[1]
         times = times[timelog,:]
         nt = times.shape[0]
@@ -186,7 +190,7 @@ def readSRI_h5(filename,paramstr,timelims = None):
         curpath = pathdict[istr][0]
         curint = pathdict[istr][-1]
         
-        if curint==None:
+        if curint is None:
             
             tempdata = h5file.getNode(curpath).read()
         else:
