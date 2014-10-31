@@ -21,32 +21,58 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     columns are unique times
     """
     #open hdf5 file    
-    files = openFile(filename, mode = "r", title = 'Sondrestrom1')
+    files = openFile(filename, mode = "r", title = 'Madrigal_hdf5')
     all_data = files.getNode('/Data/Table Layout').read()
     sensor_data = files.getNode('/Metadata/Experiment Parameters').read()
     files.close() 
     
+    instrument = sensor_data[0][1] #instrument type string
+    if "Sondrestrom" in instrument:
+        radar = 1
+        print("Sondrestrom data")
+    elif "Poker Flat" in instrument:
+        radar = 2
+        print("PFISR data")
+    elif "Resolute Bay" in instrument:
+        radar = 3
+        print ("RISR data")
+    else:
+        print("Error: Radar type not supported by program in this version.")
+        exit()
+            
     # get the data location (range, el1, azm)
     all_loc = []
     alt = all_data['gdalt']  
+    if radar == 1:
+        angle1 = 'el1'
+    elif radar == 2:
+        angle1 = 'elm'
+    elif radar ==3:
+        angle1 = 'elm'
+        
     try:
-        el1 = all_data['el1']
+        el = all_data[angle1]
     except ValueError:
-        el1 = np.nan *np.ones(len(list(alt)))
+        el = np.nan * np.ones(len(list(alt)))
+        
     try:       
         azm = all_data['azm']
     except ValueError:        
-        azm = np.nan *np.ones(len(list(alt)))  
+        azm = np.nan * np.ones(len(list(alt)))
+        
     for i in range(len(alt)):
-        all_loc.append([alt[i], el1[i], azm[i]])
+        all_loc.append([alt[i], el[i], azm[i]])
 
     #create list of unique data location lists
     dataloc = [list(y) for y in set([tuple(x) for x in all_loc])]
     
-    #create N x 1 time array
-    times = all_data['ut1_unix']
-    uniq_times = sorted(set(times))
-    times = np.asarray(times)
+    all_times = []
+    times1 = all_data['ut1_unix']
+    times2 = all_data['ut2_unix']
+    for i in range(len(times1)):
+        all_times.append([times1[i], times2[i]])
+    
+    uniq_times = sorted(set(tuple(x) for x in all_times))
         
     #initialize and fill data dictionary with parameter arrays
     data = {}
@@ -63,7 +89,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
             #row
             row = dataloc.index(all_loc[t])
             #column-time
-            col = uniq_times.index(times[t])
+            col = uniq_times.index(tuple(all_times[t]))
             temparray[row][col] = tempdata[t]
 
         data[p]=temparray
@@ -72,11 +98,10 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     lat = sensor_data[7][1]
     lon = sensor_data[8][1]
     sensor_alt = sensor_data[9][1]
-    sensorloc = np.array([lat,lon,sensor_alt],dtype='f')
-    #sensor_type = "Sondrestrom"
+    sensorloc = np.array([lat,lon,sensor_alt], dtype='f')
     coordnames = 'Spherical'
     
-    return (data,coordnames,np.array(dataloc,dtype='f'),sensorloc,times)
+    return (data,coordnames,np.array(dataloc, dtype='f'),sensorloc,np.asarray(uniq_times, dtype='f'))
     
-    
-#data, coordnames, dataloc, sensorloc, times, sensor_type = readMad_hdf5('/Users/anna/Research/Ionosphere/2008WorldDaysPDB/son081001g.001.hdf5', ['ti', 'dti', 'nel'])
+if __name__ == '__main__':    
+    data, coordnames, dataloc, sensorloc, times = readMad_hdf5('/Users/anna/Research/Ionosphere/2008WorldDaysPDB/son081001g.001.hdf5', ['ti', 'dti', 'nel'])
