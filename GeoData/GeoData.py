@@ -109,7 +109,7 @@ class GeoData(object):
         except: # catch *all* exceptions
             e = sys.exc_info()
             h5file.close()
-            pdb.set_trace()
+           # pdb.set_trace()
             print e
             sys.exit()
             
