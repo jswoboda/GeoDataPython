@@ -10,14 +10,16 @@ import time
 import posixpath
 import numpy as np
 import scipy as sp
+import scipy.interpolate as spinterp
 import tables
 import sys
 import pdb
+import CoordTransforms as CT
 VARNAMES = ['data','coordnames','dataloc','sensorloc','times']
 class GeoData(object):
     '''This class will hold the information for geophysical data.
     Variables
-    data - This is a dictionary with strings for keys only. The strings are 
+    data - This is a dictionary with strings for keys only. The strings are
     the given names of the data.
     coordnames - A string that holds the type of coordinate system.
     dataloc - A numpy array that holds the locations of the samples
@@ -35,19 +37,65 @@ class GeoData(object):
         assert is_numeric(self.sensorloc), "sensorloc needs to be a numeric array"
         assert type(self.times) is np.ndarray,"times needs to be a numpy array"
         assert is_numeric(self.times), "times needs to be a numeric array"
-        
-    @staticmethod   
+
+
+
+    def interpolate(self,new_coords,newcoordname,method='linear',fill_value=np.nan):
+        """This method will take the data points in the dictionary data and spatially.
+        interpolate the points given the new coordinates. The method of interpolation
+        will be determined by the input parameter method.
+        Input:
+            new_coords - A Nlocx3 numpy array. This will hold the new coordinates that
+            one wants to interpolate the data over.
+            newcoordname - New Coordinate system that the data is being transformed into.
+            method - A string. The method of interpolation curently only accepts 'linear',
+            'nearest' and 'cubic'
+            fill_value - The fill value for the interpolation.
+        """
+        curavalmethods = ['linear', 'nearest', 'cubic']
+        interpmethods = ['linear', 'nearest', 'cubic']
+        if method not in curavalmethods:
+            raise ValueError('Must be one of the following methods: '+ str(curavalmethods))
+        Nt = self.times.shape[0]
+        NNlocs = new_coords.shape[0]
+
+
+        curcoords = self.__changecoords__(newcoordname)
+        # Loop through parameters and create temp variable
+        for iparam in self.data.keys():
+            New_param = np.zeros((NNlocs,Nt),dtype=self.data[iparam].dtype)
+            for itime in np.arange(Nt):
+
+                curparam =self.data[iparam][:,itime]
+                if method in interpmethods:
+                    intparam = spinterp.griddata(curcoords,curparam,new_coords,method,fill_value)
+                    New_param[:,itime] = intparam
+            self.data[iparam] = New_param
+
+        self.dataloc = new_coords
+        self.coordnames=newcoordname
+
+    def __changecoords__(self,newcoordname):
+
+        if self.coordnames=='Spherical' and newcoordname=='Cartesian':
+            return CT.sphereical2Cartisian(self.dataloc)
+        if self.coordnames== 'Cartesian'and newcoordname=='Spherical':
+            return CT.cartisian2Sphereical(self.dataloc)
+
+        raise ValueError('Wrong inputs for coordnate names was given.')
+
+    @staticmethod
     def read_h5(filename):
         """ Static method for this"""
         return GeoData(read_h5_main,[filename])
-        
+
     def __eq__(self,self2):
         '''This is the == operator. '''
         # Check the data dictionary
         datakeys = self.data.keys()
         if set(datakeys) !=set(self2.data.keys()):
             return False
-        
+
         for ikey in datakeys:
             a = np.ma.array(self.data[ikey],mask=np.isnan(self.data[ikey]))
             b = np.ma.array(self2.data[ikey],mask=np.isnan(self2.data[ikey]))
@@ -72,10 +120,10 @@ class GeoData(object):
         blah = np.ma.array(self2.times,mask=np.isnan(self2.times))
         if not np.ma.allequal(a,blah):
             return False
-        
+
         return True
-        
-        
+
+
     def __ne__(self,self2):
         '''This is the != operator. '''
         return not self.__eq__(self2)
@@ -83,7 +131,7 @@ class GeoData(object):
     def datanames(self):
         '''Returns the data names.'''
         return self.data.keys()
-    
+
     def write_h5(self,filename):
         '''Writes out the structured h5 files for the class.
         inputs
@@ -104,7 +152,7 @@ class GeoData(object):
                         h5file.createArray(group2,ikeys,vardict[cvar][ikeys],'Static array')
                 else:
                     h5file.createArray('/',cvar,vardict[cvar],'Static array')
-            h5file.close()          
+            h5file.close()
 
         except: # catch *all* exceptions
             e = sys.exc_info()
@@ -112,11 +160,11 @@ class GeoData(object):
            # pdb.set_trace()
             print e
             sys.exit()
-            
+
 def is_numeric(obj):
     attrs = ['__add__', '__sub__', '__mul__', '__div__', '__pow__']
     return all(hasattr(obj, attr) for attr in attrs)
-# TODO might want to make this private method   
+# TODO might want to make this private method
 # currently just give this to the init function and it will create a class instance.
 def read_h5_main(filename):
     ''' Read in the structured h5 file.'''
@@ -144,13 +192,13 @@ def read_h5_main(filename):
                 break
         if dictout:
             continue
-        
+
         for ikeys in basekeys:
             if ikeys==ivar:
                 outlist.append(output[posixpath.sep][ikeys])
-    
+
     return tuple(outlist)
-    
+
 def readSRI_h5(filename,paramstr,timelims = None):
     '''This will read the SRI formated h5 files for RISR and PFISR.'''
     coordnames = 'Spherical'
@@ -160,7 +208,7 @@ def readSRI_h5(filename,paramstr,timelims = None):
                 'Vi':('/FittedParams/Fits',(0,3)),'dVi':('/FittedParams/Errors',(0,3)),
                 'Ti':('/FittedParams/Fits',(0,1)),'dTi':('/FittedParams/Errors',(0,1)),
                 'Te':('/FittedParams/Fits',(-1,1)),'Ti':('/FittedParams/Errors',(-1,1))}
-    
+
     # Get the times and time lims
     times = h5file.getNode('/Time/UnixTime').read()
     nt = times.shape[0]
@@ -189,19 +237,19 @@ def readSRI_h5(filename,paramstr,timelims = None):
             continue
         curpath = pathdict[istr][0]
         curint = pathdict[istr][-1]
-        
+
         if curint is None:
-            
+
             tempdata = h5file.getNode(curpath).read()
         else:
             tempdata = h5file.getNode(curpath).read()[:,:,:,curint[0],curint[1]]
         data[istr] = np.array([tempdata[iT,:,:].flatten() for iT in range(nt)]).transpose()
-    h5file.close() 
+    h5file.close()
     return (data,coordnames,dataloc,sensorloc,times)
-    
+
 def pathparts(path):
     ''' '''
-    components = [] 
+    components = []
     while True:
         (path,tail) = posixpath.split(path)
         if tail == "":
