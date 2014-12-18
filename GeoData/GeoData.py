@@ -8,6 +8,7 @@ Created on Thu Jul 17 12:46:46 2014
 import os
 import time
 import posixpath
+from copy import copy
 import numpy as np
 import scipy as sp
 import scipy.interpolate as spinterp
@@ -74,6 +75,29 @@ class GeoData(object):
 
         self.dataloc = new_coords
         self.coordnames=newcoordname
+
+    def timeslice(self,timelist,listtype=None):
+        """ This method will return a copy of the object with only the desired points of time.
+        Inputs
+            timelist - This is a list of times in posix for the beginning time or a listing of array elements depending on the input
+            of listtype.
+            listtype - This is a string the input must be 'Array', for the input list to array
+            elements or 'Time' for the times list to represent posix times. If nothing is entered the
+            default is 'Array'."""
+        if listtype is None:
+            loclist = timelist
+        elif listtype =='Array':
+            loclist = timelist
+        elif listtype == 'Time':
+            ix = np.in1d(self.times[:,0],timelist)
+            loclist = np.where(ix)[0]
+
+        gd2 = copy(self)
+
+        gd2.times = gd2.times[loclist]
+        for idata in gd2.datanames():
+            gd2.data[idata] = gd2.data[idata][:,loclist]
+        return gd2
 
     def __changecoords__(self,newcoordname):
 
