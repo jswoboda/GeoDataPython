@@ -17,15 +17,15 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     list of parameters to look at written as strings
     Returns:
     dictionary with keys are the Madrigal parameter string, the value is an array
-    rows are unique data locations (data_loc) = (alt, el1, azm)
+    rows are unique data locations (data_loc) = (rng, azm, el1)
     columns are unique times
     """
-    #open hdf5 file    
+    #open hdf5 file
     files = openFile(filename, mode = "r", title = 'Sondrestrom1')
     all_data = files.getNode('/Data/Table Layout').read()
     sensor_data = files.getNode('/Metadata/Experiment Parameters').read()
-    files.close() 
-    
+    files.close()
+
     instrument = sensor_data[0][1] #instrument type string
     if "Sondrestrom" in instrument:
         radar = 1
@@ -39,34 +39,34 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     else:
         print("Error: Radar type not supported by program in this version.")
         exit()
-            
+
     # get the data location (range, el1, azm)
     all_loc = []
     if radar == 1:
         angle1 = 'elm'
-        alt = all_data['gdalt'] 
+        rng = all_data['gdalt']
     elif radar == 2:
         angle1 = 'elm'
-        alt = all_data['range'] 
+        rng = all_data['range']
     elif radar ==3:
         angle1 = 'elm'
-        alt = all_data['range'] 
-        
+        rng = all_data['range']
+
     try:
         el = all_data[angle1]
     except ValueError:
-        el = np.nan * np.ones(len(list(alt)))
-        
-    try:       
+        el = np.nan * np.ones(len(list(rng)))
+
+    try:
         azm = all_data['azm']
-    except ValueError:        
-        azm = np.nan * np.ones(len(list(alt)))
+    except ValueError:
+        azm = np.nan * np.ones(len(list(rng)))
     # take out nans
-    nan_ar = np.isnan(alt)|np.isnan(el)|np.isnan(azm)
+    nan_ar = np.isnan(rng)|np.isnan(el)|np.isnan(azm)
     notnan = np.logical_not(nan_ar)
-    for i in range(len(alt)):
+    for i in range(len(rng)):
         if notnan[i]:
-            all_loc.append([alt[i], el[i], azm[i]])
+            all_loc.append([rng[i],azm[i],el[i]])
 
     #create list of unique data location lists
     dataloc = [list(y) for y in set([tuple(x) for x in all_loc])]
@@ -76,7 +76,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     for i in range(len(times1)):
         all_times.append([times1[i], times2[i]])
     uniq_times = sorted(set(tuple(x) for x in all_times))
-        
+
     #initialize and fill data dictionary with parameter arrays
     data = {}
     maxcols = len(uniq_times)
@@ -87,7 +87,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
             continue
         tempdata = all_data[p][notnan] #list of parameter pulled from all_data
         temparray = np.empty([maxrows,maxcols]) #converting the tempdata list into array form
-        
+
         for t in range(len(tempdata)):
             #row
             row = dataloc.index(all_loc[t])
@@ -97,14 +97,14 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
 
         data[p]=temparray
 
-    #get the sensor location (lat, long, alt)
+    #get the sensor location (lat, long, rng)
     lat = sensor_data[7][1]
     lon = sensor_data[8][1]
     sensor_alt = sensor_data[9][1]
     sensorloc = np.array([lat,lon,sensor_alt], dtype='f')
     coordnames = 'Spherical'
-    
+
     return (data,coordnames,np.array(dataloc, dtype='f'),sensorloc,np.asarray(uniq_times, dtype='f'))
-    
-    
+
+
 #data, coordnames, dataloc, sensorloc, times = readMad_hdf5('/Users/anna/Research/Ionosphere/2008WorldDaysPDB/son081001g.001.hdf5', ['ti', 'dti', 'nel'])
