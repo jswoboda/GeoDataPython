@@ -209,6 +209,7 @@ def read_h5_main(filename):
     # Have to do this in order because of the input being a list instead of a dictionary
     for ivar in VARNAMES:
         dictout = False
+        #dictionary
         for npath,ipath in enumerate(outarr):
             if ivar==ipath[0]:
                 outlist.append(output[output.keys()[npath]])
@@ -216,10 +217,15 @@ def read_h5_main(filename):
                 break
         if dictout:
             continue
-
+        # for non-dicitonary
         for ikeys in basekeys:
             if ikeys==ivar:
-                outlist.append(output[posixpath.sep][ikeys])
+                # Have to check for MATLAB type strings, for some reason python does not like to register them as strings
+                curdata = output[posixpath.sep][ikeys]
+                if type(curdata)==np.ndarray:
+                    if curdata.dtype.kind=='S':
+                        curdata=str(curdata)
+                outlist.append(curdata)
 
     return tuple(outlist)
 
