@@ -8,7 +8,7 @@ Created on Sat Nov  1 19:09:47 2014
 """
 
 import numpy as np
-
+import pdb
 def sphereical2Cartisian(spherecoords):
     """This function will convert Spherical coordinates to Cartisian coordinates.
     Input
@@ -216,6 +216,247 @@ def ecef2wgs(ECEF_COORDS):
     if transcoords:
         WGS_COORDS = np.transpose(WGS_COORDS)
     return WGS_COORDS
+
+def ecef2enul(ECEF,LatLongHeight):
+    """ecef2enul
+    ENU = ecef2enul(ECEF,LatLongHeight)
+    by John Swoboda 1/8/2015
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    Description
+    This fuction will take a set of ecef coorinates in meters and transfers
+    them to an east north up coordinate system also in meters.  LatLongHeight
+    can be a single set of coordinates or a collection of coordintes to deal
+    with a moving platform.This function uses ecef2enu4vec.m
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    Input
+    ECEF - A 3xN matrix (can also be a Nx3 matrix) with X, Y and Z in ECEF
+    coordinate space.  The  coordinates must be in meters.  The X,Y and Z
+    coordinates are broken up where they are rows 1, 2,
+    and 3 of the matrix respectively(assuming a 3xN array, if transposed this
+    will be the columns.
+    LatLonHeight - A 3xN matrix (can also be a Nx3 matrix) with the latitude
+    longitude and height. These will be the coordinates that the ENU
+    coordinate system is in reference to.  The matrix is broken up in the
+    following way, the first row is latitude in degrees, the second row is
+    longitude in degrees and the last row is the height in meters.
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    Output
+    ENU - A 3xN matrix with the rotated vectors in meters refereced to east
+    up from the original stated in the WGS coordinate given.  The east, north
+    and up components are rows 1, 2 and 3 respectivly.
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    Reference:
+    Wikipedia article: http://en.wikipedia.org/wiki/Geodetic_system"""
+     #%% Check Input
+    (dir1,dir2) = ECEF.shape
+    transcoords = False
+    if dir2==3:
+        ECEF = np.transpose(ECEF)
+        transcoords  = True
+    if 3 not in ECEF.shape:
+        raise ValueError('Neither of the dimensions are of length 3')
+
+    if transcoords:
+        LatLongHeight = np.transpose(LatLongHeight)
+
+    #%% Perfom Calculation
+    ECEF0 = wgs2ecef(LatLongHeight);
+    LatLong = LatLongHeight[:2,:]
+    ENU = ecef2enu4vec(ECEF-ECEF0,LatLong)
+    return ENU
+
+def ecef2enu4vec(ECEF,LatLong):
+    """ecef2enu4vec
+    ENU = ecef2enu4vec(ECEF,LatLong)
+    by John Swoboda 1/7/2015
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    Description
+    This function will take a set of numpy arrays in ECEF coordinates and rotate
+    them to an ENU coordinate system. This has been compared to a working matlab version
+    that has been comapred to the internal MATLAB function and has comparible results
+    with a normalized difference on the order of 10^-31.
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    Inputs
+    ECEF - A 3xN numpy array (can also be a Nx3 array) with X, Y and Z in ECEF
+    coordinate space. The coordinates are in meters.  The X,Y and Z coordinates
+    are broken up where they are rows 1, 2, and 3 of the array respectively(assuming
+    a 3xN array, if transposed this will be the columns.
+    LatLon - A 2xN array (can also be a Nx2 matrix) with the latitude
+    longitude. The matrix is broken up in the following way, the first row
+    is latitude in degrees, the second row is longitude in degrees.
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    Output
+    ENU - A 3xN numpy array with the rotated vectors in whatever unit the origial
+    vectors were in.  The east, north and up components are rows 1, 2 and 3
+    respecitivly.
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    Reference:
+    Wikipedia article: http://en.wikipedia.org/wiki/Geodetic_system"""
+    #%% Check Input
+    d2r = np.pi/180.0
+    (dir1,dir2) = ECEF.shape
+    transcoords = False
+    if dir2==3:
+        ECEF = np.transpose(ECEF)
+        transcoords  = True
+    if 3 not in ECEF.shape:
+        raise ValueError('Neither of the dimensions are of length 3')
+
+    U = ECEF[0,:]
+    V = ECEF[1,:]
+    W = ECEF[2,:]
+
+    # assume that the lat and long data are oriented the same way
+    if transcoords:
+        LatLong = np.transpose(LatLong)
+    # Get the latitude and longitude into
+    if LatLong.size==2:
+        lat0 = LatLong[0]
+        long0 = LatLong[1]
+        lat0 = lat0*np.ones((1,U.size))*d2r
+        long0 = long0*np.ones((1,U.size))*d2r
+    else:
+        lat0 = LatLong[0,:]*d2r
+        long0 = LatLong[1,:]*d2r
+
+    #%% Set up calculation
+    a11 = -np.sin(long0)
+    a12 = np.cos(long0)
+    a13 = np.zeros(lat0.shape)
+    a21 = -np.sin(lat0)*np.cos(long0)
+    a22 = -np.sin(lat0)*np.sin(long0)
+    a23 = np.cos(lat0)
+    a31 = np.cos(lat0)*np.cos(long0)
+    a32 = np.cos(lat0)*np.sin(long0)
+    a33 = np.sin(lat0)
+    #%% Create vectors
+
+    East = a11*U + a12*V + a13*W
+    North = a21*U + a22*V + a23*W
+    Up = a31*U + a32*V + a33*W
+
+    ENU =np.vstack((East,North,Up))
+    return ENU
+def enu2ecefl(ENU,LatLongHeight):
+    """enu2ecefl
+    ENU = ecef2enul(ECEF,LatLongHeight)
+    by John Swoboda 1/8/2015
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    Description
+    This function will take a set of east north up vectors with the origin
+    points in LatLongHeight.  LatLongHeight can be a single set of
+    coordinates or a collection of coordintes to deal with a moving platform.
+    This function uses enu2ecef4vec.m.
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    Input
+    ENU - A 3xN matrix (can also be a Nx3 matrix)with the rotated vectors in
+    meters from the origin point stated in LatLongHeight.  The east, north
+    and up components are rows 1, 2 and 3 respecitivly.
+    LatLonHeight - A 3xN matrix (can also be a Nx3 matrix) with the latitude
+    longitude and height. These will be the coordinates that the ENU
+    coordinate system is in reference to.  The matrix is broken up in the
+    following way, the first row is latitude in degrees, the second row is
+    longitude in degrees and the last row is the height in meters.
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    Output
+    ECEF - A 3xN matrix with X, Y and Z in ECEF coordinate space.  The
+    coordinates must be in meters.  The X,Y and Z coordinates are broken up
+    where they are rows 1, 2, and 3 of the matrix respectively.
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    Reference:
+    Wikipedia article: http://en.wikipedia.org/wiki/Geodetic_system"""
+    #%% Check Input
+    (dir1,dir2) = ENU.shape
+    transcoords = False
+    if dir2==3:
+        ENU = np.transpose(ENU)
+        transcoords  = True
+    if 3 not in ENU.shape:
+        raise ValueError('Neither of the dimensions are of length 3')
+
+    if transcoords:
+        LatLongHeight = np.transpose(LatLongHeight)
+    #%% Perfom Calculation
+    ECEF0 = wgs2ecef(LatLongHeight);
+    LatLong = LatLongHeight[:2,:]
+#    # correct for a single point
+#    if LatLongHeight.shape[1]==1:
+#        ECEF0=repmat(ECEF0,1,ENU.shape[1])
+
+    ECEF = enu2ecef4vec(ENU,LatLong)+ECEF0;
+    return ECEF
+def enu2ecef4vec(ENU,LatLong):
+    """% enu2ecef4vec.m
+    ENU = ecef2enu4vec(ECEF,LatLong)
+    by John Swoboda 1/7/2015
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    Description
+    This function will take a set of vectors (in terms of the mathematical
+    structure) in ENU coordinates and rotate them to an ECEF coordinate
+    system. This has been compared to a working matlab version
+    that has been comapred to the internal MATLAB function and has comparible results
+    with a normalized difference on the order of 10^-33.
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    Input
+    ENU - A 3xN matrix (can also be a Nx3 matrix)with the rotated vectors in
+    whatever unit the origial vectors were in.  The east, north and up
+    components are rows 1, 2 and 3 respecitivly.
+    LatLon - A 2xN matrix (can also be a Nx2 matrix) with the latitude
+    longitude. The matrix is broken up in the following way, the first row
+    is latitude in degrees, the second row is longitude in degrees.
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    Output
+    ECEF - A 3xN matrix  with X, Y and Z in ECEF coordinate space.  The
+    coordinates can be in what ever units the user wants.  The X,Y and Z
+    coordinates are broken up where they are rows 1, 2, and 3 of the matrix
+    respectively.
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    Reference:
+        Wikipedia article: http://en.wikipedia.org/wiki/Geodetic_system"""
+    #%% Check Input
+    d2r = np.pi/180.0
+    (dir1,dir2) = ENU.shape
+    transcoords = False
+    if dir2==3:
+        ENU = np.transpose(ENU)
+        transcoords  = True
+    if 3 not in ENU.shape:
+        raise ValueError('Neither of the dimensions are of length 3')
+
+    U = ENU[0,:]
+    V = ENU[1,:]
+    W = ENU[2,:]
+
+    # assume that the lat and long data are oriented the same way
+    if transcoords:
+        LatLong = np.transpose(LatLong)
+    # Get the latitude and longitude into
+    if LatLong.size==2:
+        lat0 = LatLong[0]
+        long0 = LatLong[1]
+        lat0 = lat0*np.ones((1,U.size))*d2r
+        long0 = long0*np.ones((1,U.size))*d2r
+    else:
+        lat0 = LatLong[0,:]*d2r
+        long0 = LatLong[1,:]*d2r
+    #%% Set up calculation
+    a11 = -np.sin(long0)
+    a12 = -np.sin(lat0)*np.cos(long0)
+    a13 = np.cos(lat0)*np.cos(long0)
+    a21 = np.cos(long0)
+    a22 = -np.sin(lat0)*np.sin(long0)
+    a23 = np.cos(lat0)*np.sin(long0)
+    a31 = 0.0
+    a32 = np.cos(lat0)
+    a33 = np.sin(lat0)
+    #%% Create vectors
+
+    X = a11*U + a12*V + a13*W
+    Y = a21*U + a22*V + a23*W
+    Z = a31*U + a32*V + a33*W
+
+    ECEF = np.vstack((X,Y,Z))
+    return ECEF
 
 def enu2cartisian(ENUCOORDS):
     """ This function will transform enu coordinates to Cartisian coordinates, the only
