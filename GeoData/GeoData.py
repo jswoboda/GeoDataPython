@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """
+GeoData.py
 Created on Thu Jul 17 12:46:46 2014
 
 @author: John Swoboda
@@ -39,42 +40,38 @@ class GeoData(object):
         assert type(self.times) is np.ndarray,"times needs to be a numpy array"
         assert is_numeric(self.times), "times needs to be a numeric array"
 
+    def datanames(self):
+        '''Returns the data names.'''
+        return self.data.keys()
 
+    def write_h5(self,filename):
+        '''Writes out the structured h5 files for the class.
+        inputs
+        filename - The filename of the output.'''
+        h5file = tables.openFile(filename, mode = "w", title = "GeoData Out")
+        # get the names of all the variables set in the init function
+        varnames = self.__dict__.keys()
+        vardict = self.__dict__
+        try:
+            # XXX only allow 1 level of dictionaries, do not allow for dictionary of dictionaries.
+            # Make group for each dictionary
+            for cvar in varnames:
+                #group = h5file.create_group(posixpath.sep, cvar,cvar +'dictionary')
+                if type(vardict[cvar]) ==dict: # Check if dictionary
+                    dictkeys = vardict[cvar].keys()
+                    group2 = h5file.create_group('/',cvar,cvar+' dictionary')
+                    for ikeys in dictkeys:
+                        h5file.createArray(group2,ikeys,vardict[cvar][ikeys],'Static array')
+                else:
+                    h5file.createArray('/',cvar,vardict[cvar],'Static array')
+            h5file.close()
 
-    def interpolate(self,new_coords,newcoordname,method='linear',fill_value=np.nan):
-        """This method will take the data points in the dictionary data and spatially.
-        interpolate the points given the new coordinates. The method of interpolation
-        will be determined by the input parameter method.
-        Input:
-            new_coords - A Nlocx3 numpy array. This will hold the new coordinates that
-            one wants to interpolate the data over.
-            newcoordname - New Coordinate system that the data is being transformed into.
-            method - A string. The method of interpolation curently only accepts 'linear',
-            'nearest' and 'cubic'
-            fill_value - The fill value for the interpolation.
-        """
-        curavalmethods = ['linear', 'nearest', 'cubic']
-        interpmethods = ['linear', 'nearest', 'cubic']
-        if method not in curavalmethods:
-            raise ValueError('Must be one of the following methods: '+ str(curavalmethods))
-        Nt = self.times.shape[0]
-        NNlocs = new_coords.shape[0]
-
-
-        curcoords = self.__changecoords__(newcoordname)
-        # Loop through parameters and create temp variable
-        for iparam in self.data.keys():
-            New_param = np.zeros((NNlocs,Nt),dtype=self.data[iparam].dtype)
-            for itime in np.arange(Nt):
-
-                curparam =self.data[iparam][:,itime]
-                if method in interpmethods:
-                    intparam = spinterp.griddata(curcoords,curparam,new_coords,method,fill_value)
-                    New_param[:,itime] = intparam
-            self.data[iparam] = New_param
-
-        self.dataloc = new_coords
-        self.coordnames=newcoordname
+        except: # catch *all* exceptions
+            e = sys.exc_info()
+            h5file.close()
+           # pdb.set_trace()
+            print e
+            sys.exit()
 
     def timeslice(self,timelist,listtype=None):
         """ This method will return a copy of the object with only the desired points of time.
@@ -99,13 +96,72 @@ class GeoData(object):
             gd2.data[idata] = gd2.data[idata][:,loclist]
         return gd2
 
-    def __changecoords__(self,newcoordname):
+    def interpolate(self,new_coords,newcoordname,method='linear',fill_value=np.nan):
+        """This method will take the data points in the dictionary data and spatially.
+        interpolate the points given the new coordinates. The method of interpolation
+        will be determined by the input parameter method.
+        Input:
+            new_coords - A Nlocx3 numpy array. This will hold the new coordinates that
+            one wants to interpolate the data over.
+            newcoordname - New Coordinate system that the data is being transformed into.
+            method - A string. The method of interpolation curently only accepts 'linear',
+            'nearest' and 'cubic'
+            fill_value - The fill value for the interpolation.
+        """
+        curavalmethods = ['linear', 'nearest', 'cubic']
+        interpmethods = ['linear', 'nearest', 'cubic']
+        if method not in curavalmethods:
+            raise ValueError('Must be one of the following methods: '+ str(curavalmethods))
+        Nt = self.times.shape[0]
+        NNlocs = new_coords.shape[0]
 
+
+
+        curcoords = self.__changecoords__(newcoordname)
+
+        # XXX Pulling axes where all of the elements are the same.
+        # Probably not the best way to fix issue with two dimensional interpolation
+        firstel = new_coords[0]
+        firstelold = curcoords[0]
+        keepaxis = np.ones(firstel.shape, dtype=bool)
+        for k in range(len(firstel)):
+            curax = new_coords[:,k]
+            curaxold = curcoords[:,k]
+            keepaxis[k] = not (np.all(curax==firstel[k]) or np.all(curaxold==firstelold[k]))
+
+        curcoords = curcoords[:,keepaxis]
+        new_coords = curcoords[:,keepaxis]
+
+        # Loop through parameters and create temp variable
+        for iparam in self.data.keys():
+            New_param = np.zeros((NNlocs,Nt),dtype=self.data[iparam].dtype)
+            for itime in np.arange(Nt):
+
+                curparam =self.data[iparam][:,itime]
+                if method in interpmethods:
+                    intparam = spinterp.griddata(curcoords,curparam,new_coords,method,fill_value)
+                    New_param[:,itime] = intparam
+            self.data[iparam] = New_param
+
+        self.dataloc = new_coords
+        self.coordnames=newcoordname
+
+
+
+    def __changecoords__(self,newcoordname):
+        """This method will change the coordinates of the data to the new coordinate
+        system before interpolation.
+        Inputs:
+        newcoordname: A string that holds the name of the new coordinate system everything is being changed to.
+        outputs
+        outcoords: A new coordinate system where each row is a coordinate in the new system.
+        """
         if self.coordnames=='Spherical' and newcoordname=='Cartesian':
             return CT.sphereical2Cartisian(self.dataloc)
         if self.coordnames== 'Cartesian'and newcoordname=='Spherical':
             return CT.cartisian2Sphereical(self.dataloc)
-
+        if self.coordnames==newcoordname:
+            return self.dataloc
         raise ValueError('Wrong inputs for coordnate names was given.')
 
     @staticmethod
@@ -152,38 +208,7 @@ class GeoData(object):
         '''This is the != operator. '''
         return not self.__eq__(self2)
 
-    def datanames(self):
-        '''Returns the data names.'''
-        return self.data.keys()
 
-    def write_h5(self,filename):
-        '''Writes out the structured h5 files for the class.
-        inputs
-        filename - The filename of the output.'''
-        h5file = tables.openFile(filename, mode = "w", title = "GeoData Out")
-        # get the names of all the variables set in the init function
-        varnames = self.__dict__.keys()
-        vardict = self.__dict__
-        try:
-            # XXX only allow 1 level of dictionaries, do not allow for dictionary of dictionaries.
-            # Make group for each dictionary
-            for cvar in varnames:
-                #group = h5file.create_group(posixpath.sep, cvar,cvar +'dictionary')
-                if type(vardict[cvar]) ==dict: # Check if dictionary
-                    dictkeys = vardict[cvar].keys()
-                    group2 = h5file.create_group('/',cvar,cvar+' dictionary')
-                    for ikeys in dictkeys:
-                        h5file.createArray(group2,ikeys,vardict[cvar][ikeys],'Static array')
-                else:
-                    h5file.createArray('/',cvar,vardict[cvar],'Static array')
-            h5file.close()
-
-        except: # catch *all* exceptions
-            e = sys.exc_info()
-            h5file.close()
-           # pdb.set_trace()
-            print e
-            sys.exit()
 
 def is_numeric(obj):
     attrs = ['__add__', '__sub__', '__mul__', '__div__', '__pow__']
