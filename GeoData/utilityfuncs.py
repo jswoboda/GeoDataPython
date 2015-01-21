@@ -7,6 +7,9 @@ Created on Thu Sep 11 15:29:27 2014
 import pdb
 import numpy as np
 from tables import *
+from GeoData import GeoData
+#from GeoData import CoordTransforms
+
 
 
 def readMad_hdf5 (filename, paramstr): #timelims=None
@@ -106,5 +109,14 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
 
     return (data,coordnames,np.array(dataloc, dtype='f'),sensorloc,np.asarray(uniq_times, dtype='f'))
 
+def readOMTI(filename):
+    outlist = GeoData.read_h5_main(filename)
+    print('step1')
+    optical = outlist[0]['optical']
+    instance = optical[:,0]
+    enu = outlist[2].T
+    cartCoords = CoordTransforms.enu2cartisian(enu)
+    coordnames = 'Cartesian'
+    return (instance, coordnames, np.array(cartCoords, dtype='f'), outlist[3], np.asarray(outlist[4],dtype='f'))
 
 #data, coordnames, dataloc, sensorloc, times = readMad_hdf5('/Users/anna/Research/Ionosphere/2008WorldDaysPDB/son081001g.001.hdf5', ['ti', 'dti', 'nel'])
