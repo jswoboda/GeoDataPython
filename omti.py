@@ -28,6 +28,7 @@ def interp(dataClass, new_coords, interpMeth):
     gd2 = dataClass.timeslice([1,2])
     gd2.interpolate(new_coords, newcoordname='Cartesian', method=interpMeth, fill_value=np.nan)
     interpData = gd2.data['optical']
+    pdb.set_trace()
     p = interpData[:,0].reshape(x.shape)
     return p
 

@@ -15,6 +15,7 @@ import scipy.interpolate as spinterp
 import tables
 import sys
 import CoordTransforms as CT
+import pdb
 
 VARNAMES = ['data','coordnames','dataloc','sensorloc','times']
 class GeoData_0(object):
@@ -71,7 +72,7 @@ class GeoData_0(object):
                     intparam = spinterp.griddata(curcoords,curparam,new_coords,method,fill_value)
                     New_param[:,itime] = intparam
             self.data[iparam] = New_param
-
+        pdb.set_trace()
         self.dataloc = new_coords
         self.coordnames=newcoordname
 
