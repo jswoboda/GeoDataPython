@@ -15,7 +15,7 @@ import scipy as sp
 import scipy.interpolate as spinterp
 import tables
 import sys
-#import pdb
+import pdb
 import CoordTransforms as CT
 
 VARNAMES = ['data','coordnames','dataloc','sensorloc','times']
@@ -121,22 +121,21 @@ class GeoData(object):
 
 
         curcoords = self.__changecoords__(newcoordname)
-
+#        pdb.set_trace()
         # XXX Pulling axes where all of the elements are the same.
         # Probably not the best way to fix issue with two dimensional interpolation
         firstel = new_coords[0]
         firstelold = curcoords[0]
         keepaxis = np.ones(firstel.shape, dtype=bool)
-        print keepaxis.shape
         for k in range(len(firstel)):
             curax = new_coords[:,k]
             curaxold = curcoords[:,k]
             keepaxis[k] = not (np.all(curax==firstel[k]) or np.all(curaxold==firstelold[k]))
-       
-        #if index is true, keep that column         
+
+        #if index is true, keep that column
         curcoords = curcoords[:,keepaxis]
-        new_coords = curcoords[:,keepaxis]
-        
+        new_coords = new_coords[:,keepaxis]
+
         Nt = self.times.shape[0]
         NNlocs = new_coords.shape[0]
 
@@ -146,14 +145,14 @@ class GeoData(object):
             for itime in np.arange(Nt):
                 curparam =self.data[iparam][:,itime]
                 if method in interpmethods:
-                    intparam = spinterp.griddata(curcoords,curparam,new_coords,method,fill_value)                  
+                    intparam = spinterp.griddata(curcoords,curparam,new_coords,method,fill_value)
                     New_param[:,itime] = intparam
             self.data[iparam] = New_param
 
-                
+
         self.dataloc = new_coords
         self.coordnames=newcoordname
-        
+
 
 
 
