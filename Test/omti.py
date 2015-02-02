@@ -20,7 +20,7 @@ np.ndarray.flatten(y)
 np.ndarray.flatten(z)
 new_coords = np.column_stack((x.flatten(),y.flatten(),z.flatten()))
 extent=[xvec.min(),xvec.max(),yvec.min(),yvec.max()]
-h5name = '/Users/anna/Research/Ionosphere/Semeter/OMTIdata.h5'
+h5name = 'OMTIdata.h5'
 
 omti = GeoData.GeoData(utilityfuncs.readOMTI,(h5name, ['optical']) )
 
@@ -28,17 +28,17 @@ def interp(dataClass, new_coords, interpMeth):
     gd2 = dataClass.timeslice([1,2])
     gd2.interpolate(new_coords, newcoordname='Cartesian', method=interpMeth, fill_value=np.nan)
     interpData = gd2.data['optical']
-    pdb.set_trace()
+#    pdb.set_trace()
     p = interpData[:,0].reshape(x.shape)
     return p
 
-#pdb.set_trace()   
-p = interp(omti, new_coords, 'linear')
+#pdb.set_trace()
+p = interp(omti, new_coords, 'nearest')
 
 fig, ax = plt.subplots(facecolor='white')
-omtiplot = ax.imshow(p,origin = 'lower', aspect = 'auto')
+omtiplot = ax.imshow(p,origin = 'lower', aspect = 'auto',extent=extent,vmin=200,vmax=800,cmap=plt.get_cmap('gray'))
 plt.title("OMTI data")
 cbar=plt.colorbar(omtiplot)
 cbar.set_label('OMTI')
-plt.show()
+plt.show(False)
 

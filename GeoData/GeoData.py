@@ -116,9 +116,7 @@ class GeoData(object):
             raise ValueError('Must be one of the following methods: '+ str(curavalmethods))
         Nt = self.times.shape[0]
         NNlocs = new_coords.shape[0]
-        print NNlocs
-
-
+#        print NNlocs
 
         curcoords = self.__changecoords__(newcoordname)
 #        pdb.set_trace()
@@ -154,7 +152,8 @@ class GeoData(object):
         self.coordnames=newcoordname
 
 
-
+    def copy(self):
+        return GeoData(copyinst,[self])
 
     def __changecoords__(self,newcoordname):
         """This method will change the coordinates of the data to the new coordinate
@@ -216,7 +215,8 @@ class GeoData(object):
         '''This is the != operator. '''
         return not self.__eq__(self2)
 
-
+def copyinst(obj1):
+    return(obj1.data.copy(),(obj1.coordnames+'.')[:-1],obj1.dataloc.copy(),obj1.sensorloc.copy(),obj1.times.copy())
 
 def is_numeric(obj):
     attrs = ['__add__', '__sub__', '__mul__', '__div__', '__pow__']
