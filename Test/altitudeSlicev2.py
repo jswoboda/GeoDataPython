@@ -18,11 +18,10 @@ import numpy as np
 from GeoData import GeoData
 import scipy as sp
 import matplotlib.pyplot as plt
-import pdb
+import pickle
 
 def interpLin(dataClass, new_coords, interpMeth):
     gd2 = dataClass.timeslice([1,2])
-    pdb.set_trace()
     gd2.interpolate(new_coords, newcoordname='Cartesian', method=interpMeth, fill_value=np.nan)
     interpDataA = gd2.data['nel']
     interpDataB = gd2.data['ti']
@@ -44,7 +43,7 @@ Neminmax =[sp.log10(5e10),sp.log10(5e11)]
 
 new_coords = np.column_stack((x.flatten(),y.flatten(),z.flatten()))
 extent=[xvec.min(),xvec.max(),yvec.min(),yvec.max()]
-h5name = 'ran120219.004.hdf5'
+h5name = '/Users/anna/Research/Ionosphere/Semeter/ran120219.004.hdf5'
 
 gdL = GeoData.GeoData(utilityfuncs.readMad_hdf5,(h5name, ['ti','nel']) )
 gdN = gdL.copy()#GeoData.GeoData(utilityfuncs.readMad_hdf5,(h5name, ['ti','nel']) )
@@ -52,6 +51,9 @@ gdN = gdL.copy()#GeoData.GeoData(utilityfuncs.readMad_hdf5,(h5name, ['ti','nel']
 # a is nel
 p1a, p1b = interpLin(gdL.copy(), new_coords, 'linear')
 p2a, p2b = interpLin(gdN.copy(), new_coords, 'nearest')
+
+pickle.dump((p1a, p2a), open("nel.p", "wb"))
+pickle.dump((p1b, p2b), open("ti.p", "wb"))
 
 #plotting.overlayPlots(p2a, p1a, extent, 0.9)
 
