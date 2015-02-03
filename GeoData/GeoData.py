@@ -151,6 +151,20 @@ class GeoData(object):
         self.dataloc = new_coords
         self.coordnames=newcoordname
 
+    def changedata(self,dataname,newname,func,params=(),rm_old=True):
+        """ This method will take a set of data out of the instance of this class and apply
+        the function func to it with the extra parameters params.
+        Inputs:
+        dataname - A string that is one of the datanames.
+        newname - A string for the changed data that it will be known as from now on.
+        func - The function used to change the data.
+        params - (default - ()) Any extra parameters that are needed for the function.
+        rm_old - (default - True) A flag that if set to True will remove the old data."""
+
+        assert dataname in self.data.keys(),"Incorrect data name used."
+        self.data[newname]=func(self.data[dataname],*params)
+        if rm_old:
+            del self.data[dataname]
 
     def copy(self):
         return GeoData(copyinst,[self])
