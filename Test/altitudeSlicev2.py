@@ -2,7 +2,7 @@
 """
 Created on Sun Nov 30 09:58:20 2014
 
-@author: anna
+@author: Anna Stuhlmacher
 
 taking an hdf5
 -saving the parameters

@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sun Oct 12 22:03:16 2014
+Creates a GeoData object from an omti h5 files and outputs a 2D colorplot in gray scale.
 
-@author: anna
+@author: Anna Stuhlmacher
+
 """
 from GeoData import utilityfuncs
 import numpy as np
 from GeoData import GeoData
 import scipy as sp
 import matplotlib.pyplot as plt
-import pickle
 
 xvec = np.linspace(-100.0,500.0)
 yvec = np.linspace(0.0,600.0)
@@ -22,20 +22,24 @@ new_coords = np.column_stack((x.flatten(),y.flatten(),z.flatten()))
 extent=[xvec.min(),xvec.max(),yvec.min(),yvec.max()]
 h5name = '/Users/anna/Research/Ionosphere/Semeter/OMTIdata.h5'
 
+#omti takes data input from file directory
 omti = GeoData.GeoData(utilityfuncs.readOMTI,(h5name, ['optical']) )
 
 def interp(dataClass, new_coords, interpMeth):
+    """
+    Uses GeoData's interpolate function to smooth data,
+    method used on the parameter is either 'linear' or 'nearest'.
+    Returns a new interpolated array.
+    """
     gd2 = dataClass.timeslice([1,2])
     gd2.interpolate(new_coords, newcoordname='Cartesian', method=interpMeth, fill_value=np.nan)
     interpData = gd2.data['optical']
-#    pdb.set_trace()
     p = interpData[:,0].reshape(x.shape)
     return p
-
-#pdb.set_trace()
+    
 p = interp(omti, new_coords, 'nearest')
-pickle.dump(p, open("omti.p", "wb"))
 
+#Plotting in gray scale, with colorbar
 fig, ax = plt.subplots(facecolor='white')
 omtiplot = ax.imshow(p,origin = 'lower', aspect = 'auto',extent=extent,vmin=200,vmax=800,cmap=plt.get_cmap('gray'))
 plt.title("OMTI data")
