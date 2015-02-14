@@ -17,7 +17,7 @@ import matplotlib as mpl
 from matplotlib import ticker
    
         
-def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title):
+def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None):
     """
     geodatalist - A list of geodata objects that will be overlayed, first object is on the bottom and in gray scale
     altlist - A list of the altitudes that we can overlay.
@@ -47,22 +47,28 @@ def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title):
     gd3 = geodatalist[0].timeslice([1,2])
     gd3.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
     interpData = gd3.data[key0[0]]
-    omti = interpData[:,0].reshape(x.shape)        
-        
-    plt.figure(facecolor='white')        
-    bottom = imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
-    cbar1 = plt.colorbar(bottom)
-    cbar1.set_label(key0[0])
-    hold(True)
-    top = imshow(risr, cmap=cm.jet, alpha=0.4, extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
-    cbar2 = plt.colorbar(top)
-    cbar2.set_label(key1[0])
-    plt.title(title)
-    plt.xlabel('x')
-    plt.ylabel('y')
-    show()
+    omti = interpData[:,0].reshape(x.shape)  
+
+    if axis == None:      
+        plt.figure(facecolor='white')        
+        bottom = imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
+        cbar1 = plt.colorbar(bottom)
+        cbar1.set_label(key0[0])
+        hold(True)
+        top = imshow(risr, cmap=cm.jet, alpha=0.4, extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
+        cbar2 = plt.colorbar(top)
+        cbar2.set_label(key1[0])
+        plt.title(title)
+        plt.xlabel('x')
+        plt.ylabel('y')
+        show()
+    else:
+        axis.imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
+        hold(True)
+        axis.imshow(risr, cmap=cm.jet, alpha=0.4, extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])        
+        return axis
     
-def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title):
+def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None):
     """
     geodatalist - A list of geodata objects that will be overlayed, first object is on the bottom and in gray scale
     altlist - A list of the altitudes that we can overlay.
@@ -94,22 +100,28 @@ def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title):
     interpData = gd3.data[key0[0]]
     omti = interpData[:,0].reshape(x.shape)   
         
-    plt.figure(facecolor='white')        
-    bottom = imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
-    cbar1 = plt.colorbar(bottom, orientation='horizontal')
-    cbar1.set_label(key0[0])
-    hold(True)
-    top = contour(x,y, risr, cmap=cm.jet,extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
-    #clabel(top,inline=1,fontsize=10, fmt='%1.0e')    
-    cbar2 = plt.colorbar(top, format='%.0e')
-    cbar2.set_label(key1[0])
-    plt.title(title)
-    plt.xlabel('x')
-    plt.ylabel('y')
-    show()
+    if axis == None:
+        plt.figure(facecolor='white')        
+        bottom = imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
+        cbar1 = plt.colorbar(bottom, orientation='horizontal')
+        cbar1.set_label(key0[0])
+        hold(True)
+        top = contour(x,y, risr, cmap=cm.jet,extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
+        #clabel(top,inline=1,fontsize=10, fmt='%1.0e')    
+        cbar2 = plt.colorbar(top, format='%.0e')
+        cbar2.set_label(key1[0])
+        plt.title(title)
+        plt.xlabel('x')
+        plt.ylabel('y')
+        show()
+    else:
+        axis.imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
+        hold(True)
+        axis.contour(x,y, risr, cmap=cm.jet,extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])        
+        return axis
     
 
-def plot3D (geodata, altlist, xyvecs, vbounds, title):
+def plot3D (geodata, altlist, xyvecs, vbounds, title, axis=None):
     """
     Inputs:
     geodata - A geodata object that will be plotted in 3D
