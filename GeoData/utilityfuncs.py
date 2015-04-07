@@ -116,7 +116,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     coordnames = 'Spherical'
 
     return (data,coordnames,np.array(dataloc, dtype='f'),sensorloc,np.asarray(uniq_times, dtype='f'))
-    
+
 def read_h5_main(filename):
     ''' Read in the structured h5 file.'''
     h5file=openFile(filename)
@@ -155,7 +155,7 @@ def read_h5_main(filename):
                 outlist.append(curdata)
 
     return tuple(outlist)
-    
+
 def pathparts(path):
     ''' '''
     components = []
@@ -165,7 +165,7 @@ def pathparts(path):
             components.reverse()
             return components
         components.append(tail)
-        
+
 def readOMTI(filename, paramstr):
     outlist = read_h5_main(filename)
     optical = outlist[0]
@@ -174,7 +174,24 @@ def readOMTI(filename, paramstr):
     coordnames = 'Cartesian'
     sensorloc = outlist[3]
     times = outlist[4]
-        
+
     return (optical, coordnames, np.array(dataloc, dtype='f'), sensorloc, np.asarray(times,dtype='f'))
+def readIono(iono):
+    pnames = iono.Param_Names
+    Param_List = iono.Param_List
+    (nloc,nt) = Param_List.shape[:2]
+    if type(pnames) == sp.ndarray:
+        if pnames.ndim>1:
+            ionkeys = pnames.flatten()
+            Param_List = sp.reshape(Param_List,(nloc,nt,len(ionkeys)))
+    pdb.set_trace()
+    paramdict = {ikeys:Param_List[:,:,ikeyn] for ikeyn, ikeys in enumerate(ionkeys)}
+    if iono.Coord_Vecs == ['r','theta','phi']:
+        coordnames = 'Sphereical'
+        coords = iono.Sphere_Coords
+    elif iono.Coord_Vecs == ['x','y','z']:
+        coordnames = 'Cartisian'
+        coords = iono.Cart_Coords
+    return (paramdict,coordnames,coords,sp.array(iono.Sensor_loc),iono.Time_Vector)
 
 #data, coordnames, dataloc, sensorloc, times = readMad_hdf5('/Users/anna/Research/Ionosphere/2008WorldDaysPDB/son081001g.001.hdf5', ['ti', 'dti', 'nel'])
