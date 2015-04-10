@@ -150,6 +150,63 @@ class GeoData(object):
 
         self.dataloc = new_coords
         self.coordnames=newcoordname
+    def checkgrids(self,pltdict,coordname):
+        origcoords = self.dataloc
+        origcoordname = self.coordnames
+        if coordname!=origcoordname:
+            return False
+        cdims = pltdict.keys()
+        for idim in cdims:
+            if not sp.all(sp.in1d(pltdict[idim],origcoords[:,idim])):
+                return False
+        return True
+
+    def datalocationslice(self,pltdict,copyinst=True,newcoordname = None):
+        #XXX Need to come up with better output or error
+        if newcoordname is None:
+            newcoordname = self.coordnames
+        if not self.checkgrids(pltdict,newcoordname):
+            return False
+        origcoords = self.dataloc
+        nlocs = origcoords.shape[0]
+        loclog = sp.ones(nlocs,dtype = bool)
+        cdims = pltdict.keys()
+        for idim in cdims:
+            loclog = sp.logical_and(loclog,sp.in1d(origcoords[:,idim],pltdict[idim]))
+        if copyinst:
+            selfcp = self.copy()
+
+            selfcp.dataloc = selfcp.dataloc[loclog]
+            for ikeys in selfcp.data.keys():
+                selfcp.data[ikeys] = selfcp.data[ikeys][loclog]
+            return selfcp
+        else:
+            self.dataloc = self.dataloc[loclog]
+            for ikeys in self.data.keys():
+                self.data[ikeys] = self.data[ikeys][loclog]
+            return True
+    def getdatalocationslice(self,pltdict,ikey,newcoordname = None):
+        #XXX Need to come up with better output or error
+        if newcoordname is None:
+            newcoordname = self.coordnames
+        if not self.checkgrids(pltdict,newcoordname):
+            return False
+        origcoords = self.dataloc
+        nlocs = origcoords.shape[0]
+        loclog = sp.ones(nlocs,dtype = bool)
+        cdims = pltdict.keys()
+        for idim in cdims:
+            loclog = sp.logical_and(loclog,sp.in1d(origcoords[:,idim],pltdict[idim]))
+        outdata = self.data[ikey][loclog]
+        datapnts = self.dataloc[loclog]
+        indata = sp.array([pltdict[idim] for idim in cdims ]).transpose()
+        outorder = np.zeros(len(indata))
+        for idat in indata:
+            loclist = [idat[idim]== datapnts[:,idim] for idim in cdims]
+            tempord = sp.argwhere(loclist[0]*loclist[1]*loclist[2])
+            if tempord.size ==0: pdb.set_trace()
+            outorder[idat] = tempord
+        return outdata[outorder]
 
     def changedata(self,dataname,newname,func,params=(),rm_old=True):
         """ This method will take a set of data out of the instance of this class and apply
@@ -325,7 +382,12 @@ def readSRI_h5(filename,paramstr,timelims = None):
     return (data,coordnames,dataloc,sensorloc,times)
 
 def pathparts(path):
-    ''' '''
+    ''' This function will give a list of paths for a posix path string. It is mainly used
+    for h5 files
+    Inputs
+    path - A posix type path string.
+    Outputs
+    A list of strings of each part of the path.'''
     components = []
     while True:
         (path,tail) = posixpath.split(path)

@@ -7,7 +7,6 @@ Created on Thu Sep 11 15:29:27 2014
 import pdb
 import numpy as np
 from tables import *
-from GeoData import GeoData
 import os
 import time
 import posixpath
@@ -176,7 +175,9 @@ def readOMTI(filename, paramstr):
     times = outlist[4]
 
     return (optical, coordnames, np.array(dataloc, dtype='f'), sensorloc, np.asarray(times,dtype='f'))
+
 def readIono(iono):
+    """ This function will break in stances of the IonoContainer class"""
     pnames = iono.Param_Names
     Param_List = iono.Param_List
     (nloc,nt) = Param_List.shape[:2]
@@ -184,13 +185,12 @@ def readIono(iono):
         if pnames.ndim>1:
             ionkeys = pnames.flatten()
             Param_List = sp.reshape(Param_List,(nloc,nt,len(ionkeys)))
-    pdb.set_trace()
     paramdict = {ikeys:Param_List[:,:,ikeyn] for ikeyn, ikeys in enumerate(ionkeys)}
     if iono.Coord_Vecs == ['r','theta','phi']:
         coordnames = 'Sphereical'
         coords = iono.Sphere_Coords
     elif iono.Coord_Vecs == ['x','y','z']:
-        coordnames = 'Cartisian'
+        coordnames = 'Cartesian'
         coords = iono.Cart_Coords
     return (paramdict,coordnames,coords,sp.array(iono.Sensor_loc),iono.Time_Vector)
 
