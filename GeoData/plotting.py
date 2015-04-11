@@ -330,8 +330,9 @@ def plot3Dslice(geodata, surfs, xyzvecs, vbounds, title, time = 0,gkey = None, a
     norm = mpl.colors.Normalize(vmin=vbounds[0], vmax=vbounds[1])
     cb1 = mpl.colorbar.ColorbarBase(ax_color, cmap=cmap,norm=norm, orientation='vertical')
     cb1.set_label(gkey)
-    #plt.show()
-def slice2D(geod,xyzvecs,slicenum,axis='z',time = 0,gkey = None,fig=None,ax=None,title=''):
+
+
+def slice2D(geod,xyzvecs,slicenum,vbounds,axis='z',time = 0,gkey = None,fig=None,ax=None,title=''):
     axdict = {'x':0,'y':1,'z':2}
     veckeys = xyzvecs.keys()
     if axis in veckeys: veckeys.remove(axis)
@@ -339,22 +340,31 @@ def slice2D(geod,xyzvecs,slicenum,axis='z',time = 0,gkey = None,fig=None,ax=None
     M1,M2 = sp.meshgrid(xyzvecs[veckeys[0]],xyzvecs[veckeys[1]])
     rec_coords = {axdict[veckeys[0]]:M1.flatten(),axdict[veckeys[1]]:M2.flatten(),
                   axdict[axis]:slicenum*sp.ones(M2.size)}
+    new_coords = sp.zeros((M1.size,3))
+    for ckey in rec_coords.keys(): new_coords[:,ckey] = rec_coords[ckey]
+
     if gkey is None: gkey = geod.data.keys[0]
 
-    dataout = geod.getdatalocationslice(rec_coords,gkey,newcoordname = 'Cartesian')[:,time]
+    dataout = geod.getdatalocationslice(rec_coords,gkey,newcoordname = 'Cartesian')
+    if dataout:
+        dataout = dataout[:,time]
+    if not dataout:
+        gd2 = geod.copy().timeslice([time])
+        gd2.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
+        dataout = gd2.data[gkey]
     dataout = sp.reshape(dataout,M1.shape)
 
     if ax is None:
         fig = plt.figure(facecolor='white')
         ax = fig.gca(projection='3d')
 
-    ax.pcolor(M1,M2,dataout,vmin=vbounds[0], vmax=vbounds[1])
+    ploth = ax.pcolor(M1,M2,dataout,vmin=vbounds[0], vmax=vbounds[1])
     ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(), xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
-    cbar2 = plt.colorbar(top, format='%.0e')
+    cbar2 = plt.colorbar(ploth, ax=ax, format='%.0e')
     cbar2.set_label(gkey)
-    plt.title(title)
-    plt.xlabel(veckeys[0])
-    plt.ylabel(veckeys[1])
+    ax.set_title(title)
+    ax.set_xlabel(veckeys[0])
+    ax.set_ylabel(veckeys[1])
 
     return()
 def slice3D(V,X,Y,Z,sx=[],sy=[],sz=[],Xi=None,Yi=None,Zi=None,method='nearest'):

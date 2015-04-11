@@ -98,7 +98,7 @@ class GeoData(object):
             gd2.data[idata] = gd2.data[idata][:,loclist]
         return gd2
 
-    def interpolate(self,new_coords,newcoordname,method='linear',fill_value=np.nan):
+    def interpolate(self,new_coords,newcoordname,method='linear',fill_value=np.nan,twodinterp = False):
         """This method will take the data points in the dictionary data and spatially.
         interpolate the points given the new coordinates. The method of interpolation
         will be determined by the input parameter method.
@@ -122,17 +122,18 @@ class GeoData(object):
 #        pdb.set_trace()
         # XXX Pulling axes where all of the elements are the same.
         # Probably not the best way to fix issue with two dimensional interpolation
-        firstel = new_coords[0]
-        firstelold = curcoords[0]
-        keepaxis = np.ones(firstel.shape, dtype=bool)
-        for k in range(len(firstel)):
-            curax = new_coords[:,k]
-            curaxold = curcoords[:,k]
-            keepaxis[k] = not (np.all(curax==firstel[k]) or np.all(curaxold==firstelold[k]))
+        if twodinterp:
+            firstel = new_coords[0]
+            firstelold = curcoords[0]
+            keepaxis = np.ones(firstel.shape, dtype=bool)
+            for k in range(len(firstel)):
+                curax = new_coords[:,k]
+                curaxold = curcoords[:,k]
+                keepaxis[k] = not (np.all(curax==firstel[k]) or np.all(curaxold==firstelold[k]))
 
-        #if index is true, keep that column
-        curcoords = curcoords[:,keepaxis]
-        new_coords = new_coords[:,keepaxis]
+            #if index is true, keep that column
+            curcoords = curcoords[:,keepaxis]
+            new_coords = new_coords[:,keepaxis]
 
         Nt = self.times.shape[0]
         NNlocs = new_coords.shape[0]
