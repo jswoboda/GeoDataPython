@@ -30,8 +30,11 @@ class GeoData(object):
     sensorloc - A numpy array with the WGS coordinates of the sensor.
     times - A numpy array that is holding the times associated with the measurements.'''
     def __init__(self,readmethod,inputs):
-        '''This will create an instance of the GeoData class by giving it a read method and the inputs in a tuple'''
-        (self.data,self.coordnames,self.dataloc,self.sensorloc,self.times) = readmethod(*inputs)
+        if type(readmethod)=='pass':
+            (self.data,self.coordnames,self.dataloc,self.sensorloc,self.times) = inputs
+        else:
+            '''This will create an instance of the GeoData class by giving it a read method and the inputs in a tuple'''
+            (self.data,self.coordnames,self.dataloc,self.sensorloc,self.times) = readmethod(*inputs)
         # Assert that the data types are correct
         assert type(self.data) is dict,"data needs to be a dictionary"
         assert type(self.coordnames) is str, "coordnames needs to be a string"

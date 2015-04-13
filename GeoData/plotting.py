@@ -367,12 +367,60 @@ def slice2D(geod,xyzvecs,slicenum,vbounds,axis='z',time = 0,gkey = None,fig=None
     ax.set_ylabel(veckeys[1])
 
     return()
-def slice3D(V,X,Y,Z,sx=[],sy=[],sz=[],Xi=None,Yi=None,Zi=None,method='nearest'):
+def volumetric_slice(V,X,Y,Z,sx=[],sy=[],sz=[],Xi=None,Yi=None,Zi=None,method='nearest',fill_value = sp.NaN):
     Xicheck = (Xi is None)&(Yi is None)&(Zi is None)
     scheck = (len(sx)==0)&(len(sy)==0)(len(sz)==0)
-
+    curcoords = sp.vstack((X.flatten(),Y.flatten(),Z.flatten())
     if Xicheck and scheck:
         return()
+    if (Xicheck)and(not scheck):
 
+        founddata = []
+        tointerp = [[],[],[]]
+        coords2interp = [[],[],[]]
+        # Xslices
+        Ymatx = Y[:,0,:]
+        Zmatx = Z[:,0,:]
+        Xvec = X[0,:,0]
+        for ix in sx:
+            arg =sp.argwhere(Xvec==ix)
+            if arg.size==0:
+                tointerp[0].append(ix)
+                coordstemp =[sp.ones_like(Ymatx)*ix,Ymatx,Zmatx]
+                coords2interp[0] = coordstemp
+            else:
+                founddata.append([sp.ones(Ymatx.shape)*ix,Ymatx,Zmatx,V[:,arg[0,0],:]])
 
+        # YSlices
+        Xmaty = X[0,:,:]
+        Zmaty = Z[0,:,:]
+        Yvec = Y[:,0,0]
+        for iy in sy:
+            arg =sp.argwhere(Yvec==iy)
+            if arg.size==0:
+                tointerp[1].append(iy)
+                coordstemp =[Xmaty,sp.ones(Ymatx.shape)*iy,Zmaty]
+                coords2interp[1] = coordstemp
+            else:
+                founddata.append([Xmaty,sp.ones_like(Xmaty)*iy,Zmaty,V[arg[0,0],:,:]])
+        # Zslices
+        Xmatz = X[:,:,0]
+        Ymatz = Y[:,:,0]
+        Zvec = X[0,0,:]
+        for iz in sz:
+            arg =sp.argwhere(Zvec==iz)
+            if arg.size==0:
+                tointerp[2].append(iz)
+                coordstemp =[Xmatz,Ymatz,sp.ones(Ymatx.shape)]
+                coords2interp[2] = coordstemp
+            else:
+                founddata.append([Xmatz,Ymatz,sp.ones_like(Xmatz)*iz,V[:,:,arg[0,0]]])
+        #interpolate the rest of the data points
+        for idimn, idim in enumerate(tointerp):
+            new_coords = sp.vstack([ida.flatten() for ida in coords2interp[idimn]].transpose()
+
+            intparam = spinterp.griddata(curcoords,V.flatten(),new_coords,method,fill_value)
+            intparam = sp.reshape(intparam,coords2interp[0].shape)
+
+    elif (scheck)and(not Xicheck):
 

@@ -177,7 +177,8 @@ def readOMTI(filename, paramstr):
     return (optical, coordnames, np.array(dataloc, dtype='f'), sensorloc, np.asarray(times,dtype='f'))
 
 def readIono(iono):
-    """ This function will break in stances of the IonoContainer class"""
+    """ This function will bring in instances of the IonoContainer class into GeoData.
+    this is using the set up from my own code"""
     pnames = iono.Param_Names
     Param_List = iono.Param_List
     (nloc,nt) = Param_List.shape[:2]
@@ -186,6 +187,20 @@ def readIono(iono):
             ionkeys = pnames.flatten()
             Param_List = sp.reshape(Param_List,(nloc,nt,len(ionkeys)))
     paramdict = {ikeys:Param_List[:,:,ikeyn] for ikeyn, ikeys in enumerate(ionkeys)}
+    Nis = {}
+    Tis = {}
+    # Add Ti
+    for ikey in ionkeys:
+        if 'Ti_' ==ikey[:3]:
+            Tis[ikey[3:]] = paramdict[ikey]
+        elif 'Ni_' ==ikey[:3]:
+            Nis[ikey[3:]] = paramdict[ikey]
+    Nisum = sp.zeros((nloc,nt),dtype=Param_List.dtype)
+    Ti = sp.zeros_like(Nisum)
+    for ikey in Tis.keys():
+        Ti =Tis[ikey]*Nis[ikey] +Ti
+        Nisum = Nis[ikey]+Nisum
+    paramdict['Ti'] = Ti/Nisum
     if iono.Coord_Vecs == ['r','theta','phi']:
         coordnames = 'Sphereical'
         coords = iono.Sphere_Coords
