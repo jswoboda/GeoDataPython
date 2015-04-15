@@ -207,6 +207,7 @@ def readIono(iono):
     elif iono.Coord_Vecs == ['x','y','z']:
         coordnames = 'Cartesian'
         coords = iono.Cart_Coords
+
     return (paramdict,coordnames,coords,sp.array(iono.Sensor_loc),iono.Time_Vector)
 
 #data, coordnames, dataloc, sensorloc, times = readMad_hdf5('/Users/anna/Research/Ionosphere/2008WorldDaysPDB/son081001g.001.hdf5', ['ti', 'dti', 'nel'])
