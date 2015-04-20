@@ -186,6 +186,8 @@ def readIono(iono):
         if pnames.ndim>1:
             ionkeys = pnames.flatten()
             Param_List = sp.reshape(Param_List,(nloc,nt,len(ionkeys)))
+        else:
+            ionkeys=pnames
     paramdict = {ikeys:Param_List[:,:,ikeyn] for ikeyn, ikeys in enumerate(ionkeys)}
     Nis = {}
     Tis = {}
