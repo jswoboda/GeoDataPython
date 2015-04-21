@@ -186,6 +186,8 @@ def readIono(iono):
         if pnames.ndim>1:
             ionkeys = pnames.flatten()
             Param_List = sp.reshape(Param_List,(nloc,nt,len(ionkeys)))
+        else:
+            ionkeys=pnames
     paramdict = {ikeys:Param_List[:,:,ikeyn] for ikeyn, ikeys in enumerate(ionkeys)}
     Nis = {}
     Tis = {}
@@ -202,7 +204,7 @@ def readIono(iono):
         Nisum = Nis[ikey]+Nisum
     paramdict['Ti'] = Ti/Nisum
     if iono.Coord_Vecs == ['r','theta','phi']:
-        coordnames = 'Sphereical'
+        coordnames = 'Spherical'
         coords = iono.Sphere_Coords
     elif iono.Coord_Vecs == ['x','y','z']:
         coordnames = 'Cartesian'
