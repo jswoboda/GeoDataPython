@@ -94,7 +94,7 @@ class GeoData(object):
             ix = np.in1d(self.times[:,0],timelist)
             loclist = np.where(ix)[0]
 
-        gd2 = copy(self)
+        gd2 = self.copy()
 
         gd2.times = gd2.times[loclist]
         for idata in gd2.datanames():

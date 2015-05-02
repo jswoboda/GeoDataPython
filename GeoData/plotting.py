@@ -255,7 +255,7 @@ def plot3D2(geodata, altlist, xyvecs, vbounds, title, time = 0,gkey = None, ax=N
     cb1 = mpl.colorbar.ColorbarBase(ax_color, cmap=cmap,norm=norm, orientation='vertical')
     cb1.set_label(gkey)
 
-def plot3Dslice(geodata, surfs,  vbounds, titlestr, time = 0,gkey = None,cmap='jet', ax=None,fig=None):
+def plot3Dslice(geodata, surfs,  vbounds, titlestr='', time = 0,gkey = None,cmap='jet', ax=None,fig=None):
     """
     This function will use a
     Inputs:
