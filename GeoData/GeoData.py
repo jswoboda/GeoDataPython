@@ -81,11 +81,11 @@ class GeoData(object):
     def timeslice(self,timelist,listtype=None):
         """ This method will return a copy of the object with only the desired points of time.
         Inputs
-            timelist - This is a list of times in posix for the beginning time or a listing of array elements depending on the input
-            of listtype.
-            listtype - This is a string the input must be 'Array', for the input list to array
-            elements or 'Time' for the times list to represent posix times. If nothing is entered the
-            default is 'Array'."""
+            timelist - This is a list of times in posix for the beginning time or a
+                listing of array elements depending on the input of listtype.
+            listtype - This is a string the input must be 'Array', for the input list
+                to array elements or 'Time' for the times list to represent posix times.
+                If nothing is entered thedefault is 'Array'."""
         if listtype is None:
             loclist = timelist
         elif listtype =='Array':
@@ -100,8 +100,8 @@ class GeoData(object):
         for idata in gd2.datanames():
             gd2.data[idata] = gd2.data[idata][:,loclist]
         return gd2
-
-    def interpolate(self,new_coords,newcoordname,method='linear',fill_value=np.nan,twodinterp = False):
+#%% Changing data based on location
+    def interpolate(self,new_coords,newcoordname,method='linear',fill_value=np.nan,twodinterp = False,ikey=None):
         """This method will take the data points in the dictionary data and spatially.
         interpolate the points given the new coordinates. The method of interpolation
         will be determined by the input parameter method.
@@ -141,94 +141,29 @@ class GeoData(object):
         Nt = self.times.shape[0]
         NNlocs = new_coords.shape[0]
 
-        # Loop through parameters and create temp variable
-        for iparam in self.data.keys():
-            New_param = np.zeros((NNlocs,Nt),dtype=self.data[iparam].dtype)
+        # Check to see if you're outputing all of the parameters
+        if ikey is None or ikey not in self.data.keys():
+            # Loop through parameters and create temp variable
+            for iparam in self.data.keys():
+                New_param = np.zeros((NNlocs,Nt),dtype=self.data[iparam].dtype)
+                for itime in np.arange(Nt):
+                    curparam =self.data[iparam][:,itime]
+                    if method in interpmethods:
+                        intparam = spinterp.griddata(curcoords,curparam,new_coords,method,fill_value)
+                        New_param[:,itime] = intparam
+                self.data[iparam] = New_param
+
+
+            self.dataloc = new_coords
+            self.coordnames=newcoordname
+        else:
+            New_param = np.zeros((NNlocs,Nt),dtype=self.data[ikey].dtype)
             for itime in np.arange(Nt):
-                curparam =self.data[iparam][:,itime]
+                curparam =self.data[ikey][:,itime]
                 if method in interpmethods:
                     intparam = spinterp.griddata(curcoords,curparam,new_coords,method,fill_value)
                     New_param[:,itime] = intparam
-            self.data[iparam] = New_param
-
-
-        self.dataloc = new_coords
-        self.coordnames=newcoordname
-    def checkgrids(self,pltdict,coordname):
-        origcoords = self.dataloc
-        origcoordname = self.coordnames
-        if coordname!=origcoordname:
-            return False
-        cdims = pltdict.keys()
-        for idim in cdims:
-            if not sp.all(sp.in1d(pltdict[idim],origcoords[:,idim])):
-                return False
-        return True
-
-    def datalocationslice(self,pltdict,copyinst=True,newcoordname = None):
-        #XXX Need to come up with better output or error
-        if newcoordname is None:
-            newcoordname = self.coordnames
-        if not self.checkgrids(pltdict,newcoordname):
-            return False
-        origcoords = self.dataloc
-        nlocs = origcoords.shape[0]
-        loclog = sp.ones(nlocs,dtype = bool)
-        cdims = pltdict.keys()
-        for idim in cdims:
-            loclog = sp.logical_and(loclog,sp.in1d(origcoords[:,idim],pltdict[idim]))
-        if copyinst:
-            selfcp = self.copy()
-
-            selfcp.dataloc = selfcp.dataloc[loclog]
-            for ikeys in selfcp.data.keys():
-                selfcp.data[ikeys] = selfcp.data[ikeys][loclog]
-            return selfcp
-        else:
-            self.dataloc = self.dataloc[loclog]
-            for ikeys in self.data.keys():
-                self.data[ikeys] = self.data[ikeys][loclog]
-            return True
-    def getdatalocationslice(self,pltdict,ikey,newcoordname = None):
-        #XXX Need to come up with better output or error
-        if newcoordname is None:
-            newcoordname = self.coordnames
-        if not self.checkgrids(pltdict,newcoordname):
-            return False
-        origcoords = self.dataloc
-        nlocs = origcoords.shape[0]
-        loclog = sp.ones(nlocs,dtype = bool)
-        cdims = pltdict.keys()
-        for idim in cdims:
-            loclog = sp.logical_and(loclog,sp.in1d(origcoords[:,idim],pltdict[idim]))
-        outdata = self.data[ikey][loclog]
-        datapnts = self.dataloc[loclog]
-        indata = sp.array([pltdict[idim] for idim in cdims ]).transpose()
-        outorder = np.zeros(len(indata))
-        for idat in indata:
-            loclist = [idat[idim]== datapnts[:,idim] for idim in cdims]
-            tempord = sp.argwhere(loclist[0]*loclist[1]*loclist[2])
-            if tempord.size ==0: pdb.set_trace()
-            outorder[idat] = tempord
-        return outdata[outorder]
-
-    def changedata(self,dataname,newname,func,params=(),rm_old=True):
-        """ This method will take a set of data out of the instance of this class and apply
-        the function func to it with the extra parameters params.
-        Inputs:
-        dataname - A string that is one of the datanames.
-        newname - A string for the changed data that it will be known as from now on.
-        func - The function used to change the data.
-        params - (default - ()) Any extra parameters that are needed for the function.
-        rm_old - (default - True) A flag that if set to True will remove the old data."""
-
-        assert dataname in self.data.keys(),"Incorrect data name used."
-        self.data[newname]=func(self.data[dataname],*params)
-        if rm_old:
-            del self.data[dataname]
-
-    def copy(self):
-        return GeoData(copyinst,[self])
+            return New_param
 
     def __changecoords__(self,newcoordname):
         """This method will change the coordinates of the data to the new coordinate
@@ -245,6 +180,61 @@ class GeoData(object):
         if self.coordnames==newcoordname:
             return self.dataloc
         raise ValueError('Wrong inputs for coordnate names was given.')
+
+    def checkcoords(self,newcoords,coordname):
+        """ This method checks to see if all of the coordiantes are in the class instance.
+        inputs
+        pltdict - A dictionary with keys that represent each of the dimensions of
+        the data. For example 0 is the x axis 1 is the y axis 2 is the z axis. The values
+        are numpy arrays.
+        coordname - This is coordinate names of the input directory."""
+        origcoords = self.dataloc
+        origcoordname = self.coordnames
+        if coordname!=origcoordname:
+            return False
+        for irow in newcoords:
+            pdb.set_trace()
+            if not sp.any(sp.all(origcoords==irow,axis=1)):
+                return False
+        return True
+
+    def datareducelocation(self,newcoords,coordname,key=None):
+        """ This method takes a list of coordinates and finds what instances are in
+        the set of locations for the instance of the class.
+        newcoords -A numpy array where each row is a coordinate that the user desires to keep.
+        coordname - This is coordinate names of the input directory.
+        key - The name of the data that the user wants extracted"""
+        assert(self.coordnames==coordname)
+
+        reorderlist = sp.zeros(len(newcoords))
+        for irow in enumerate(newcoords):
+            reorderlist[irow]=sp.where(sp.all(self.dataloc==irow,axis=1))[0][0]
+
+        if key is None:
+            for ikey in self.datanames():
+                self.data[ikey]= self.data[ikey][reorderlist]
+        else:
+            return self.data[key][reorderlist]
+
+    #%% General tools
+    def changedata(self,dataname,newname,func,params=(),rm_old=True):
+        """ This method will take a set of data out of the instance of this class and apply
+        the function func to it with the extra parameters params.
+        Inputs:
+        dataname - A string that is one of the datanames.
+        newname - A string for the changed data that it will be known as from now on.
+        func - The function used to change the data.
+        params - (default - ()) Any extra parameters that are needed for the function.
+        rm_old - (default - True) A flag that if set to True will remove the old data."""
+
+        assert dataname in self.data.keys(),"Incorrect data name used."
+        self.data[newname]=func(self.data[dataname],*params)
+        if rm_old:
+            del self.data[dataname]
+    def copy(self):
+        return GeoData(copyinst,[self])
+
+
 
     @staticmethod
     def read_h5(filename):

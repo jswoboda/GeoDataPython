@@ -15,7 +15,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 import matplotlib as mpl
 from matplotlib import ticker
-
+from mayavi import mlab
 
 def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None):
     """
@@ -255,8 +255,9 @@ def plot3D2(geodata, altlist, xyvecs, vbounds, title, time = 0,gkey = None, ax=N
     cb1 = mpl.colorbar.ColorbarBase(ax_color, cmap=cmap,norm=norm, orientation='vertical')
     cb1.set_label(gkey)
 
-def plot3Dslice(geodata, surfs, xyzvecs, vbounds, title, time = 0,gkey = None, ax=None,fig=None):
+def plot3Dslice(geodata, surfs,  vbounds, titlestr, time = 0,gkey = None,cmap='jet', ax=None,fig=None):
     """
+    This function will use a
     Inputs:
     geodata - A geodata object that will be plotted in 3D
     altlist - A list of the altitudes that RISR parameter slices will be taken at
@@ -265,72 +266,71 @@ def plot3Dslice(geodata, surfs, xyzvecs, vbounds, title, time = 0,gkey = None, a
     title - A string that holds for the overall image
     ax - A handle for an axis that this will be plotted on.
 
-    Returns an 3D image of the different altitude slices for the geodata object parameter that is passed in.
+    Returns a mayavi image with a surface
     """
-    xvec = xyzvecs[0]
-    yvec = xyzvecs[1]
-    zvec = xyzvecs[2]
+    assert geodata.coordnames.lower() =='cartesian'
 
+    datalocs = geodata.dataloc
 
-    x,y,z = sp.meshgrid(xvec, yvec,zvec)
-    x_tot, y_tot, z_tot, p_tot = (np.ones(x.shape) for i in range(4))
-    np.ndarray.flatten(x)
-    np.ndarray.flatten(y)
-    np.ndarray.flatten(z)
+    xvec = unique(datalocs[:,0])
+    yvec = unique(datalocs[:,1])
+    zvec = unique(datalocs[:,2])
 
-    key = geodata.data.keys()
-    xlen = x.shape[0]
+    assert len(xvec)*len(yvec)*len(zvec)==datalocs.shape[0]
+
+    #determine if the ordering is fortran or c style ordering
+    diffcoord = sp.diff(datalocs,axis=0)
+    if diffcoord[0,1]!=0.0:
+        ord='f'
+    elif diffcoord[0,2]!=0:
+        ord='c'
+    matshape = (len(yvec),len(xvec),len(zvec))
+
+    # reshape the arrays into a matricies for plotting
+    x,y,z = [sp.reshape(datalocs[:,idim],matshape,order=ord) for idim in range(3)]
+
     if gkey is None:
-        gkey = key[0]
-    xydict = {0:xyvecs[0],1:xyvecs[1]}
-    for alt in altlist:
-         z = np.ones(x.shape)*alt
-         np.ndarray.flatten(z)
-         new_coords = np.column_stack((x.flatten(),y.flatten(),z.flatten()))
-         gd2 = geodata.copy().timeslice([time])
-         zloc = sp.argmin(sp.absolute(geodata.dataloc[:,2]-alt))
-         zval = geodata.dataloc[zloc,2]
-         xydict[2]=zval
-         gdcheck = gd2.datalocationslice(xydict,newcoordname = 'Cartesian',copyinst=False)
-         if not gdcheck:
-             gd2.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
+        gkey = geodata.datanames()[0]
 
-         xloc = sp.unique(gd2.dataloc[:,0],return_inverse = True)[1]
-         yloc = sp.unique(gd2.dataloc[:,1],return_inverse = True)[1]
-         p1 = sp.zeros(x.shape)
-         interpData = gd2.data[gkey]
+    p = reshape(geodata.data[gkey][:,time],matshape,order= ord )
 
-         p1[yloc,xloc] = interpData[:,time]
-         if firsttime:
-             x_tot = x
-         x_tot = np.concatenate((x_tot,x), axis=0)
-         y_tot = np.concatenate((y_tot,y), axis=0)
-         z_tot = np.concatenate((z_tot,z), axis=0)
-         p_tot = np.concatenate((p_tot,p1), axis=0)
 
-    if ax is None:
-        fig = plt.figure(facecolor='white')
-        ax = fig.gca(projection='3d')
-    N_tot = p_tot/np.nanmax(p_tot) #normalize (0...1)
+    mlab.figure(fig)
+    #get slices for each dimension out
+    xslices = surfs[0]
+    for isur in xslices:
+        indx = sp.argmin(sp.absolute(isur-xvec))
+        xtmp = x[:,indx]
+        ytmp = y[:,indx]
+        ztmp = z[:,indx]
+        ptmp = p[:,indx]
+        mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap)
 
-    surf = ax.plot_surface(x_tot[xlen:][:], y_tot[xlen:][:], z_tot[xlen:][:],
-                           rstride=1, cstride=1, facecolors=cm.jet(N_tot[xlen:][:]),
-                           linewidth=0, antialiased=False,vmin=vbounds[0],
-                           vmax=vbounds[1], shade=False)
-    plt.title(title)
-    plt.xlabel('x')
-    plt.ylabel('y')
-    ax.set_zlabel('z')
-    ax.set_zlim3d(min(altlist)-50, max(altlist)+50)
-    #creating colorbar
-    #axes dimensions in fractions of figure image [left, bottom, width, height]
-    ax_color = fig.add_axes([0.9, 0.05, 0.03, 0.80])
-    #choosing color map scheme and defining the bounds of the normalized bar
-    cmap = cm.jet
-    norm = mpl.colors.Normalize(vmin=vbounds[0], vmax=vbounds[1])
-    cb1 = mpl.colorbar.ColorbarBase(ax_color, cmap=cmap,norm=norm, orientation='vertical')
-    cb1.set_label(gkey)
+    yslices = surfs[1]
+    for isur in yslices:
+        indx = sp.argmin(sp.absolute(isur-yvec))
+        xtmp = x[indx]
+        ytmp = y[indx]
+        ztmp = z[indx]
+        ptmp = p[indx]
+        mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap)
 
+    zslices = surfs[2]
+    for isur in zslices:
+        indx = sp.argmin(sp.absolute(isur-zvec))
+        xtmp = x[:,:,indx]
+        ytmp = y[:,:,indx]
+        ztmp = z[:,:,indx]
+        ptmp = p[:,:,indx]
+        mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap)
+
+    mlab.colorbar(title=gkey, orientation='vertical')
+    mlab.title(titlestr,color=(0,0,0))
+    mlab.outline(color=(0,0,0))
+    mlab.axes(color=(0,0,0),x_axis_visibility=True,xlabel = 'x in km',y_axis_visibility=True,
+              ylabel = 'y in km',z_axis_visibility=True,zlabel = 'z in km')
+
+    mlab.orientation_axes(xlabel = 'x in km',ylabel = 'y in km',zlabel = 'z in km')
 
 def slice2D(geod,xyzvecs,slicenum,vbounds,axis='z',time = 0,gkey = None,fig=None,ax=None,title=''):
     axdict = {'x':0,'y':1,'z':2}
@@ -367,60 +367,4 @@ def slice2D(geod,xyzvecs,slicenum,vbounds,axis='z',time = 0,gkey = None,fig=None
     ax.set_ylabel(veckeys[1])
 
     return()
-def volumetric_slice(V,X,Y,Z,sx=[],sy=[],sz=[],Xi=None,Yi=None,Zi=None,method='nearest',fill_value = sp.NaN):
-    Xicheck = (Xi is None)&(Yi is None)&(Zi is None)
-    scheck = (len(sx)==0)&(len(sy)==0)(len(sz)==0)
-    curcoords = sp.vstack((X.flatten(),Y.flatten(),Z.flatten())
-    if Xicheck and scheck:
-        return()
-    if (Xicheck)and(not scheck):
-
-        founddata = []
-        tointerp = [[],[],[]]
-        coords2interp = [[],[],[]]
-        # Xslices
-        Ymatx = Y[:,0,:]
-        Zmatx = Z[:,0,:]
-        Xvec = X[0,:,0]
-        for ix in sx:
-            arg =sp.argwhere(Xvec==ix)
-            if arg.size==0:
-                tointerp[0].append(ix)
-                coordstemp =[sp.ones_like(Ymatx)*ix,Ymatx,Zmatx]
-                coords2interp[0] = coordstemp
-            else:
-                founddata.append([sp.ones(Ymatx.shape)*ix,Ymatx,Zmatx,V[:,arg[0,0],:]])
-
-        # YSlices
-        Xmaty = X[0,:,:]
-        Zmaty = Z[0,:,:]
-        Yvec = Y[:,0,0]
-        for iy in sy:
-            arg =sp.argwhere(Yvec==iy)
-            if arg.size==0:
-                tointerp[1].append(iy)
-                coordstemp =[Xmaty,sp.ones(Ymatx.shape)*iy,Zmaty]
-                coords2interp[1] = coordstemp
-            else:
-                founddata.append([Xmaty,sp.ones_like(Xmaty)*iy,Zmaty,V[arg[0,0],:,:]])
-        # Zslices
-        Xmatz = X[:,:,0]
-        Ymatz = Y[:,:,0]
-        Zvec = X[0,0,:]
-        for iz in sz:
-            arg =sp.argwhere(Zvec==iz)
-            if arg.size==0:
-                tointerp[2].append(iz)
-                coordstemp =[Xmatz,Ymatz,sp.ones(Ymatx.shape)]
-                coords2interp[2] = coordstemp
-            else:
-                founddata.append([Xmatz,Ymatz,sp.ones_like(Xmatz)*iz,V[:,:,arg[0,0]]])
-        #interpolate the rest of the data points
-        for idimn, idim in enumerate(tointerp):
-            new_coords = sp.vstack([ida.flatten() for ida in coords2interp[idimn]].transpose()
-
-            intparam = spinterp.griddata(curcoords,V.flatten(),new_coords,method,fill_value)
-            intparam = sp.reshape(intparam,coords2interp[0].shape)
-
-    elif (scheck)and(not Xicheck):
 
