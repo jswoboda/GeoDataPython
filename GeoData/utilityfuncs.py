@@ -202,7 +202,8 @@ def readIono(iono):
     for ikey in Tis.keys():
         Ti =Tis[ikey]*Nis[ikey] +Ti
         Nisum = Nis[ikey]+Nisum
-    paramdict['Ti'] = Ti/Nisum
+    if len(Ti)!=0:
+        paramdict['Ti'] = Ti/Nisum
     if iono.Coord_Vecs == ['r','theta','phi']:
         coordnames = 'Spherical'
         coords = iono.Sphere_Coords
