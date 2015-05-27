@@ -15,8 +15,8 @@ def revpower(x1,x2):
     return np.power(x2,x1)
 
 #path names to h5 files
-risrName = '/Users/anna/Research/Ionosphere/Semeter/ran120219.004.hdf5'
-omtiName = '/Users/anna/Research/Ionosphere/Semeter/OMTIdata.h5'
+risrName = 'ran120219.004.hdf5'
+omtiName = 'OMTIdata.h5'
 
 #creating GeoData objects of the 2 files, given a specific parameter
 omti_class = GeoData.GeoData(utilityfuncs.readOMTI,(omtiName, ['optical']))

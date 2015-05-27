@@ -77,6 +77,33 @@ class GeoData(object):
            # pdb.set_trace()
             print e
             sys.exit()
+    #%% Time augmentation
+    def add_times(self,self2):
+        """This method will combine the times and content of two instances of the GeoData class.
+        The first object will be extendent in time."""
+        datakeys = self.data.keys()
+        assert(set(datakeys) ==set(self2.data.keys()),'Data must have the same names.')
+        # Look at the coordinate names
+        assert(self.coordnames==self2.coordnames,'Must be same coordinate same.')
+        # Look at the data location
+        a = np.ma.array(self.dataloc,mask=np.isnan(self.dataloc))
+        blah = np.ma.array(self2.dataloc,mask=np.isnan(self2.dataloc))
+        assert(np.ma.allequal(a,blah),'Location points must be the same')
+
+        # Look at the sensor location
+        a = np.ma.array(self.sensorloc,mask=np.isnan(self.sensorloc))
+        blah = np.ma.array(self2.sensorloc,mask=np.isnan(self2.sensorloc))
+        assert(np.ma.allequal(a,blah),'Sensor Locations must be the same')
+
+        alltimes = sp.vstack((timerepaire(self.times),timerepaire(self2.times)))
+
+        #sort based off of start times
+        s_ind = sp.argsort(alltimes[:,0])
+        self.times = alltimes[s_ind]
+
+        for ikey in self.datanames():
+            outarr = sp.hstack((self.data[ikey],self2.data[ikey]))
+            self.data[ikey] = outarr[:,s_ind]
 
     def timeslice(self,timelist,listtype=None):
         """ This method will return a copy of the object with only the desired points of time.
@@ -279,7 +306,7 @@ class GeoData(object):
     def __ne__(self,self2):
         '''This is the != operator. '''
         return not self.__eq__(self2)
-
+#%%
 def copyinst(obj1):
     return(obj1.data.copy(),(obj1.coordnames+'.')[:-1],obj1.dataloc.copy(),obj1.sensorloc.copy(),obj1.times.copy())
 
@@ -389,3 +416,11 @@ def pathparts(path):
             components.reverse()
             return components
         components.append(tail)
+def timerepaire(timear):
+    if sp.ndim(2)==2:
+        return timear
+
+    avdiff = sp.mean(sp.diff(timear))
+    timear2 = sp.roll(timear,-1)
+    timear2[-1]=timear2[-2]+avdiff
+    return sp.column_stack((timear,timear2))

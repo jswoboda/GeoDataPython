@@ -17,7 +17,7 @@ def revpower(x1,x2):
     return np.power(x2,x1)
 
 #path names to RISR file
-risrName = '/Users/anna/Research/Ionosphere/Semeter/ran120219.004.hdf5'
+risrName = 'ran120219.004.hdf5'
 #creating a GeoData object of the RISR h5 file, given a specific parameter
 risr_class = GeoData.GeoData(utilityfuncs.readMad_hdf5,(risrName, ['nel']))
 
