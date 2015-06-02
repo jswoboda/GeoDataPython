@@ -9,7 +9,7 @@ Created on Thu Jul 17 12:46:46 2014
 import os
 import time
 import posixpath
-from copy import copy
+from copy import deepcopy
 import numpy as np
 import scipy as sp
 import scipy.interpolate as spinterp
@@ -142,12 +142,13 @@ class GeoData(object):
         """
         curavalmethods = ['linear', 'nearest', 'cubic']
         interpmethods = ['linear', 'nearest', 'cubic']
-        if method not in curavalmethods:
-            raise ValueError('Must be one of the following methods: '+ str(curavalmethods))
+        assert method in interpmethods,'method needs to be linear, nearest, cubic'
+        assert method in curavalmethods, 'Must be one of the following methods: '+ str(curavalmethods)
+
         Nt = self.times.shape[0]
         NNlocs = new_coords.shape[0]
 #        print NNlocs
-
+        new_coordsorig = deepcopy(new_coords)
         curcoords = self.__changecoords__(newcoordname)
 #        pdb.set_trace()
         # XXX Pulling axes where all of the elements are the same.
@@ -175,21 +176,25 @@ class GeoData(object):
                 New_param = np.zeros((NNlocs,Nt),dtype=self.data[iparam].dtype)
                 for itime in np.arange(Nt):
                     curparam =self.data[iparam][:,itime]
-                    if method in interpmethods:
-                        intparam = spinterp.griddata(curcoords,curparam,new_coords,method,fill_value)
-                        New_param[:,itime] = intparam
+                    datakeep = ~np.isnan(curparam)
+                    curparam = curparam[datakeep]
+                    coordkeep = curcoords[datakeep]
+                    intparam = spinterp.griddata(coordkeep,curparam,new_coords,method,fill_value)
+                    New_param[:,itime] = intparam
                 self.data[iparam] = New_param
 
 
-            self.dataloc = new_coords
+            self.dataloc = new_coordsorig
             self.coordnames=newcoordname
         else:
             New_param = np.zeros((NNlocs,Nt),dtype=self.data[ikey].dtype)
             for itime in np.arange(Nt):
                 curparam =self.data[ikey][:,itime]
-                if method in interpmethods:
-                    intparam = spinterp.griddata(curcoords,curparam,new_coords,method,fill_value)
-                    New_param[:,itime] = intparam
+                datakeep = ~np.isnan(curparam)
+                curparam = curparam[datakeep]
+                coordkeep = curcoords[datakeep]
+                intparam = spinterp.griddata(coordkeep,curparam,new_coords,method,fill_value)
+                New_param[:,itime] = intparam
             return New_param
 
     def __changecoords__(self,newcoordname):

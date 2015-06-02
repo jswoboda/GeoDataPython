@@ -7,10 +7,10 @@ Created on Fri Jan 02 09:38:14 2015
 plotting
 """
 import pdb
-from pylab import *
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sp
+import scipy.interpolate as spinterp
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 import matplotlib as mpl
@@ -72,7 +72,7 @@ def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None)
     """
     geodatalist - A list of geodata objects that will be overlayed, first object is on the bottom and in gray scale
     altlist - A list of the altitudes that we can overlay.
-    xyvecs- A list of x and y numpy arrays that have the x and y coordinates that the data will be interpolated over. ie, xyvecs=[np.linspace(-100.0,500.0),np.linspace(0.0,600.0)]
+    xyvecs- A list of x and y numpy arrays that have the x and y coordinates that the data will be interpolated over.
     vbounds = a list of bounds for each geodata object. ie, vbounds=[[500,2000], [5e10,5e11]]
     title - A string that holds for the overall image
     Returns an image of an overlayed plot at a specific altitude.
@@ -237,7 +237,7 @@ def plot3D2(geodata, altlist, xyvecs, vbounds, title, time = 0,gkey = None, ax=N
         ax = fig.gca(projection='3d')
     N_tot = p_tot/np.nanmax(p_tot) #normalize (0...1)
 
-    surf = ax.plot_surface(x_tot[xlen:][:], y_tot[xlen:][:], z_tot[xlen:][:],
+    surfs = ax.plot_surface(x_tot[xlen:][:], y_tot[xlen:][:], z_tot[xlen:][:],
                            rstride=1, cstride=1, facecolors=cm.jet(N_tot[xlen:][:]),
                            linewidth=0, antialiased=False,vmin=vbounds[0],
                            vmax=vbounds[1], shade=False)
@@ -255,11 +255,11 @@ def plot3D2(geodata, altlist, xyvecs, vbounds, title, time = 0,gkey = None, ax=N
     cb1 = mpl.colorbar.ColorbarBase(ax_color, cmap=cmap,norm=norm, orientation='vertical')
     cb1.set_label(gkey)
 
-def plot3Dslice(geodata, surfs,  vbounds, titlestr='', time = 0,gkey = None,cmap='jet', ax=None,fig=None):
-    """
-    This function will use a
+def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='jet', ax=None,fig=None,method='linear',fill_value=np.nan):
+    """ This function create 3-D slice image given either a surface or list of coordinates to slice through
     Inputs:
     geodata - A geodata object that will be plotted in 3D
+    surfs - This is a three element list. Each element can either be
     altlist - A list of the altitudes that RISR parameter slices will be taken at
     xyvecs- A list of x and y numpy arrays that have the x and y coordinates that the data will be interpolated over. ie, xyvecs=[np.linspace(-100.0,500.0),np.linspace(0.0,600.0)]
     vbounds = a list of bounds for the geodata objec's parameters. ie, vbounds=[500,2000]
@@ -272,58 +272,77 @@ def plot3Dslice(geodata, surfs,  vbounds, titlestr='', time = 0,gkey = None,cmap
 
     datalocs = geodata.dataloc
 
-    xvec = unique(datalocs[:,0])
-    yvec = unique(datalocs[:,1])
-    zvec = unique(datalocs[:,2])
+    xvec = sp.unique(datalocs[:,0])
+    yvec = sp.unique(datalocs[:,1])
+    zvec = sp.unique(datalocs[:,2])
 
     assert len(xvec)*len(yvec)*len(zvec)==datalocs.shape[0]
 
     #determine if the ordering is fortran or c style ordering
     diffcoord = sp.diff(datalocs,axis=0)
+
     if diffcoord[0,1]!=0.0:
         ord='f'
-    elif diffcoord[0,2]!=0:
+    elif diffcoord[0,2]!=0.0:
         ord='c'
-    matshape = (len(yvec),len(xvec),len(zvec))
+    elif diffcoord[0,0]!=0.0:
+        if len(np.where(diffcoord[:,1])[0])==0:
+            ord = 'f'
+        elif len(np.where(diffcoord[:,2])[0])==0:
+            ord = 'c'
 
+    matshape = (len(yvec),len(xvec),len(zvec))
     # reshape the arrays into a matricies for plotting
     x,y,z = [sp.reshape(datalocs[:,idim],matshape,order=ord) for idim in range(3)]
 
     if gkey is None:
         gkey = geodata.datanames()[0]
-
-    p = reshape(geodata.data[gkey][:,time],matshape,order= ord )
-
+    porig = geodata.data[gkey][:,time]
 
     mlab.figure(fig)
+    #determine if list of slices or surfaces are given
+
+    islists = type(surfs[0])==list
+    if type(surfs[0])==np.ndarray:
+        onedim = surfs[0].ndim==1
     #get slices for each dimension out
-    xslices = surfs[0]
-    for isur in xslices:
-        indx = sp.argmin(sp.absolute(isur-xvec))
-        xtmp = x[:,indx]
-        ytmp = y[:,indx]
-        ztmp = z[:,indx]
-        ptmp = p[:,indx]
-        mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap)
+    if islists or onedim:
+        p = np.reshape(porig,matshape,order= ord )
+        xslices = surfs[0]
+        for isur in xslices:
+            indx = sp.argmin(sp.absolute(isur-xvec))
+            xtmp = x[:,indx]
+            ytmp = y[:,indx]
+            ztmp = z[:,indx]
+            ptmp = p[:,indx]
+            mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap)
 
-    yslices = surfs[1]
-    for isur in yslices:
-        indx = sp.argmin(sp.absolute(isur-yvec))
-        xtmp = x[indx]
-        ytmp = y[indx]
-        ztmp = z[indx]
-        ptmp = p[indx]
-        mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap)
+        yslices = surfs[1]
+        for isur in yslices:
+            indx = sp.argmin(sp.absolute(isur-yvec))
+            xtmp = x[indx]
+            ytmp = y[indx]
+            ztmp = z[indx]
+            ptmp = p[indx]
+            mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap)
 
-    zslices = surfs[2]
-    for isur in zslices:
-        indx = sp.argmin(sp.absolute(isur-zvec))
-        xtmp = x[:,:,indx]
-        ytmp = y[:,:,indx]
-        ztmp = z[:,:,indx]
-        ptmp = p[:,:,indx]
-        mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap)
-
+        zslices = surfs[2]
+        for isur in zslices:
+            indx = sp.argmin(sp.absolute(isur-zvec))
+            xtmp = x[:,:,indx]
+            ytmp = y[:,:,indx]
+            ztmp = z[:,:,indx]
+            ptmp = p[:,:,indx]
+            mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap)
+    else:
+        # For a general surface.
+        xtmp,ytmp,ztmp = surfs[:]
+        gooddata = ~np.isnan(porig)
+        curparam = porig[gooddata]
+        curlocs = datalocs[gooddata]
+        new_coords = np.column_stack((xtmp.flatten(),ytmp.flatten(),ztmp.flatten()))
+        ptmp = spinterp.griddata(curlocs,curparam,new_coords,method,fill_value)
+        mlab.mesh(surfs[0],surfs[1],surfs[2],scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap)
     mlab.colorbar(title=gkey, orientation='vertical')
     mlab.title(titlestr,color=(0,0,0))
     mlab.outline(color=(0,0,0))
@@ -331,6 +350,9 @@ def plot3Dslice(geodata, surfs,  vbounds, titlestr='', time = 0,gkey = None,cmap
               ylabel = 'y in km',z_axis_visibility=True,zlabel = 'z in km')
 
     mlab.orientation_axes(xlabel = 'x in km',ylabel = 'y in km',zlabel = 'z in km')
+
+def plotbeamposGD(geod,fig=None,ax=None,title=''):
+        assert geod.coordnames.lower() =='spherical'
 
 def slice2D(geod,xyzvecs,slicenum,vbounds,axis='z',time = 0,gkey = None,fig=None,ax=None,title=''):
     axdict = {'x':0,'y':1,'z':2}
