@@ -315,7 +315,10 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='j
             ytmp = y[:,indx]
             ztmp = z[:,indx]
             ptmp = p[:,indx]
-            mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap)
+            pmask = sp.zeros_like(ptmp).astype(bool)
+            pmask[sp.isnan(ptmp)]=True
+            surf = mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap,mask=pmask)
+            surf.module_manager.scalar_lut_manager.lut.nan_color = 0, 0, 0, 0
 
         yslices = surfs[1]
         for isur in yslices:
@@ -324,8 +327,10 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='j
             ytmp = y[indx]
             ztmp = z[indx]
             ptmp = p[indx]
-            mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap)
-
+            pmask = sp.zeros_like(ptmp).astype(bool)
+            pmask[sp.isnan(ptmp)]=True
+            surf = mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap,mask=pmask)
+            surf.module_manager.scalar_lut_manager.lut.nan_color = 0, 0, 0, 0
         zslices = surfs[2]
         for isur in zslices:
             indx = sp.argmin(sp.absolute(isur-zvec))
@@ -333,7 +338,10 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='j
             ytmp = y[:,:,indx]
             ztmp = z[:,:,indx]
             ptmp = p[:,:,indx]
-            mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap)
+            pmask = sp.zeros_like(ptmp).astype(bool)
+            pmask[sp.isnan(ptmp)]=True
+            surf = mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap,mask=pmask)
+            surf.module_manager.scalar_lut_manager.lut.nan_color = 0, 0, 0, 0
     else:
         # For a general surface.
         xtmp,ytmp,ztmp = surfs[:]
@@ -342,10 +350,12 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='j
         curlocs = datalocs[gooddata]
         new_coords = np.column_stack((xtmp.flatten(),ytmp.flatten(),ztmp.flatten()))
         ptmp = spinterp.griddata(curlocs,curparam,new_coords,method,fill_value)
-        mlab.mesh(surfs[0],surfs[1],surfs[2],scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap)
-    mlab.colorbar(title=gkey, orientation='vertical')
+        pmask = sp.zeros_like(ptmp).astype(bool)
+        pmask[sp.isnan(ptmp)]=True
+        surf = mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap,mask=pmask)
+        surf.module_manager.scalar_lut_manager.lut.nan_color = 0, 0, 0, 0
     mlab.title(titlestr,color=(0,0,0))
-    mlab.outline(color=(0,0,0))
+    #mlab.outline(color=(0,0,0))
     mlab.axes(color=(0,0,0),x_axis_visibility=True,xlabel = 'x in km',y_axis_visibility=True,
               ylabel = 'y in km',z_axis_visibility=True,zlabel = 'z in km')
 
