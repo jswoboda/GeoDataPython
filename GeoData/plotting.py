@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sp
 import scipy.interpolate as spinterp
+from copy import deepcopy
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 import matplotlib as mpl
@@ -121,141 +122,8 @@ def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None)
         return axis
 
 
-def plot3D(geodata, altlist, xyvecs, vbounds, title, time = 0,gkey = None, ax=None,fig=None):
-    """
-    Inputs:
-    geodata - A geodata object that will be plotted in 3D
-    altlist - A list of the altitudes that RISR parameter slices will be taken at
-    xyvecs- A list of x and y numpy arrays that have the x and y coordinates that the data will be interpolated over. ie, xyvecs=[np.linspace(-100.0,500.0),np.linspace(0.0,600.0)]
-    vbounds = a list of bounds for the geodata objec's parameters. ie, vbounds=[500,2000]
-    title - A string that holds for the overall image
-    ax - A handle for an axis that this will be plotted on.
 
-    Returns an 3D image of the different altitude slices for the geodata object parameter that is passed in.
-    """
-    xvec = xyvecs[0]
-    yvec = xyvecs[1]
-    x,y = sp.meshgrid(xvec, yvec)
-    x_tot, y_tot, z_tot, p_tot = (np.ones(x.shape) for i in range(4))
-    np.ndarray.flatten(x)
-    np.ndarray.flatten(y)
-    key = geodata.data.keys()
-    xlen = x.shape[0]
-    if gkey is None:
-        gkey = key[0]
-    xydict = {0:xyvecs[0],1:xyvecs[1]}
-    for alt in altlist:
-         z = np.ones(x.shape)*alt
-         np.ndarray.flatten(z)
-         new_coords = np.column_stack((x.flatten(),y.flatten(),z.flatten()))
-         gd2 = geodata.copy().timeslice([time])
-         zloc = sp.argmin(sp.absolute(geodata.dataloc[:,2]-alt))
-         zval = geodata.dataloc[zloc,2]
-         xydict[2]=zval
-         gdcheck = gd2.getdatalocationslice(xydict,newcoordname = 'Cartesian',copyinst=False)
-         if not gdcheck:
-             gd2.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
-
-         xloc = sp.unique(gd2.dataloc[:,0],return_inverse = True)[1]
-         yloc = sp.unique(gd2.dataloc[:,1],return_inverse = True)[1]
-         p1 = sp.zeros(x.shape)
-         interpData = gd2.data[gkey]
-
-         p1[yloc,xloc] = interpData[:,time]
-         x_tot = np.concatenate((x_tot,x), axis=0)
-         y_tot = np.concatenate((y_tot,y), axis=0)
-         z_tot = np.concatenate((z_tot,z), axis=0)
-         p_tot = np.concatenate((p_tot,p1), axis=0)
-
-    if ax is None:
-        fig = plt.figure(facecolor='white')
-        ax = fig.gca(projection='3d')
-    N_tot = p_tot/np.nanmax(p_tot) #normalize (0...1)
-
-    surf = ax.plot_surface(x_tot[xlen:][:], y_tot[xlen:][:], z_tot[xlen:][:],
-                           rstride=1, cstride=1, facecolors=cm.jet(N_tot[xlen:][:]),
-                           linewidth=0, antialiased=False,vmin=vbounds[0],
-                           vmax=vbounds[1], shade=False)
-    plt.title(title)
-    plt.xlabel('x')
-    plt.ylabel('y')
-    ax.set_zlabel('z')
-    ax.set_zlim3d(min(altlist)-50, max(altlist)+50)
-    #creating colorbar
-    #axes dimensions in fractions of figure image [left, bottom, width, height]
-    ax_color = fig.add_axes([0.9, 0.05, 0.03, 0.80])
-    #choosing color map scheme and defining the bounds of the normalized bar
-    cmap = cm.jet
-    norm = mpl.colors.Normalize(vmin=vbounds[0], vmax=vbounds[1])
-    cb1 = mpl.colorbar.ColorbarBase(ax_color, cmap=cmap,norm=norm, orientation='vertical')
-    cb1.set_label(gkey)
-    #plt.show()
-def plot3D2(geodata, altlist, xyvecs, vbounds, title, time = 0,gkey = None, ax=None,fig=None):
-    """
-    Inputs:
-    geodata - A geodata object that will be plotted in 3D
-    altlist - A list of the altitudes that RISR parameter slices will be taken at
-    xyvecs- A list of x and y numpy arrays that have the x and y coordinates that the data will be interpolated over. ie, xyvecs=[np.linspace(-100.0,500.0),np.linspace(0.0,600.0)]
-    vbounds = a list of bounds for the geodata objec's parameters. ie, vbounds=[500,2000]
-    title - A string that holds for the overall image
-    ax - A handle for an axis that this will be plotted on.
-
-    Returns an 3D image of the different altitude slices for the geodata object parameter that is passed in.
-    """
-    xvec = xyvecs[0]
-    yvec = xyvecs[1]
-    zvec = sp.array(altlist)
-    x,y,z = sp.meshgrid(xvec, yvec,zvec)
-
-    key = geodata.data.keys()
-    xlen = x.shape[0]
-    if gkey is None:
-        gkey = key[0]
-    xydict = {0:xyvecs[0],1:xyvecs[1],2:zvec}
-    new_coords = np.column_stack((x.flatten(),y.flatten(),z.flatten()))
-    gd2 = geodata.copy().timeslice([time])
-    gdcheck = gd2.datalocationslice(xydict,newcoordname = 'Cartesian',copyinst=False)
-    if not gdcheck:
-        gd2.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
-
-    for iz in range(len(altlist)):
-        xt,yt,zt = [sp.reshape(sp.transpose(gd2.dataloc)[idim,iz::len(altlist)],x.shape[:2]) for idim in range(3)]
-        pt =sp.reshape( gd2.data[gkey][iz::len(altlist),time],x.shape[:2])
-        if iz==0:
-            x_tot = xt
-            y_tot= yt
-            z_tot=zt
-            p_tot=pt
-        else:
-            x_tot = np.concatenate((x_tot,xt), axis=0)
-            y_tot = np.concatenate((y_tot,yt), axis=0)
-            z_tot = np.concatenate((z_tot,zt), axis=0)
-            p_tot = np.concatenate((p_tot,pt), axis=0)
-
-    if ax is None:
-        fig = plt.figure(facecolor='white')
-        ax = fig.gca(projection='3d')
-    N_tot = p_tot/np.nanmax(p_tot) #normalize (0...1)
-
-    surfs = ax.plot_surface(x_tot[xlen:][:], y_tot[xlen:][:], z_tot[xlen:][:],
-                           rstride=1, cstride=1, facecolors=cm.jet(N_tot[xlen:][:]),
-                           linewidth=0, antialiased=False,vmin=vbounds[0],
-                           vmax=vbounds[1], shade=False)
-    plt.title(title)
-    plt.xlabel('x in km')
-    plt.ylabel('y in km')
-    ax.set_zlabel('z in km')
-    ax.set_zlim3d(min(altlist)-50, max(altlist)+50)
-    #creating colorbar
-    #axes dimensions in fractions of figure image [left, bottom, width, height]
-    ax_color = fig.add_axes([0.9, 0.05, 0.03, 0.80])
-    #choosing color map scheme and defining the bounds of the normalized bar
-    cmap = cm.jet
-    norm = mpl.colors.Normalize(vmin=vbounds[0], vmax=vbounds[1])
-    cb1 = mpl.colorbar.ColorbarBase(ax_color, cmap=cmap,norm=norm, orientation='vertical')
-    cb1.set_label(gkey)
-
-def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='jet', ax=None,fig=None,method='linear',fill_value=np.nan):
+def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='jet', ax=None,fig=None,method='linear',fill_value=np.nan,view = None,outimage=False):
     """ This function create 3-D slice image given either a surface or list of coordinates to slice through
     Inputs:
     geodata - A geodata object that will be plotted in 3D
@@ -306,6 +174,7 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='j
     if type(surfs[0])==np.ndarray:
         onedim = surfs[0].ndim==1
     #get slices for each dimension out
+    surflist = []
     if islists or onedim:
         p = np.reshape(porig,matshape,order= ord )
         xslices = surfs[0]
@@ -317,8 +186,8 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='j
             ptmp = p[:,indx]
             pmask = sp.zeros_like(ptmp).astype(bool)
             pmask[sp.isnan(ptmp)]=True
-            surf = mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap,mask=pmask)
-            surf.module_manager.scalar_lut_manager.lut.nan_color = 0, 0, 0, 0
+            surflist.append( mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap,mask=pmask))
+            surflist[-1].module_manager.scalar_lut_manager.lut.nan_color = 0, 0, 0, 0
 
         yslices = surfs[1]
         for isur in yslices:
@@ -329,8 +198,8 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='j
             ptmp = p[indx]
             pmask = sp.zeros_like(ptmp).astype(bool)
             pmask[sp.isnan(ptmp)]=True
-            surf = mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap,mask=pmask)
-            surf.module_manager.scalar_lut_manager.lut.nan_color = 0, 0, 0, 0
+            surflist.append( mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap,mask=pmask))
+            surflist[-1].module_manager.scalar_lut_manager.lut.nan_color = 0, 0, 0, 0
         zslices = surfs[2]
         for isur in zslices:
             indx = sp.argmin(sp.absolute(isur-zvec))
@@ -340,8 +209,8 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='j
             ptmp = p[:,:,indx]
             pmask = sp.zeros_like(ptmp).astype(bool)
             pmask[sp.isnan(ptmp)]=True
-            surf = mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap,mask=pmask)
-            surf.module_manager.scalar_lut_manager.lut.nan_color = 0, 0, 0, 0
+            surflist.append( mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap,mask=pmask))
+            surflist[-1].module_manager.scalar_lut_manager.lut.nan_color = 0, 0, 0, 0
     else:
         # For a general surface.
         xtmp,ytmp,ztmp = surfs[:]
@@ -352,51 +221,77 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='j
         ptmp = spinterp.griddata(curlocs,curparam,new_coords,method,fill_value)
         pmask = sp.zeros_like(ptmp).astype(bool)
         pmask[sp.isnan(ptmp)]=True
-        surf = mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap,mask=pmask)
-        surf.module_manager.scalar_lut_manager.lut.nan_color = 0, 0, 0, 0
+        surflist.append( mlab.mesh(xtmp,ytmp,ztmp,scalars=ptmp,vmin=vbounds[0],vmax=vbounds[1],colormap=cmap,mask=pmask))
+        surflist[-1].module_manager.scalar_lut_manager.lut.nan_color = 0, 0, 0, 0
     mlab.title(titlestr,color=(0,0,0))
     #mlab.outline(color=(0,0,0))
     mlab.axes(color=(0,0,0),x_axis_visibility=True,xlabel = 'x in km',y_axis_visibility=True,
               ylabel = 'y in km',z_axis_visibility=True,zlabel = 'z in km')
 
     mlab.orientation_axes(xlabel = 'x in km',ylabel = 'y in km',zlabel = 'z in km')
+    if outimage:
+        arr = mlab.screenshot(fig,antialiased = True)
+        mlab.close(fig)
+        return arr
+    else:
+        return surflist
 
 def plotbeamposGD(geod,fig=None,ax=None,title=''):
         assert geod.coordnames.lower() =='spherical'
 
-def slice2D(geod,xyzvecs,slicenum,vbounds,axis='z',time = 0,gkey = None,fig=None,ax=None,title=''):
+def slice2DGD(geod,axstr,slicenum,vbounds=None,titlestr='',time = 0,gkey = None,cmap='jet',fig=None,ax=None,title='',units=''):
+
+    #xyzvecs is the area that the data covers.
+
+    assert geod.coordnames.lower() =='cartesian'
+
     axdict = {'x':0,'y':1,'z':2}
-    veckeys = xyzvecs.keys()
-    if axis in veckeys: veckeys.remove(axis)
+    veckeys = ['x','y','z']
+    if type(axstr)==str:
+        axis=axstr
+    else:
+        axis= veckeys[axstr]
+    veckeys.remove(axis.lower())
+    datacoords = geod.dataloc
+    xyzvecs = {l:sp.unique(datacoords[:,axdict[l]]) for l in veckeys}
     veckeys.sort()
+    #make matrices
     M1,M2 = sp.meshgrid(xyzvecs[veckeys[0]],xyzvecs[veckeys[1]])
+    slicevec = sp.unique(datacoords[:,axdict[axis]])
+    min_idx = sp.argmin(sp.absolute(slicevec-slicenum))
+    slicenum=slicevec[min_idx]
     rec_coords = {axdict[veckeys[0]]:M1.flatten(),axdict[veckeys[1]]:M2.flatten(),
                   axdict[axis]:slicenum*sp.ones(M2.size)}
+
     new_coords = sp.zeros((M1.size,3))
-    for ckey in rec_coords.keys(): new_coords[:,ckey] = rec_coords[ckey]
+    #make coordinates
+    for ckey in rec_coords.keys():
+        new_coords[:,ckey] = rec_coords[ckey]
+    #determine the data name
+    if gkey is None:
+        gkey = geod.data.keys[0]
+    # get the data location
+    dataout = geod.datareducelocation(new_coords,'Cartesian',gkey)[:,time]
 
-    if gkey is None: gkey = geod.data.keys[0]
-
-    dataout = geod.getdatalocationslice(rec_coords,gkey,newcoordname = 'Cartesian')
-    if dataout:
-        dataout = dataout[:,time]
-    if not dataout:
-        gd2 = geod.copy().timeslice([time])
-        gd2.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
-        dataout = gd2.data[gkey]
+#    # get the data using the getdatalocations
+#    if dataout:
+#        dataout = dataout[:,time]
+#    if not dataout:
+#        gd2 = geod.copy().timeslice([time])
+#        gd2.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
+#        dataout = gd2.data[gkey]
     dataout = sp.reshape(dataout,M1.shape)
 
     if ax is None:
         fig = plt.figure(facecolor='white')
         ax = fig.gca(projection='3d')
 
-    ploth = ax.pcolor(M1,M2,dataout,vmin=vbounds[0], vmax=vbounds[1])
+    ploth = ax.pcolor(M1,M2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
     ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(), xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
     cbar2 = plt.colorbar(ploth, ax=ax, format='%.0e')
-    cbar2.set_label(gkey)
+    cbar2.set_label(gkey+' in ' +units)
     ax.set_title(title)
     ax.set_xlabel(veckeys[0])
     ax.set_ylabel(veckeys[1])
 
-    return()
-
+    return(ploth)

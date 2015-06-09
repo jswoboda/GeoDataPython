@@ -236,12 +236,11 @@ class GeoData(object):
         newcoords -A numpy array where each row is a coordinate that the user desires to keep.
         coordname - This is coordinate names of the input directory.
         key - The name of the data that the user wants extracted"""
-        assert(self.coordnames==coordname)
+        assert(self.coordnames.lower()==coordname.lower())
 
-        reorderlist = sp.zeros(len(newcoords))
-        for irow in enumerate(newcoords):
-            reorderlist[irow]=sp.where(sp.all(self.dataloc==irow,axis=1))[0][0]
-
+        reorderlist = sp.zeros(len(newcoords)).astype('int64')
+        for irown,irow in enumerate(newcoords):
+            reorderlist[irown]=sp.where(sp.all(self.dataloc==irow,axis=1))[0][0]
         if key is None:
             for ikey in self.datanames():
                 self.data[ikey]= self.data[ikey][reorderlist]
