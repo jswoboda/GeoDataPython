@@ -7,6 +7,9 @@ The output is a 2D colorplot with the OMTI data on the bottom in grayscale and t
 
 @author: Anna Stuhlmacher
 """
+if True:
+    import sys
+    sys.path.append('..')
 from GeoData import GeoData
 from GeoData import utilityfuncs
 from pylab import *
