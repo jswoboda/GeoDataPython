@@ -59,30 +59,25 @@ class GeoData(object):
         '''Writes out the structured h5 files for the class.
         inputs
         filename - The filename of the output.'''
-        h5file = tables.openFile(filename, mode = "w", title = "GeoData Out")
-        # get the names of all the variables set in the init function
-        varnames = self.__dict__.keys()
-        vardict = self.__dict__
-        try:
-            # XXX only allow 1 level of dictionaries, do not allow for dictionary of dictionaries.
-            # Make group for each dictionary
-            for cvar in varnames:
-                #group = h5file.create_group(posixpath.sep, cvar,cvar +'dictionary')
-                if type(vardict[cvar]) ==dict: # Check if dictionary
-                    dictkeys = vardict[cvar].keys()
-                    group2 = h5file.create_group('/',cvar,cvar+' dictionary')
-                    for ikeys in dictkeys:
-                        h5file.createArray(group2,ikeys,vardict[cvar][ikeys],'Static array')
-                else:
-                    h5file.createArray('/',cvar,vardict[cvar],'Static array')
-            h5file.close()
-
-        except: # catch *all* exceptions
-            e = sys.exc_info()
-            h5file.close()
-           # pdb.set_trace()
-            print(e)
-            sys.exit()
+        with tables.openFile(filename, mode = "w", title = "GeoData Out") as h5file:
+            # get the names of all the variables set in the init function
+            varnames = self.__dict__.keys()
+            vardict = self.__dict__
+            try:
+                # XXX only allow 1 level of dictionaries, do not allow for dictionary of dictionaries.
+                # Make group for each dictionary
+                for cvar in varnames:
+                    #group = h5file.create_group(posixpath.sep, cvar,cvar +'dictionary')
+                    if isinstance(vardict[cvar],dict): # Check if dictionary
+                        dictkeys = vardict[cvar].keys()
+                        group2 = h5file.create_group('/',cvar,cvar+' dictionary')
+                        for ikeys in dictkeys:
+                            h5file.createArray(group2,ikeys,vardict[cvar][ikeys],'Static array')
+                    else:
+                        h5file.createArray('/',cvar,vardict[cvar],'Static array')
+            except: # catch *all* exceptions
+                e = sys.exc_info()
+                sys.exit(str(e))
     #%% Time augmentation
     def add_times(self,self2):
         """This method will combine the times and content of two instances of the GeoData class.
