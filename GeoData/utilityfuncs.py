@@ -16,7 +16,10 @@ import posixpath
 import scipy as sp
 #import scipy.interpolate as spinterp
 from warnings import warn
-from . import CoordTransforms as CT
+try:
+    from . import CoordTransforms as CT
+except Exception:
+    import CoordTransforms as CT
 
 
 VARNAMES = ['data','coordnames','dataloc','sensorloc','times']
@@ -129,32 +132,28 @@ def read_h5_main(filename):
 
     #pdb.set_trace()
     # find the base paths which could be dictionaries or the base directory
-    outarr = [pathparts(ipath) for ipath in output.keys() if len(pathparts(ipath))>0]
-    outlist = []
+#    outarr = [pathparts(ipath) for ipath in output.keys() if len(pathparts(ipath))>0]
+    outlist = {}
     basekeys  = output[posixpath.sep].keys()
     # Determine assign the entries to each entry in the list of variables.
     # Have to do this in order because of the input being a list instead of a dictionary
-    for ivar in VARNAMES:
-        dictout = False
-        #dictionary
-        for npath,ipath in zip(output,outarr):
-            if ivar==ipath[0]:
-                outlist.append(output[npath])
-                dictout=True
-                break
-        if dictout:
+#%%
+    #dictionary
+    for ipath in output:
+        if ipath[1:] in VARNAMES:
+            outlist[ipath[1:]] = output[ipath]
             continue
-        # for non-dicitonary
-        for ikeys in basekeys:
-            if ikeys==ivar:
-                # Have to check for MATLAB type strings, for some reason python does not like to register them as strings
-                curdata = output[posixpath.sep][ikeys]
-                if type(curdata)==np.ndarray:
-                    if curdata.dtype.kind=='S':
-                        curdata=str(curdata)
-                outlist.append(curdata)
+    # for non-dicitonary
+    for k in basekeys:
+        if k in VARNAMES:
+            # Have to check for MATLAB type strings, for some reason python does not like to register them as strings
+            curdata = output['/'][k]
+            if isinstance(curdata,np.ndarray):
+                if curdata.dtype.kind=='S':
+                    curdata=str(curdata)
+            outlist[k] = curdata
 
-    return tuple(outlist)
+    return outlist
 
 def pathparts(path):
     ''' '''
@@ -167,15 +166,15 @@ def pathparts(path):
         components.append(tail)
 
 def readOMTI(filename, paramstr):
-    outlist = read_h5_main(filename)
-    optical = outlist[0]
-    enu = outlist[2]
+    out = read_h5_main(filename)
+    optical = out['data']
+    enu = out['dataloc']
     dataloc = CT.enu2cartisian(enu)
     coordnames = 'Cartesian'
-    sensorloc = outlist[3]
-    times = outlist[4]
+    sensorloc = out['sensorloc']
+    times = out['times']
 
-    return (optical, coordnames, np.array(dataloc, dtype='f'), sensorloc, np.asarray(times,dtype='f'))
+    return (optical, coordnames, dataloc, sensorloc, times)
 
 def readIono(iono):
     """ This function will bring in instances of the IonoContainer class into GeoData.
