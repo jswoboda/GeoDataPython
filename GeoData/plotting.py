@@ -17,6 +17,7 @@ from matplotlib import cm
 import matplotlib as mpl
 from matplotlib import ticker
 from mayavi import mlab
+from CoordTransforms import angles2xy
 
 def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None):
     """
@@ -123,7 +124,7 @@ def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None)
 
 
 
-def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='jet', ax=None,fig=None,method='linear',fill_value=np.nan,view = None,outimage=False):
+def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='jet', ax=None,fig=None,method='linear',fill_value=np.nan,view = None,units='',colorbar=False,outimage=False):
     """ This function create 3-D slice image given either a surface or list of coordinates to slice through
     Inputs:
     geodata - A geodata object that will be plotted in 3D
@@ -229,6 +230,13 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='j
               ylabel = 'y in km',z_axis_visibility=True,zlabel = 'z in km')
 
     mlab.orientation_axes(xlabel = 'x in km',ylabel = 'y in km',zlabel = 'z in km')
+
+    if colorbar:
+        if len(units)>0:
+            titlstr = gkey +' in ' +units
+        else:
+            titlestr = gkey
+        mlab.colorbar(surflist[-1],title=titlstr,orientation='vertical')
     if outimage:
         arr = mlab.screenshot(fig,antialiased = True)
         mlab.close(fig)
@@ -236,9 +244,60 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='j
     else:
         return surflist
 
-def plotbeamposGD(geod,fig=None,ax=None,title=''):
+def plotbeamposGD(geod,fig=None,ax=None,title='Beam Positions'):
         assert geod.coordnames.lower() =='spherical'
 
+        if (ax is None) and (fig is None):
+            fig = plt.figure(facecolor='white')
+            ax = fig.gca()
+        elif ax is None:
+            ax = fig.gca()
+
+        make_polax(fig,ax,False)
+        plt.hold(True)
+        (azvec,elvec) = (geod.dataloc[:,1],geod.dataloc[:,2])
+
+        (xx2,yy2) = angles2xy(azvec,elvec,False)
+        plotsout = plt.plot(xx2,yy2,'o',c='b', markersize=10)
+        plt.title(title)
+        return plotsout
+def make_polax(fig,ax,zenith):
+    """ This makes the polar axes for the beams"""
+    if zenith:
+        minel = 0.0
+        maxel = 70.0
+        elspace = 10.0
+        ellines = np.arange(minel,maxel,elspace)
+    else:
+        minel = 30.0
+        maxel = 90.0
+        elspace = 10.0
+        ellines = np.arange(minel,maxel,elspace)
+
+    azlines = np.arange(0.0,360.0,30.0)
+
+    # plot all of the azlines
+    elvec = np.linspace(maxel,minel,100)
+    for iaz in azlines:
+        azvec = iaz*np.ones_like(elvec)
+        (xx,yy) = angles2xy(azvec,elvec,zenith)
+        plt.plot(xx,yy,'k--')
+        plt.hold(True)
+        (xt,yt) = angles2xy(azvec[-1],elvec[-1]-5,zenith)
+        plt.text(xt,yt,str(int(iaz)))
+
+    azvec = np.linspace(0.0,360,100)
+    # plot the el lines
+    for iel in ellines:
+        elvec = iel*np.ones_like(azvec)
+        (xx,yy) = angles2xy(azvec,elvec,zenith)
+        plt.plot(xx,yy,'k--')
+        (xt,yt) = angles2xy(315,elvec[-1]-3,zenith)
+        plt.text(xt,yt,str(int(iel)))
+    plt.axis([-90,90,-90,90])
+    frame1 = plt.gca()
+    frame1.axes.get_xaxis().set_visible(False)
+    frame1.axes.get_yaxis().set_visible(False)
 def slice2DGD(geod,axstr,slicenum,vbounds=None,titlestr='',time = 0,gkey = None,cmap='jet',fig=None,ax=None,title='',units=''):
 
     #xyzvecs is the area that the data covers.
@@ -282,9 +341,11 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,titlestr='',time = 0,gkey = None,
 #        dataout = gd2.data[gkey]
     dataout = sp.reshape(dataout,M1.shape)
 
-    if ax is None:
+    if (ax is None) and (fig is None):
         fig = plt.figure(facecolor='white')
-        ax = fig.gca(projection='3d')
+        ax = fig.gca()
+    elif ax is None:
+        ax = fig.gca()
 
     ploth = ax.pcolor(M1,M2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
     ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(), xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
@@ -295,3 +356,5 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,titlestr='',time = 0,gkey = None,
     ax.set_ylabel(veckeys[1])
 
     return(ploth)
+
+

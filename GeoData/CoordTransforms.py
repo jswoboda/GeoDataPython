@@ -481,8 +481,35 @@ def cartisian2enu(CARTCOORDS):
     return CARTCOORDS*1e3
 
 def nthroot(X,N):
-
+    "This will determine the nth root of a number even if its negative."
     xlog = X<0
     xroot = np.abs(X)**(1.0/N)
     xroot[xlog] = -xroot[xlog]
     return xroot
+
+
+def angles2xy(az,el,zenith=False):
+    """ This will take az and el angles and move them to a Cartisian space for plotting"""
+
+    azt = (az)*np.pi/180.0
+    if not zenith:
+        el = 90-el
+    xout = el*np.sin(azt)
+    yout = el*np.cos(azt)
+    return (xout,yout)
+
+def xy2angles(x,y):
+    elout = 90-np.sqrt(x**2+y**2)
+    azout = (180.0/np.pi)*np.arctan2(x,y)
+    return (azout,elout)
+def angles2xyz(az,el):
+    elrad = el*np.pi/180.0
+    azrad = az*np.pi/180.0
+    x = np.cos(elrad)*np.cos(azrad)
+    y = np.cos(elrad)*np.sin(azrad)
+    z = np.sin(elrad)
+    return (x,y,z)
+def xyz2angles(x,y,z):
+    el = np.arcsin(z)*180.0/np.pi
+    az = np.arctan2(y,x)*180/np.pi
+    return(az,el)
