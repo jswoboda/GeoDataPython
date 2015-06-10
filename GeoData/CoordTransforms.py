@@ -6,7 +6,7 @@ Created on Sat Nov  1 19:09:47 2014
 
 @author: John Swoboda
 """
-
+from __future__ import division,absolute_import
 import numpy as np
 import pdb
 def sphereical2Cartisian(spherecoords):
@@ -17,7 +17,7 @@ def sphereical2Cartisian(spherecoords):
     Output
     cartcoords - A 3xN numpy array with X, Y and Z in a cartisian coordinate space.
     The coordinates are in units of kilometers."""
-    d2r = np.pi/180.0
+    d2r = np.pi/180
     (dir1,dir2) = spherecoords.shape
     transcoords = False
     if dir2==3:
@@ -52,7 +52,7 @@ def cartisian2Sphereical(cartcoords):
     Output
     spherecoords - A 3xN numpy array with rows of range (in km) azimuth (in degrees)
     and elevation (in degrees)."""
-    r2d = 180.0/np.pi
+    r2d = 180/np.pi
     (dir1,dir2) = cartcoords.shape
     transcoords = False
     if dir2==3:
@@ -134,6 +134,7 @@ def wgs2ecef(WGS_COORDS):
     if transcoords:
         ECEF_COORDS = np.transpose(ECEF_COORDS);
     return ECEF_COORDS
+
 def ecef2wgs(ECEF_COORDS):
     """ ecef2wgs
         ECEF_COORDS = wgs2ecef(WGS_COORDS)
@@ -164,7 +165,7 @@ def ecef2wgs(ECEF_COORDS):
         Nov 2002, http://link.springer.com/article/10.1007%2Fs00190-002-0273-6
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
     #%% Check Input
-    r2d = 180.0/np.pi
+    r2d = 180/np.pi
     (dir1,dir2) = ECEF_COORDS.shape
     transcoords = False
     if dir2==3:
@@ -385,6 +386,7 @@ def enu2ecefl(ENU,LatLongHeight):
 
     ECEF = enu2ecef4vec(ENU,LatLong)+ECEF0;
     return ECEF
+
 def enu2ecef4vec(ENU,LatLong):
     """% enu2ecef4vec.m
     ENU = ecef2enu4vec(ECEF,LatLong)

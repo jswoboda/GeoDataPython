@@ -5,9 +5,10 @@ Created on Thu Jul 17 12:46:46 2014
 
 @author: John Swoboda
 """
-
-import os
-import time
+from __future__ import division,absolute_import
+from six import integer_types
+#import os
+#import time
 import posixpath
 from copy import deepcopy
 import numpy as np
@@ -16,7 +17,9 @@ import scipy.interpolate as spinterp
 import tables
 import sys
 import pdb
-import CoordTransforms as CT
+from warnings import warn
+#
+from . import CoordTransforms as CT
 
 VARNAMES = ['data','coordnames','dataloc','sensorloc','times']
 
@@ -36,18 +39,16 @@ class GeoData(object):
             '''This will create an instance of the GeoData class by giving it a read method and the inputs in a tuple'''
             (self.data,self.coordnames,self.dataloc,self.sensorloc,self.times) = readmethod(*inputs)
         # Assert that the data types are correct
-        assert type(self.data) is dict,"data needs to be a dictionary"
-        assert type(self.coordnames) is str, "coordnames needs to be a string"
-        assert type(self.dataloc) is np.ndarray,"dataloc needs to be a numpy array"
-        assert is_numeric(self.dataloc), "dataloc needs to be a numeric array"
-        assert type(self.sensorloc) is np.ndarray,"sensorloc needs to be a numpy array"
-        assert is_numeric(self.sensorloc), "sensorloc needs to be a numeric array"
-        assert type(self.times) is np.ndarray,"times needs to be a numpy array"
-        assert is_numeric(self.times), "times needs to be a numeric array"
+        numerics = (np.ndarray,integer_types,float)
+        assert isinstance(self.data,dict),"data needs to be a dictionary"
+        assert isinstance(self.coordnames,str), "coordnames needs to be a string"
+        assert isinstance(self.dataloc,numerics),"dataloc needs to be a numpy array"
+        assert isinstance(self.sensorloc,numerics),"sensorloc needs to be a numpy array"
+        assert isinstance(self.times,numerics),"times needs to be a numpy array"
 
     def datanames(self):
         '''Returns the data names.'''
-        return self.data.keys()
+        return list(self.data.keys())
 
     def write_h5(self,filename):
         '''Writes out the structured h5 files for the class.
@@ -55,7 +56,7 @@ class GeoData(object):
         filename - The filename of the output.'''
         h5file = tables.openFile(filename, mode = "w", title = "GeoData Out")
         # get the names of all the variables set in the init function
-        varnames = self.__dict__.keys()
+        varnames = list(self.__dict__.keys())
         vardict = self.__dict__
         try:
             # XXX only allow 1 level of dictionaries, do not allow for dictionary of dictionaries.
@@ -63,7 +64,7 @@ class GeoData(object):
             for cvar in varnames:
                 #group = h5file.create_group(posixpath.sep, cvar,cvar +'dictionary')
                 if type(vardict[cvar]) ==dict: # Check if dictionary
-                    dictkeys = vardict[cvar].keys()
+                    dictkeys = list(vardict[cvar].keys())
                     group2 = h5file.create_group('/',cvar,cvar+' dictionary')
                     for ikeys in dictkeys:
                         h5file.createArray(group2,ikeys,vardict[cvar][ikeys],'Static array')
@@ -75,13 +76,13 @@ class GeoData(object):
             e = sys.exc_info()
             h5file.close()
            # pdb.set_trace()
-            print e
+            print(e)
             sys.exit()
     #%% Time augmentation
     def add_times(self,self2):
         """This method will combine the times and content of two instances of the GeoData class.
         The first object will be extendent in time."""
-        datakeys = self.data.keys()
+        datakeys = list(self.data.keys())
         assert(set(datakeys) ==set(self2.data.keys()),'Data must have the same names.')
         # Look at the coordinate names
         assert(self.coordnames==self2.coordnames,'Must be same coordinate same.')
@@ -140,8 +141,8 @@ class GeoData(object):
             'nearest' and 'cubic'
             fill_value - The fill value for the interpolation.
         """
-        curavalmethods = ['linear', 'nearest', 'cubic']
-        interpmethods = ['linear', 'nearest', 'cubic']
+        curavalmethods = ('linear', 'nearest', 'cubic')
+        interpmethods = ('linear', 'nearest', 'cubic')
         assert method in interpmethods,'method needs to be linear, nearest, cubic'
         assert method in curavalmethods, 'Must be one of the following methods: '+ str(curavalmethods)
 
@@ -174,7 +175,7 @@ class GeoData(object):
             # Loop through parameters and create temp variable
             for iparam in self.data.keys():
                 New_param = np.zeros((NNlocs,Nt),dtype=self.data[iparam].dtype)
-                for itime in np.arange(Nt):
+                for itime in range(Nt):
                     curparam =self.data[iparam][:,itime]
                     datakeep = ~np.isnan(curparam)
                     curparam = curparam[datakeep]
@@ -188,7 +189,7 @@ class GeoData(object):
             self.coordnames=newcoordname
         else:
             New_param = np.zeros((NNlocs,Nt),dtype=self.data[ikey].dtype)
-            for itime in np.arange(Nt):
+            for itime in range(Nt):
                 curparam =self.data[ikey][:,itime]
                 datakeep = ~np.isnan(curparam)
                 curparam = curparam[datakeep]
@@ -258,7 +259,7 @@ class GeoData(object):
         params - (default - ()) Any extra parameters that are needed for the function.
         rm_old - (default - True) A flag that if set to True will remove the old data."""
 
-        assert dataname in self.data.keys(),"Incorrect data name used."
+        assert dataname in list(self.data.keys()),"Incorrect data name used."
         self.data[newname]=func(self.data[dataname],*params)
         if rm_old:
             del self.data[dataname]
@@ -275,7 +276,7 @@ class GeoData(object):
     def __eq__(self,self2):
         '''This is the == operator. '''
         # Check the data dictionary
-        datakeys = self.data.keys()
+        datakeys = list(self.data.keys())
         if set(datakeys) !=set(self2.data.keys()):
             return False
 
@@ -315,8 +316,9 @@ def copyinst(obj1):
     return(obj1.data.copy(),(obj1.coordnames+'.')[:-1],obj1.dataloc.copy(),obj1.sensorloc.copy(),obj1.times.copy())
 
 def is_numeric(obj):
-    attrs = ['__add__', '__sub__', '__mul__', '__div__', '__pow__']
-    return all(hasattr(obj, attr) for attr in attrs)
+    return isinstance(obj,(integer_types,float))
+    #attrs = ['__add__', '__sub__', '__mul__', '__div__', '__pow__']
+    #return all(hasattr(obj, attr) for attr in attrs)
 # TODO might want to make this private method
 # currently just give this to the init function and it will create a class instance.
 def read_h5_main(filename):
@@ -331,9 +333,9 @@ def read_h5_main(filename):
     h5file.close()
     #pdb.set_trace()
     # find the base paths which could be dictionaries or the base directory
-    outarr = [pathparts(ipath) for ipath in output.keys() if len(pathparts(ipath))>0]
+    outarr = [pathparts(ipath) for ipath in list(output.keys()) if len(pathparts(ipath))>0]
     outlist = []
-    basekeys  = output[posixpath.sep].keys()
+    basekeys  = list(output[posixpath.sep].keys())
     # Determine assign the entries to each entry in the list of variables.
     # Have to do this in order because of the input being a list instead of a dictionary
     for ivar in VARNAMES:
@@ -341,7 +343,7 @@ def read_h5_main(filename):
         #dictionary
         for npath,ipath in enumerate(outarr):
             if ivar==ipath[0]:
-                outlist.append(output[output.keys()[npath]])
+                outlist.append(output[list(output.keys())[npath]])
                 dictout=True
                 break
         if dictout:
@@ -391,8 +393,8 @@ def readSRI_h5(filename,paramstr,timelims = None):
     # Read in the data
     data = {}
     for istr in paramstr:
-        if not istr in pathdict.keys():
-            print 'Warning: ' +istr + ' is not a valid parameter name.'
+        if not istr in list(pathdict.keys()):
+            warn(istr + ' is not a valid parameter name.')
             continue
         curpath = pathdict[istr][0]
         curint = pathdict[istr][-1]

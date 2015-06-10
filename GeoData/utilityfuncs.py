@@ -4,17 +4,19 @@ Created on Thu Sep 11 15:29:27 2014
 
 @author: John Swoboda
 """
+from __future__ import division,absolute_import
 import pdb
 import numpy as np
-from tables import *
-import os
-import time
+import tables as tb
+#import os
+#import time
 import posixpath
-import sys
-from copy import copy
+#import sys
+#from copy import copy
 import scipy as sp
-import scipy.interpolate as spinterp
-import CoordTransforms as CT
+#import scipy.interpolate as spinterp
+from warnings import warn
+from . import CoordTransforms as CT
 
 
 VARNAMES = ['data','coordnames','dataloc','sensorloc','times']
@@ -31,10 +33,10 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     columns are unique times
     """
     #open hdf5 file
-    files = openFile(filename, mode = "r", title = 'Sondrestrom1')
-    all_data = files.getNode('/Data/Table Layout').read()
-    sensor_data = files.getNode('/Metadata/Experiment Parameters').read()
-    files.close()
+    with tb.openFile(filename, mode = "r", title = 'Sondrestrom1') as files:
+        all_data = files.getNode('/Data/Table Layout').read()
+        sensor_data = files.getNode('/Metadata/Experiment Parameters').read()
+
 
     instrument = sensor_data[0][1] #instrument type string
     if "Sondrestrom" in instrument:
@@ -47,8 +49,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
         radar = 3
         print ("RISR data")
     else:
-        print("Error: Radar type not supported by program in this version.")
-        exit()
+        exit("Error: Radar type not supported by program in this version.")
 
     # get the data location (range, el1, azm)
     all_loc = []
@@ -93,7 +94,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     maxrows = len(dataloc)
     for p in paramstr:
         if not p in all_data.dtype.names:
-            print 'Warning: ' + p + ' is not a valid parameter name.'
+            warn('{} is not a valid parameter name.'.format(p))
             continue
         tempdata = all_data[p][notnan] #list of parameter pulled from all_data
         temparray = np.empty([maxrows,maxcols]) #converting the tempdata list into array form
@@ -118,14 +119,14 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
 
 def read_h5_main(filename):
     ''' Read in the structured h5 file.'''
-    h5file=openFile(filename)
-    output={}
-    # Read in all of the info from the h5 file and put it in a dictionary.
-    for group in h5file.walkGroups(posixpath.sep):
-        output[group._v_pathname]={}
-        for array in h5file.listNodes(group, classname = 'Array'):
-            output[group._v_pathname][array.name]=array.read()
-    h5file.close()
+    with tb.openFile(filename) as h5file:
+        output={}
+        # Read in all of the info from the h5 file and put it in a dictionary.
+        for group in h5file.walkGroups(posixpath.sep):
+            output[group._v_pathname]={}
+            for array in h5file.listNodes(group, classname = 'Array'):
+                output[group._v_pathname][array.name]=array.read()
+
     #pdb.set_trace()
     # find the base paths which could be dictionaries or the base directory
     outarr = [pathparts(ipath) for ipath in output.keys() if len(pathparts(ipath))>0]
@@ -136,9 +137,9 @@ def read_h5_main(filename):
     for ivar in VARNAMES:
         dictout = False
         #dictionary
-        for npath,ipath in enumerate(outarr):
+        for npath,ipath in zip(output,outarr):
             if ivar==ipath[0]:
-                outlist.append(output[output.keys()[npath]])
+                outlist.append(output[npath])
                 dictout=True
                 break
         if dictout:
