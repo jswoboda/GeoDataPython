@@ -55,7 +55,6 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
         exit("Error: Radar type not supported by program in this version.")
 
     # get the data location (range, el1, azm)
-    all_loc = []
     if radar == 1:
         angle1 = 'elm'
         rng = all_data['gdalt']
@@ -69,42 +68,39 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     try:
         el = all_data[angle1]
     except ValueError:
-        el = np.nan * np.ones(len(list(rng)))
+        el = np.nan * np.ones(rng.size)
 
     try:
         azm = all_data['azm']
     except ValueError:
-        azm = np.nan * np.ones(len(list(rng)))
-    # take out nans
-    nan_ar = np.isnan(rng)|np.isnan(el)|np.isnan(azm)
-    notnan = np.logical_not(nan_ar)
-    for i in range(len(rng)):
-        if notnan[i]:
-            all_loc.append([rng[i],azm[i],el[i]])
+        azm = np.nan * np.ones(rng.size)
+
+    all_loc = np.column_stack((rng,el,azm))
+    notnan = np.isfinite(all_loc).all(axis=1)
+    all_loc = all_loc[notnan]
 
     #create list of unique data location lists
-    dataloc = [list(y) for y in set([tuple(x) for x in all_loc])]
-    all_times = []
-    times1 = all_data['ut1_unix'][notnan]
-    times2 = all_data['ut2_unix'][notnan]
-    for i in range(len(times1)):
-        all_times.append([times1[i], times2[i]])
-    uniq_times = sorted(set(tuple(x) for x in all_times))
+    dataloc = np.unique(all_data['beamid'])
+    all_times = np.column_stack((all_data['ut1_unix'][notnan],
+                                 all_data['ut2_unix'][notnan]))
+
+    uniq_t_ind = np.unique(all_data['ut1_unix'][notnan],return_index=True)[1]
+    uniq_times = all_times[uniq_t_ind,:]
 
     #initialize and fill data dictionary with parameter arrays
     data = {}
-    maxcols = len(uniq_times)
-    maxrows = len(dataloc)
+    maxcols = uniq_times.shape[0]
+    maxrows = dataloc.size
     for p in paramstr:
         if not p in all_data.dtype.names:
             warn('{} is not a valid parameter name.'.format(p))
             continue
         tempdata = all_data[p][notnan] #list of parameter pulled from all_data
-        temparray = np.empty([maxrows,maxcols]) #converting the tempdata list into array form
+        temparray = np.empty((maxrows,maxcols)) #converting the tempdata list into array form
 
-        for t in range(len(tempdata)):
+        for t in range(tempdata.size):
             #row
-            row = dataloc.index(all_loc[t])
+            row = dataloc.index(all_loc[t,:])
             #column-time
             col = uniq_times.index(tuple(all_times[t]))
             temparray[row][col] = tempdata[t]
