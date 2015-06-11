@@ -4,12 +4,20 @@ INCOMPLETE...plots blank graph underneath ax2 handle
 
 @author: Anna Stuhlmacher
 """
+from __future__ import division, absolute_import
 import matplotlib.pyplot as plt
-from GeoData import GeoData
-from GeoData import utilityfuncs
 from pylab import *
 import numpy as np
-from GeoData.plotting import *
+#
+if True:
+    import sys; sys.path.append('..') #for testing without install
+try:
+    from GeoData import GeoData
+    from GeoData import utilityfuncs
+    import GeoData.plotting as GP
+except:
+    from .Geodata import GeoData
+    from .GeoData import utilityfuncs
 
 def revpower(x1,x2):
     return np.power(x2,x1)
@@ -34,9 +42,9 @@ title='OMTI data and NE linear interpolation'
 
 fig3, (ax1, ax2) = plt.subplots(1,2,figsize=(10,5), facecolor='white')
 ax1 = fig3.add_subplot(121)
-ax1 = alt_slice_overlay(geodatalist_slice, altlist, xyvecs, vbounds, title, axis=ax1)
+ax1 = GP.alt_slice_overlay(geodatalist_slice, altlist, xyvecs, vbounds, title, axis=ax1)
 ax2 = fig3.add_subplot(122)
-ax2 = alt_contour_overlay(geodatalist_contour, altlist, xyvecs, vbounds, title, axis=ax2)
+ax2 = GP.alt_contour_overlay(geodatalist_contour, altlist, xyvecs, vbounds, title, axis=ax2)
 
 ax1.set_ylabel('y')
 ax1.set_xlabel('x')
@@ -44,4 +52,4 @@ ax2.set_ylabel('y')
 ax2.set_xlabel('x')
 
 # Show only fig3
-fig3.show()
+show()

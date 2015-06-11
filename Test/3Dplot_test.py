@@ -6,12 +6,14 @@ The output is 3D image with different colorplot slices at different altitudes.
 
 @author: Anna Stuhlmacher
 """
-
-from GeoData import GeoData
-from GeoData import utilityfuncs
+from __future__ import division, absolute_import
 from pylab import *
 import numpy as np
-from GeoData.plotting import *
+if True: #for testing without install
+    import sys; sys.path.append('..')
+from GeoData import GeoData
+from GeoData import utilityfuncs
+from GeoData.plotting import plot3Dslice
 
 def revpower(x1,x2):
     return np.power(x2,x1)
@@ -34,4 +36,5 @@ vbounds = [5e10,5e11]
 title='Ne altitude slices at 300, 400 and 500 km'
 
 #plotting.py function
-plot3D(geodata, altlist, xyvecs, vbounds, title)
+""" currently not working """
+plot3Dslice(geodata, altlist, xyvecs, vbounds, title)

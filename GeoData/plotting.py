@@ -6,16 +6,25 @@ Created on Fri Jan 02 09:38:14 2015
 
 plotting
 """
+from __future__ import division, absolute_import
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sp
 import scipy.interpolate as spinterp
+from warnings import warn
 #from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 #import matplotlib as mpl
 #from matplotlib import ticker
-from mayavi import mlab
-from CoordTransforms import angles2xy
+try:
+    from mayavi import mlab
+except Exception as e:
+    warn('could not import Mayavi. Some 3-D plots will be disabled.  {}'.format(e))
+
+try:
+    from CoordTransforms import angles2xy
+except:
+    from .CoordTransforms import angles2xy
 
 def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None):
     """
@@ -33,10 +42,10 @@ def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None):
     new_coords = np.column_stack((x.ravel(),y.ravel(),z.ravel()))
     extent=[xvec.min(),xvec.max(),yvec.min(),yvec.max()]
 
-    key0 = geodatalist[0].data.keys()
-    key1 =  geodatalist[1].data.keys()
+    key0 = list(geodatalist[0].data.keys()) #list necessary for Python3
+    key1 = list(geodatalist[1].data.keys())
 
-    gd2 = geodatalist[1].timeslice([1,2])
+    gd2 = geodatalist[1].timeslice([1,2]) #second and third times in array
     gd2.interpolate(new_coords, newcoordname='Cartesian', method='linear', fill_value=np.nan)
     interpData = gd2.data[key1[0]]
     risr = interpData[:,0].reshape(x.shape)
@@ -59,7 +68,6 @@ def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None):
         ax.set_title(title)
         ax.set_xlabel('x')
         ax.set_ylabel('y')
-        plt.show()
     else:
         axis.imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
         axis.hold(True)
@@ -82,8 +90,8 @@ def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None)
     new_coords = np.column_stack((x.ravel(),y.ravel(),z.ravel()))
     extent=[xvec.min(),xvec.max(),yvec.min(),yvec.max()]
 
-    key0 = geodatalist[0].data.keys()
-    key1 =  geodatalist[1].data.keys()
+    key0 = list(geodatalist[0].data.keys()) #list needed for Python3
+    key1 = list(geodatalist[1].data.keys())
 
     gd2 = geodatalist[1].timeslice([1,2])
     gd2.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
@@ -96,22 +104,22 @@ def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None)
     omti = interpData[:,0].reshape(x.shape)
 
     if axis == None:
-        plt.figure(facecolor='white')
-        bottom = imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
+        fg= plt.figure(facecolor='white'); ax=fg.gca()
+        bottom = ax.imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
         cbar1 = plt.colorbar(bottom, orientation='horizontal')
         cbar1.set_label(key0[0])
-        hold(True)
-        top = contour(x,y, risr, cmap=cm.jet,extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
+        ax.hold(True)
+
+        top = ax.contour(x,y, risr, cmap=cm.jet,extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
         #clabel(top,inline=1,fontsize=10, fmt='%1.0e')
-        cbar2 = plt.colorbar(top, format='%.0e')
+        cbar2 = fg.colorbar(top, format='%.0e')
         cbar2.set_label(key1[0])
-        plt.title(title)
-        plt.xlabel('x')
-        plt.ylabel('y')
-        show()
+        ax.set_title(title)
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
     else:
         axis.imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
-        hold(True)
+        axis.hold(True)
         axis.contour(x,y, risr, cmap=cm.jet,extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
         return axis
 

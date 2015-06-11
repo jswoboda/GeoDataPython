@@ -56,45 +56,69 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     elif radar in (2,3):
         irng = 'range'
 
-    all_loc = DataFrame(columns=['range','az','el','ut1','ut2'])
+    filt_data = DataFrame(columns=['range','az','el','ut1','ut2'])
     try:
-        all_loc['range'] = all_data[irng]
+        filt_data['range'] = all_data[irng]
     except ValueError: pass
     try:
-        all_loc['az'] = all_data['azm']
+        filt_data['az'] = all_data['azm']
     except ValueError: pass
     try:
-        all_loc['el'] = all_data['elm']
+        filt_data['el'] = all_data['elm']
     except ValueError: pass
 
-    all_loc['ut1'] = all_data['ut1_unix']
-    all_loc['ut2'] = all_data['ut2_unix']
+    filt_data['ut1'] = all_data['ut1_unix']
+    filt_data['ut2'] = all_data['ut2_unix']
 
     for p in paramstr:
-        all_loc[p] = all_data[p]
+        filt_data[p] = all_data[p]
 
 #%% SELECT
-    all_loc.dropna(axis=0,how='any',subset=['range','az','el'],inplace=True)
-    #notnan = all_loc.index
+    filt_data.dropna(axis=0,how='any',subset=['range','az','el'],inplace=True)
 
     #create list of unique data location lists
-    dataloc = all_loc.drop_duplicates(subset=['range','az','el'])
-    uniq_times = np.unique(all_loc['ut1'])
+    dataloc = filt_data[['range','az','el']].drop_duplicates()
+    uniq_times = filt_data['ut1'].drop_duplicates().values
 
     #initialize and fill data dictionary with parameter arrays
+    usenumpy = True
+    #notnan = filt_data.index
+    if not usenumpy:
+        all_loc=filt_data[['range','az','el']].values.tolist()
+        all_times = filt_data['ut1'].values.tolist()
+        dataloclist = dataloc.values.tolist()
+        uniq_timeslist = uniq_times = filt_data['ut1'].drop_duplicates().values.tolist()
+        maxcols = len(uniq_times);  maxrows = len(dataloc)
+
     data = {}
     for p in paramstr:
         if not p in all_data.dtype.names:
             warn('{} is not a valid parameter name.'.format(p))
             continue
-        # all_loc has already been filtered for time and location with 'nel' riding along.
-            #Just reshape it!
-        data[p] = all_loc['nel'].reshape((dataloc.shape[0],uniq_times.size))
+
+        if usenumpy:
+        # example of doing via numpy
+        # filt_data has already been filtered for time and location with 'nel' riding along.
+         #Just reshape it!
+            data[p] = DataFrame(data=filt_data['nel'].reshape((dataloc.shape[0],uniq_times.shape[0]),order='F'),
+                           columns=uniq_times)
+        else:
+            #example with CPython
+            vec = filt_data[p].values #list of parameter pulled from all_data
+            arr = np.empty([maxrows,maxcols]) #converting the tempdata list into array form
+
+            for t in range(vec.size):
+                #row
+                row = dataloclist.index(all_loc[t])
+                #column-time
+                col = uniq_timeslist.index(all_times[t])
+                arr[row][col] = vec[t]
+            data[p] = arr
 
         #example of doing by MultiIndex
 #        data[p]= DataFrame(index=[dataloc['range'],dataloc['az'],dataloc['el']],
 #                            columns=uniq_times)
-#        for i,qq in all_loc.iterrows():
+#        for i,qq in filt_data.iterrows():
 #            ci = qq[['range','az','el']].values
 #            data[p].loc[ci[0],ci[1],ci[2]][qq['ut1'].astype(int)] = qq[p]
 

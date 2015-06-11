@@ -16,6 +16,7 @@ import scipy as sp
 import scipy.interpolate as spinterp
 import tables
 import sys
+from pandas import DataFrame
 import pdb
 from warnings import warn
 #
@@ -124,12 +125,18 @@ class GeoData(object):
 
         gd2 = self.copy()
 
-        gd2.times = gd2.times[loclist]
+        if gd2.times.ndim==1:
+            gd2.times = gd2.times[loclist]
+        else:
+            gd2.times = gd2.times[loclist,:]
         for idata in gd2.datanames():
-            gd2.data[idata] = gd2.data[idata][:,loclist]
+            if isinstance(gd2.data[idata],DataFrame):
+                gd2.data[idata] = gd2.data[idata][gd2.times] #data is a vector
+            else: #assume numpy array
+                gd2.data[idata] = gd2.data[idata][:,loclist]
         return gd2
 #%% Changing data based on location
-    def interpolate(self,new_coords,newcoordname,method='linear',fill_value=np.nan,twodinterp = False,ikey=None):
+    def interpolate(self,new_coords,newcoordname,method='nearest',fill_value=np.nan,twodinterp = False,ikey=None):
         """This method will take the data points in the dictionary data and spatially.
         interpolate the points given the new coordinates. The method of interpolation
         will be determined by the input parameter method.
@@ -166,20 +173,24 @@ class GeoData(object):
             #if index is true, keep that column
             curcoords = curcoords[:,keepaxis]
             new_coords = new_coords[:,keepaxis]
-
-        Nt = self.times.shape[0]
-        NNlocs = new_coords.shape[0]
+            NNlocs = new_coords.shape[0]
 
         # Check to see if you're outputing all of the parameters
         if ikey is None or ikey not in self.data.keys():
             # Loop through parameters and create temp variable
             for iparam in self.data.keys():
-                New_param = np.zeros((NNlocs,Nt),dtype=self.data[iparam].dtype)
-                for itime in range(Nt):
-                    curparam =self.data[iparam][:,itime]
-                    datakeep = np.isfinite(curparam)
-                    curparam = curparam[datakeep]
-                    coordkeep = curcoords[datakeep]
+                usepandas=True if isinstance(self.data[iparam],DataFrame) else False
+                # FIXME won't it virtually always be float?
+                New_param = np.empty((NNlocs,Nt))#,dtype=self.data[iparam].dtype)
+                for itime,tim in enumerate(self.times):
+                    if usepandas:
+                        curparam = self.data[iparam][tim] #dataframe: columns are time in this case
+                    else: #assume Numpy
+                        curparam = self.data[iparam][:,itime] #assuming 2-D numpy array
+                    dfmask = np.isfinite(curparam)
+                    curparam = curparam[dfmask]
+                    npmask=dfmask.values if usepandas else dfmask #have to do this for proper indexing of numpy arrays!
+                    coordkeep = curcoords[npmask,:]
                     intparam = spinterp.griddata(coordkeep,curparam,new_coords,method,fill_value)
                     New_param[:,itime] = intparam
                 self.data[iparam] = New_param
