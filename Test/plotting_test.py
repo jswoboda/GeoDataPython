@@ -34,7 +34,7 @@ risr.changedata('nel','ne',revpower,[10])
 geodatalist = [omti, risr]
 altlist = [300]
 xyvecs = [np.linspace(-100.0,500.0),np.linspace(0.0,600.0)]
-vbounds = [[200,800],[5e10,5e11]]
+vbounds = [[200,800],[1e9,2e10]] #[5e10,5e11]
 title='OMTI data and NE linear interpolation'
 
 #%% This requires Mayavi, currently only for Python2

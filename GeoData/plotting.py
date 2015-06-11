@@ -52,6 +52,7 @@ def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None):
         cbar1 = fg.colorbar(bottom)
         cbar1.set_label(key0[0])
         ax.hold(True)
+
         top = ax.imshow(risr, cmap=cm.jet, alpha=0.4, extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
         cbar2 = fg.colorbar(top)
         cbar2.set_label(key1[0])
