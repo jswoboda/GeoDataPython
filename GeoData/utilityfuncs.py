@@ -18,6 +18,7 @@ except Exception:
     import CoordTransforms as CT
 
 
+
 VARNAMES = ['data','coordnames','dataloc','sensorloc','times']
 
 def readMad_hdf5 (filename, paramstr): #timelims=None
@@ -80,6 +81,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     dataloc = filt_data[['range','az','el']].drop_duplicates()
     uniq_times = filt_data['ut1'].drop_duplicates().values
 
+
     #initialize and fill data dictionary with parameter arrays
     usenumpy = True
     #notnan = filt_data.index
@@ -94,6 +96,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     for p in paramstr:
         if not p in all_data.dtype.names:
             warn('{} is not a valid parameter name.'.format(p))
+
             continue
 
         if usenumpy:

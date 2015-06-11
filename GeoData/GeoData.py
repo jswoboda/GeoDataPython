@@ -9,6 +9,7 @@ from __future__ import division,absolute_import
 from six import integer_types
 #import os
 #import time
+
 import posixpath
 from copy import deepcopy
 import numpy as np
@@ -26,6 +27,7 @@ try:
 except Exception:
     import CoordTransforms as CT
     from utilityfuncs import read_h5_main
+
 
 VARNAMES = ['data','coordnames','dataloc','sensorloc','times']
 
@@ -79,6 +81,14 @@ class GeoData(object):
             except: # catch *all* exceptions
                 e = sys.exc_info()
                 sys.exit(str(e))
+
+
+        except: # catch *all* exceptions
+            e = sys.exc_info()
+            h5file.close()
+           # pdb.set_trace()
+            print(e)
+            sys.exit()
     #%% Time augmentation
     def add_times(self,self2):
         """This method will combine the times and content of two instances of the GeoData class.
@@ -368,6 +378,7 @@ def readSRI_h5(filename,paramstr,timelims = None):
     for istr in paramstr:
         if not istr in list(pathdict.keys()):
             warn(istr + ' is not a valid parameter name.')
+
             continue
         curpath = pathdict[istr][0]
         curint = pathdict[istr][-1]
