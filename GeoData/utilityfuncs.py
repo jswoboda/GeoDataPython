@@ -41,7 +41,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
         sensor_data = files.getNode('/Metadata/Experiment Parameters').read()
 
 
-    instrument = sensor_data[0][1] #instrument type string
+    instrument = str(sensor_data[0][1]) #instrument type string, comes out as bytes so cast to str
     if "Sondrestrom" in instrument:
         radar = 1
         print("Sondrestrom data")
