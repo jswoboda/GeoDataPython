@@ -133,6 +133,55 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
 
     return (data,coordnames,dataloc[['range','az','el']].values,sensorloc,uniq_times)
 
+def readSRI_h5(filename,paramstr,timelims = None):
+    '''This will read the SRI formated h5 files for RISR and PFISR.'''
+    coordnames = 'Spherical'
+    h5file=tables.openFile(filename)
+    # Set up the dictionary to find the data
+    pathdict = {'Ne':('/FittedParams/Ne',None),'dNe':('/FittedParams/Ne',None),
+                'Vi':('/FittedParams/Fits',(0,3)),'dVi':('/FittedParams/Errors',(0,3)),
+                'Ti':('/FittedParams/Fits',(0,1)),'dTi':('/FittedParams/Errors',(0,1)),
+                'Te':('/FittedParams/Fits',(-1,1)),'Ti':('/FittedParams/Errors',(-1,1))}
+
+    # Get the times and time lims
+    times = h5file.getNode('/Time/UnixTime').read()
+    nt = times.shape[0]
+    if timelims is not None:
+        timelog = times[:,0]>= timelims[0] and times[:,1]<timelims[1]
+        times = times[timelog,:]
+        nt = times.shape[0]
+    # get the sensor location
+    lat = h5file.getNode('/Site/Latitude').read()
+    lon = h5file.getNode('/Site/Longitude').read()
+    alt = h5file.getNode('/Site/Altitude').read()
+    sensorloc = np.array([lat,lon,alt])
+    # Get the locations of the data points
+    rng = h5file.getNode('/FittedParams/Range').read()/1e3
+    angles = h5file.getNode('/BeamCodes').read()[:,1:2]
+    nrng = rng.shape[1]
+    repangles = np.tile(angles,(1,2.0*nrng))
+    allaz = repangles[:,::2]
+    allel = repangles[:,1::2]
+    dataloc =np.vstack((rng.flatten(),allaz.flatten(),allel.flatten())).transpose()
+    # Read in the data
+    data = {}
+    for istr in paramstr:
+        if not istr in list(pathdict.keys()):
+            warn(istr + ' is not a valid parameter name.')
+
+            continue
+        curpath = pathdict[istr][0]
+        curint = pathdict[istr][-1]
+
+        if curint is None:
+
+            tempdata = h5file.getNode(curpath).read()
+        else:
+            tempdata = h5file.getNode(curpath).read()[:,:,:,curint[0],curint[1]]
+        data[istr] = np.array([tempdata[iT,:,:].flatten() for iT in range(nt)]).transpose()
+    h5file.close()
+    return (data,coordnames,dataloc,sensorloc,times)
+
 def read_h5_main(filename):
     ''' Read in the structured h5 file.'''
     with tb.openFile(filename) as h5file:
@@ -150,7 +199,7 @@ def read_h5_main(filename):
     basekeys  = output[posixpath.sep].keys()
     # Determine assign the entries to each entry in the list of variables.
     # Have to do this in order because of the input being a list instead of a dictionary
-#%%
+
     #dictionary
     for ipath in output:
         if ipath[1:] in VARNAMES:

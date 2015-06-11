@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sp
 import scipy.interpolate as spinterp
+import time
 from warnings import warn
 #from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
@@ -360,3 +361,50 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,titlestr='',time = 0,gkey = None,
     return(ploth)
 
 
+def insertinfo(strin,key='',posix=None,posixend = None):
+
+    listin = type(strin)==list
+    if listin:
+        stroutall = []
+    else:
+        strin=[strin]
+
+    for k in range(len(strin)):
+
+        strout = strin[k].replace('$k',key)
+        if posix is None:
+            strout.replace()
+            strout=strout.strip('$tu')
+            strout=strout.strip('$tdu')
+        else:
+            curdt = time.gmtime(posix);
+            curdte = time.gmtime(posixend);
+            markers = [
+                '$thmsehms',#UT hours minutes seconds - hours minutes seconds
+                '$thmehm',#UT hours minutes - hours minutes
+                '$tmsems',#UT minutes seconds - minutes seconds
+                '$thms',#UT hours minutes seconds
+                '$thm',#UT hours minutes
+                '$tms',#UT minutes seconds
+                '$tmdyhms',#UT month/day/year hours minutes seconds
+                '$tmdyhm',#UT month/day/year hours minutes
+                '$tmdhm'#UT month/day hours minutes
+                ]
+            datestrcell = [
+                time.strftime('%H:%M:%S',curdt)+' - '+time.strftime('%H:%M:%S',curdte)+' UT',
+                time.strftime('%H:%M',curdt)+' - '+time.strftime('%H:%M',curdte)+' UT',
+                time.strftime('%M:%S',curdt)+' - '+time.strftime('%M:%S',curdte)+' UT',
+                time.strftime('%H:%M:%S',curdt)+' UT',
+                time.strftime('%H:%M',curdt)+' UT',
+                time.strftime('%M:%S',curdt)+' UT',
+                time.strftime('%m/%d/%Y %H:%M:%S',curdt)+' UT',
+                time.strftime('%m/%d/%Y %H:%M',curdt)+' UT',
+                time.strftime('%m/%d %H:%M',curdt)+' UT']
+            for imark in range(len(markers)):
+                strout=strout.replace(markers[imark],datestrcell[imark]);
+
+        if listin:
+            stroutall[k] = strout
+        else:
+            stroutall = strout
+    return stroutall

@@ -53,6 +53,7 @@ class GeoData(object):
         assert isinstance(self.dataloc,numerics),"dataloc needs to be a numpy array"
         assert isinstance(self.sensorloc,numerics),"sensorloc needs to be a numpy array"
         assert isinstance(self.times,numerics),"times needs to be a numpy array"
+        self.times = timerepair(self.times)
 
     def datanames(self):
         '''Returns the data names.'''
@@ -79,16 +80,40 @@ class GeoData(object):
                     else:
                         h5file.createArray('/',cvar,vardict[cvar],'Static array')
             except: # catch *all* exceptions
+                h5file.close()
+
                 e = sys.exc_info()
                 sys.exit(str(e))
 
-
-        except: # catch *all* exceptions
-            e = sys.exc_info()
             h5file.close()
-           # pdb.set_trace()
-            print(e)
-            sys.exit()
+
+    #%% Time registration
+    def timeregister(self,self2):
+        """ Create a cell array which shows the overlap between two
+        instances of GeoData.
+        Inputs
+        self2 - A GeoData object.
+        Outputs
+        outcell - A cellarray of vectors the same length as the time
+        vector in self. Each vector will have the time indecies from
+        the second GeoData object which overlap with the time indicie
+        of the first object."""
+        times1 = timerepair(self.times)
+        times2 = timerepair(self2.times)
+        outcell = [[] for i in range(times1.shape[0])]
+        for k in  range(times1.shape[0]):
+            l = times1[k,:]
+
+            list1 = sp.argwhere(l[0]>times2[:,0])
+            list2 = sp.argwhere(l[1]<times2[:,1])
+            if (list1.size==0) or (list2.size==0):
+               continue
+            ind1 = list1[0][-1]
+            ind2 = list2[0][0]
+            outcell[k]=sp.arange(ind1,ind2).astype('int64')
+        return outcell
+
+
     #%% Time augmentation
     def add_times(self,self2):
         """This method will combine the times and content of two instances of the GeoData class.
@@ -107,7 +132,7 @@ class GeoData(object):
         blah = np.ma.array(self2.sensorloc,mask=np.isnan(self2.sensorloc))
         assert(np.ma.allequal(a,blah),'Sensor Locations must be the same')
 
-        alltimes = sp.vstack((timerepaire(self.times),timerepaire(self2.times)))
+        alltimes = sp.vstack((timerepair(self.times),timerepair(self2.times)))
 
         #sort based off of start times
         s_ind = sp.argsort(alltimes[:,0])
@@ -343,54 +368,6 @@ def is_numeric(obj):
 # TODO might want to make this private method
 # currently just give this to the init function and it will create a class instance.
 
-def readSRI_h5(filename,paramstr,timelims = None):
-    '''This will read the SRI formated h5 files for RISR and PFISR.'''
-    coordnames = 'Spherical'
-    h5file=tables.openFile(filename)
-    # Set up the dictionary to find the data
-    pathdict = {'Ne':('/FittedParams/Ne',None),'dNe':('/FittedParams/Ne',None),
-                'Vi':('/FittedParams/Fits',(0,3)),'dVi':('/FittedParams/Errors',(0,3)),
-                'Ti':('/FittedParams/Fits',(0,1)),'dTi':('/FittedParams/Errors',(0,1)),
-                'Te':('/FittedParams/Fits',(-1,1)),'Ti':('/FittedParams/Errors',(-1,1))}
-
-    # Get the times and time lims
-    times = h5file.getNode('/Time/UnixTime').read()
-    nt = times.shape[0]
-    if timelims is not None:
-        timelog = times[:,0]>= timelims[0] and times[:,1]<timelims[1]
-        times = times[timelog,:]
-        nt = times.shape[0]
-    # get the sensor location
-    lat = h5file.getNode('/Site/Latitude').read()
-    lon = h5file.getNode('/Site/Longitude').read()
-    alt = h5file.getNode('/Site/Altitude').read()
-    sensorloc = np.array([lat,lon,alt])
-    # Get the locations of the data points
-    rng = h5file.getNode('/FittedParams/Range').read()/1e3
-    angles = h5file.getNode('/BeamCodes').read()[:,1:2]
-    nrng = rng.shape[1]
-    repangles = np.tile(angles,(1,2.0*nrng))
-    allaz = repangles[:,::2]
-    allel = repangles[:,1::2]
-    dataloc =np.vstack((rng.flatten(),allaz.flatten(),allel.flatten())).transpose()
-    # Read in the data
-    data = {}
-    for istr in paramstr:
-        if not istr in list(pathdict.keys()):
-            warn(istr + ' is not a valid parameter name.')
-
-            continue
-        curpath = pathdict[istr][0]
-        curint = pathdict[istr][-1]
-
-        if curint is None:
-
-            tempdata = h5file.getNode(curpath).read()
-        else:
-            tempdata = h5file.getNode(curpath).read()[:,:,:,curint[0],curint[1]]
-        data[istr] = np.array([tempdata[iT,:,:].flatten() for iT in range(nt)]).transpose()
-    h5file.close()
-    return (data,coordnames,dataloc,sensorloc,times)
 
 def pathparts(path):
     ''' This function will give a list of paths for a posix path string. It is mainly used
@@ -406,10 +383,12 @@ def pathparts(path):
             components.reverse()
             return components
         components.append(tail)
-def timerepaire(timear):
-    if sp.ndim(2)==2:
-        return timear
 
+def timerepair(timear):
+    if (sp.ndim(timear)==2):
+        if timear.shape[1] ==2:
+            return timear
+        timear = timear.flatten()
     avdiff = sp.mean(sp.diff(timear))
     timear2 = sp.roll(timear,-1)
     timear2[-1]=timear2[-2]+avdiff
