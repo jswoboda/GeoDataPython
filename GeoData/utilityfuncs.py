@@ -8,13 +8,9 @@ from __future__ import division,absolute_import
 import pdb
 import numpy as np
 import tables as tb
-#import os
-#import time
 import posixpath
-#import sys
-#from copy import copy
 import scipy as sp
-#import scipy.interpolate as spinterp
+from pandas import DataFrame
 from warnings import warn
 try:
     from . import CoordTransforms as CT
@@ -56,56 +52,48 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
 
     # get the data location (range, el1, azm)
     if radar == 1:
-        angle1 = 'elm'
-        rng = all_data['gdalt']
-    elif radar == 2:
-        angle1 = 'elm'
-        rng = all_data['range']
-    elif radar ==3:
-        angle1 = 'elm'
-        rng = all_data['range']
+        irng = 'gdalt'
+    elif radar in (2,3):
+        irng = 'range'
 
+    all_loc = DataFrame(columns=['range','az','el','ut1','ut2'])
     try:
-        el = all_data[angle1]
-    except ValueError:
-        el = np.nan * np.ones(rng.size)
-
+        all_loc['range'] = all_data[irng]
+    except ValueError: pass
     try:
-        azm = all_data['azm']
-    except ValueError:
-        azm = np.nan * np.ones(rng.size)
+        all_loc['az'] = all_data['azm']
+    except ValueError: pass
+    try:
+        all_loc['el'] = all_data['elm']
+    except ValueError: pass
 
-    all_loc = np.column_stack((rng,el,azm))
-    notnan = np.isfinite(all_loc).all(axis=1)
-    all_loc = all_loc[notnan]
+    all_loc['ut1'] = all_data['ut1_unix']
+    all_loc['ut2'] = all_data['ut2_unix']
+
+    for p in paramstr:
+        all_loc[p] = all_data[p]
+
+#%% SELECT
+    all_loc.dropna(axis=0,how='any',subset=['range','az','el'],inplace=True)
+    #notnan = all_loc.index
 
     #create list of unique data location lists
-    dataloc = np.unique(all_data['beamid'])
-    all_times = np.column_stack((all_data['ut1_unix'][notnan],
-                                 all_data['ut2_unix'][notnan]))
-
-    uniq_t_ind = np.unique(all_data['ut1_unix'][notnan],return_index=True)[1]
-    uniq_times = all_times[uniq_t_ind,:]
+    dataloc = all_loc.drop_duplicates(subset=['range','az','el'])
+    uniq_times = np.unique(all_loc['ut1'])
 
     #initialize and fill data dictionary with parameter arrays
     data = {}
-    maxcols = uniq_times.shape[0]
-    maxrows = dataloc.size
     for p in paramstr:
         if not p in all_data.dtype.names:
             warn('{} is not a valid parameter name.'.format(p))
             continue
-        tempdata = all_data[p][notnan] #list of parameter pulled from all_data
-        temparray = np.empty((maxrows,maxcols)) #converting the tempdata list into array form
+        data[p] = all_loc['nel'].reshape((dataloc.shape[0],uniq_times.size))
+#        data[p]= DataFrame(index=[dataloc['range'],dataloc['az'],dataloc['el']],
+#                            columns=uniq_times)
+#        for i,qq in all_loc.iterrows():
+#            ci = qq[['range','az','el']].values
+#            data[p].loc[ci[0],ci[1],ci[2]][qq['ut1'].astype(int)] = qq[p]
 
-        for t in range(tempdata.size):
-            #row
-            row = dataloc.index(all_loc[t,:])
-            #column-time
-            col = uniq_times.index(tuple(all_times[t]))
-            temparray[row][col] = tempdata[t]
-
-        data[p]=temparray
 
     #get the sensor location (lat, long, rng)
     lat = sensor_data[7][1]
