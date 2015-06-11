@@ -7,6 +7,7 @@ The output is a 2D colorplot with the OMTI data on the bottom in grayscale and t
 
 @author: Anna Stuhlmacher
 """
+from __future__ import division, absolute_import
 import numpy as np
 #
 debug=True
@@ -17,7 +18,7 @@ from GeoData import GeoData
 from GeoData import utilityfuncs
 
 def revpower(x1,x2):
-    return np.power(x2,x1)
+    return x2**x1
 
 #path names to h5 files
 risrName = 'ran120219.004.hdf5'
@@ -27,7 +28,7 @@ omtiName = 'OMTIdata.h5'
 omti = GeoData.GeoData(utilityfuncs.readOMTI,(omtiName, ['optical']))
 risr = GeoData.GeoData(utilityfuncs.readMad_hdf5,(risrName, ['nel']))
 #converting logarthmic electron density (nel) array into electron density (ne) array
-risr.changedata('nel','ne',revpower,[10.0])
+risr.changedata('nel','ne',revpower,[10])
 
 #first object in geodatalist is being overlayed over by the second object
 geodatalist = [omti, risr]

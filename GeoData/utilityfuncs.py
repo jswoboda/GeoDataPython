@@ -87,7 +87,11 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
         if not p in all_data.dtype.names:
             warn('{} is not a valid parameter name.'.format(p))
             continue
+        # all_loc has already been filtered for time and location with 'nel' riding along.
+            #Just reshape it!
         data[p] = all_loc['nel'].reshape((dataloc.shape[0],uniq_times.size))
+
+        #example of doing by MultiIndex
 #        data[p]= DataFrame(index=[dataloc['range'],dataloc['az'],dataloc['el']],
 #                            columns=uniq_times)
 #        for i,qq in all_loc.iterrows():
@@ -96,13 +100,11 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
 
 
     #get the sensor location (lat, long, rng)
-    lat = sensor_data[7][1]
-    lon = sensor_data[8][1]
-    sensor_alt = sensor_data[9][1]
+    lat,lon,sensor_alt = sensor_data[7][1],sensor_data[8][1],sensor_data[9][1]
     sensorloc = np.array([lat,lon,sensor_alt], dtype='f')
     coordnames = 'Spherical'
 
-    return (data,coordnames,np.array(dataloc, dtype='f'),sensorloc,np.asarray(uniq_times, dtype='f'))
+    return (data,coordnames,dataloc[['range','az','el']].values,sensorloc,uniq_times)
 
 def read_h5_main(filename):
     ''' Read in the structured h5 file.'''

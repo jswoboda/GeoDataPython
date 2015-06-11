@@ -177,7 +177,7 @@ class GeoData(object):
                 New_param = np.zeros((NNlocs,Nt),dtype=self.data[iparam].dtype)
                 for itime in range(Nt):
                     curparam =self.data[iparam][:,itime]
-                    datakeep = ~np.isnan(curparam)
+                    datakeep = np.isfinite(curparam)
                     curparam = curparam[datakeep]
                     coordkeep = curcoords[datakeep]
                     intparam = spinterp.griddata(coordkeep,curparam,new_coords,method,fill_value)

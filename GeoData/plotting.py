@@ -6,16 +6,14 @@ Created on Fri Jan 02 09:38:14 2015
 
 plotting
 """
-import pdb
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sp
 import scipy.interpolate as spinterp
-from copy import deepcopy
-from mpl_toolkits.mplot3d import Axes3D
+#from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
-import matplotlib as mpl
-from matplotlib import ticker
+#import matplotlib as mpl
+#from matplotlib import ticker
 from mayavi import mlab
 from CoordTransforms import angles2xy
 
@@ -30,12 +28,9 @@ def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None):
     """
     xvec = xyvecs[0]
     yvec = xyvecs[1]
-    x,y = sp.meshgrid(xvec, yvec)
+    x,y = np.meshgrid(xvec, yvec)
     z = np.ones(x.shape)*altlist
-    np.ndarray.flatten(x)
-    np.ndarray.flatten(y)
-    np.ndarray.flatten(z)
-    new_coords = np.column_stack((x.flatten(),y.flatten(),z.flatten()))
+    new_coords = np.column_stack((x.ravel(),y.ravel(),z.ravel()))
     extent=[xvec.min(),xvec.max(),yvec.min(),yvec.max()]
 
     key0 = geodatalist[0].data.keys()
@@ -51,22 +46,22 @@ def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None):
     interpData = gd3.data[key0[0]]
     omti = interpData[:,0].reshape(x.shape)
 
-    if axis == None:
-        plt.figure(facecolor='white')
-        bottom = imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
-        cbar1 = plt.colorbar(bottom)
+    if axis is None:
+        fg = plt.figure(facecolor='white'); ax=fg.gca()
+        bottom = ax.imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
+        cbar1 = fg.colorbar(bottom)
         cbar1.set_label(key0[0])
-        hold(True)
-        top = imshow(risr, cmap=cm.jet, alpha=0.4, extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
-        cbar2 = plt.colorbar(top)
+        ax.hold(True)
+        top = ax.imshow(risr, cmap=cm.jet, alpha=0.4, extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
+        cbar2 = fg.colorbar(top)
         cbar2.set_label(key1[0])
-        plt.title(title)
-        plt.xlabel('x')
-        plt.ylabel('y')
-        show()
+        ax.set_title(title)
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        plt.show()
     else:
         axis.imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
-        hold(True)
+        axis.hold(True)
         axis.imshow(risr, cmap=cm.jet, alpha=0.4, extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
         return axis
 
@@ -81,12 +76,9 @@ def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None)
     """
     xvec = xyvecs[0]
     yvec = xyvecs[1]
-    x,y = sp.meshgrid(xvec, yvec)
+    x,y = np.meshgrid(xvec, yvec)
     z = np.ones(x.shape)*altlist
-    np.ndarray.flatten(x)
-    np.ndarray.flatten(y)
-    np.ndarray.flatten(z)
-    new_coords = np.column_stack((x.flatten(),y.flatten(),z.flatten()))
+    new_coords = np.column_stack((x.ravel(),y.ravel(),z.ravel()))
     extent=[xvec.min(),xvec.max(),yvec.min(),yvec.max()]
 
     key0 = geodatalist[0].data.keys()
