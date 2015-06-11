@@ -46,14 +46,12 @@ def demo():
     yvec = np.linspace(0.0,600.0)
     x,y = sp.meshgrid(xvec,yvec)
     z = np.ones(x.shape)*300.0
-    np.ndarray.flatten(x)
-    np.ndarray.flatten(y)
-    np.ndarray.flatten(z)
+
     # min and max of plots
     Tminmax = [500,2000]
     Neminmax =np.array([5e10,5e11])
 
-    new_coords = np.column_stack((x.flatten(),y.flatten(),z.flatten()))
+    new_coords = np.column_stack((x.ravel(),y.ravel(),z.ravel()))
     extent=[xvec.min(),xvec.max(),yvec.min(),yvec.max()]
     h5name = 'ran120219.004.hdf5'
 
