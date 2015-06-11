@@ -7,6 +7,7 @@ The output is a 2D colorplot with the OMTI data on the bottom in grayscale and t
 
 @author: Anna Stuhlmacher
 """
+from __future__ import absolute_import
 if True:
     import sys
     sys.path.append('..')

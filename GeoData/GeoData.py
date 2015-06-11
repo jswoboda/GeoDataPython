@@ -5,9 +5,7 @@ Created on Thu Jul 17 12:46:46 2014
 
 @author: John Swoboda
 """
-
-import os
-import time
+from __future__ import absolute_import
 import posixpath
 from copy import deepcopy
 import numpy as np
@@ -16,7 +14,10 @@ import scipy.interpolate as spinterp
 import tables
 import sys
 import pdb
-import CoordTransforms as CT
+try:
+    import CoordTransforms as CT
+except:
+    from . import CoordTransforms as CT
 
 VARNAMES = ['data','coordnames','dataloc','sensorloc','times']
 
@@ -75,7 +76,7 @@ class GeoData(object):
             e = sys.exc_info()
             h5file.close()
            # pdb.set_trace()
-            print e
+            print(e)
             sys.exit()
     #%% Time augmentation
     def add_times(self,self2):
@@ -392,7 +393,7 @@ def readSRI_h5(filename,paramstr,timelims = None):
     data = {}
     for istr in paramstr:
         if not istr in pathdict.keys():
-            print 'Warning: ' +istr + ' is not a valid parameter name.'
+            print('Warning: ' +istr + ' is not a valid parameter name.')
             continue
         curpath = pathdict[istr][0]
         curint = pathdict[istr][-1]

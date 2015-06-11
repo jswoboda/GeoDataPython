@@ -63,7 +63,6 @@ def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None):
         plt.title(title)
         plt.xlabel('x')
         plt.ylabel('y')
-        plt.show()
     else:
         axis.imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
         hold(True)

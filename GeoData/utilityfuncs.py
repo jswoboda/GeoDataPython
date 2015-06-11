@@ -4,17 +4,16 @@ Created on Thu Sep 11 15:29:27 2014
 
 @author: John Swoboda
 """
+from __future__ import absolute_import
 import pdb
 import numpy as np
 from tables import *
-import os
-import time
 import posixpath
-import sys
-from copy import copy
 import scipy as sp
-import scipy.interpolate as spinterp
-import CoordTransforms as CT
+try:
+    import CoordTransforms as CT
+except:
+    from . import CoordTransforms as CT
 
 
 VARNAMES = ['data','coordnames','dataloc','sensorloc','times']
@@ -79,6 +78,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
             all_loc.append([rng[i],azm[i],el[i]])
 
     #create list of unique data location lists
+    #TODO sets are unordered, does this next operation disconnect the columns from each other ?
     dataloc = [list(y) for y in set([tuple(x) for x in all_loc])]
     all_times = []
     times1 = all_data['ut1_unix'][notnan]
@@ -93,7 +93,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     maxrows = len(dataloc)
     for p in paramstr:
         if not p in all_data.dtype.names:
-            print 'Warning: ' + p + ' is not a valid parameter name.'
+            print('Warning: ' + p + ' is not a valid parameter name.')
             continue
         tempdata = all_data[p][notnan] #list of parameter pulled from all_data
         temparray = np.empty([maxrows,maxcols]) #converting the tempdata list into array form
