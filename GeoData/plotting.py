@@ -53,17 +53,17 @@ def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None):
 
     if axis == None:
         plt.figure(facecolor='white')
-        bottom = imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
+        bottom = plt.imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
         cbar1 = plt.colorbar(bottom)
         cbar1.set_label(key0[0])
-        hold(True)
-        top = imshow(risr, cmap=cm.jet, alpha=0.4, extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
+        plt.hold(True)
+        top = plt.imshow(risr, cmap=cm.jet, alpha=0.4, extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
         cbar2 = plt.colorbar(top)
         cbar2.set_label(key1[0])
         plt.title(title)
         plt.xlabel('x')
         plt.ylabel('y')
-        show()
+        plt.show()
     else:
         axis.imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
         hold(True)
