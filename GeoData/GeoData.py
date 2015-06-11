@@ -5,9 +5,10 @@ Created on Thu Jul 17 12:46:46 2014
 
 @author: John Swoboda
 """
-
-import os
-import time
+from __future__ import division,absolute_import
+from six import integer_types
+#import os
+#import time
 import posixpath
 from copy import deepcopy
 import numpy as np
@@ -15,8 +16,16 @@ import scipy as sp
 import scipy.interpolate as spinterp
 import tables
 import sys
+from pandas import DataFrame
 import pdb
-import CoordTransforms as CT
+from warnings import warn
+#
+try:
+    from . import CoordTransforms as CT
+    from .utilityfuncs import read_h5_main
+except Exception:
+    import CoordTransforms as CT
+    from utilityfuncs import read_h5_main
 
 VARNAMES = ['data','coordnames','dataloc','sensorloc','times']
 
@@ -36,14 +45,12 @@ class GeoData(object):
             '''This will create an instance of the GeoData class by giving it a read method and the inputs in a tuple'''
             (self.data,self.coordnames,self.dataloc,self.sensorloc,self.times) = readmethod(*inputs)
         # Assert that the data types are correct
-        assert type(self.data) is dict,"data needs to be a dictionary"
-        assert type(self.coordnames) is str, "coordnames needs to be a string"
-        assert type(self.dataloc) is np.ndarray,"dataloc needs to be a numpy array"
-        assert is_numeric(self.dataloc), "dataloc needs to be a numeric array"
-        assert type(self.sensorloc) is np.ndarray,"sensorloc needs to be a numpy array"
-        assert is_numeric(self.sensorloc), "sensorloc needs to be a numeric array"
-        assert type(self.times) is np.ndarray,"times needs to be a numpy array"
-        assert is_numeric(self.times), "times needs to be a numeric array"
+        numerics = (np.ndarray,integer_types,float)
+        assert isinstance(self.data,dict),"data needs to be a dictionary"
+        assert isinstance(self.coordnames,str), "coordnames needs to be a string"
+        assert isinstance(self.dataloc,numerics),"dataloc needs to be a numpy array"
+        assert isinstance(self.sensorloc,numerics),"sensorloc needs to be a numpy array"
+        assert isinstance(self.times,numerics),"times needs to be a numpy array"
 
     def datanames(self):
         '''Returns the data names.'''
@@ -53,30 +60,25 @@ class GeoData(object):
         '''Writes out the structured h5 files for the class.
         inputs
         filename - The filename of the output.'''
-        h5file = tables.openFile(filename, mode = "w", title = "GeoData Out")
-        # get the names of all the variables set in the init function
-        varnames = self.__dict__.keys()
-        vardict = self.__dict__
-        try:
-            # XXX only allow 1 level of dictionaries, do not allow for dictionary of dictionaries.
-            # Make group for each dictionary
-            for cvar in varnames:
-                #group = h5file.create_group(posixpath.sep, cvar,cvar +'dictionary')
-                if type(vardict[cvar]) ==dict: # Check if dictionary
-                    dictkeys = vardict[cvar].keys()
-                    group2 = h5file.create_group('/',cvar,cvar+' dictionary')
-                    for ikeys in dictkeys:
-                        h5file.createArray(group2,ikeys,vardict[cvar][ikeys],'Static array')
-                else:
-                    h5file.createArray('/',cvar,vardict[cvar],'Static array')
-            h5file.close()
-
-        except: # catch *all* exceptions
-            e = sys.exc_info()
-            h5file.close()
-           # pdb.set_trace()
-            print e
-            sys.exit()
+        with tables.openFile(filename, mode = "w", title = "GeoData Out") as h5file:
+            # get the names of all the variables set in the init function
+            varnames = self.__dict__.keys()
+            vardict = self.__dict__
+            try:
+                # XXX only allow 1 level of dictionaries, do not allow for dictionary of dictionaries.
+                # Make group for each dictionary
+                for cvar in varnames:
+                    #group = h5file.create_group(posixpath.sep, cvar,cvar +'dictionary')
+                    if isinstance(vardict[cvar],dict): # Check if dictionary
+                        dictkeys = vardict[cvar].keys()
+                        group2 = h5file.create_group('/',cvar,cvar+' dictionary')
+                        for ikeys in dictkeys:
+                            h5file.createArray(group2,ikeys,vardict[cvar][ikeys],'Static array')
+                    else:
+                        h5file.createArray('/',cvar,vardict[cvar],'Static array')
+            except: # catch *all* exceptions
+                e = sys.exc_info()
+                sys.exit(str(e))
     #%% Time augmentation
     def add_times(self,self2):
         """This method will combine the times and content of two instances of the GeoData class.
@@ -123,12 +125,18 @@ class GeoData(object):
 
         gd2 = self.copy()
 
-        gd2.times = gd2.times[loclist]
+        if gd2.times.ndim==1:
+            gd2.times = gd2.times[loclist]
+        else:
+            gd2.times = gd2.times[loclist,:]
         for idata in gd2.datanames():
-            gd2.data[idata] = gd2.data[idata][:,loclist]
+            if isinstance(gd2.data[idata],DataFrame):
+                gd2.data[idata] = gd2.data[idata][gd2.times] #data is a vector
+            else: #assume numpy array
+                gd2.data[idata] = gd2.data[idata][:,loclist]
         return gd2
 #%% Changing data based on location
-    def interpolate(self,new_coords,newcoordname,method='linear',fill_value=np.nan,twodinterp = False,ikey=None):
+    def interpolate(self,new_coords,newcoordname,method='nearest',fill_value=np.nan,twodinterp = False,ikey=None):
         """This method will take the data points in the dictionary data and spatially.
         interpolate the points given the new coordinates. The method of interpolation
         will be determined by the input parameter method.
@@ -140,8 +148,8 @@ class GeoData(object):
             'nearest' and 'cubic'
             fill_value - The fill value for the interpolation.
         """
-        curavalmethods = ['linear', 'nearest', 'cubic']
-        interpmethods = ['linear', 'nearest', 'cubic']
+        curavalmethods = ('linear', 'nearest', 'cubic')
+        interpmethods = ('linear', 'nearest', 'cubic')
         assert method in interpmethods,'method needs to be linear, nearest, cubic'
         assert method in curavalmethods, 'Must be one of the following methods: '+ str(curavalmethods)
 
@@ -165,20 +173,24 @@ class GeoData(object):
             #if index is true, keep that column
             curcoords = curcoords[:,keepaxis]
             new_coords = new_coords[:,keepaxis]
-
-        Nt = self.times.shape[0]
-        NNlocs = new_coords.shape[0]
+            NNlocs = new_coords.shape[0]
 
         # Check to see if you're outputing all of the parameters
         if ikey is None or ikey not in self.data.keys():
             # Loop through parameters and create temp variable
             for iparam in self.data.keys():
-                New_param = np.zeros((NNlocs,Nt),dtype=self.data[iparam].dtype)
-                for itime in np.arange(Nt):
-                    curparam =self.data[iparam][:,itime]
-                    datakeep = ~np.isnan(curparam)
-                    curparam = curparam[datakeep]
-                    coordkeep = curcoords[datakeep]
+                usepandas=True if isinstance(self.data[iparam],DataFrame) else False
+                # FIXME won't it virtually always be float?
+                New_param = np.empty((NNlocs,Nt))#,dtype=self.data[iparam].dtype)
+                for itime,tim in enumerate(self.times):
+                    if usepandas:
+                        curparam = self.data[iparam][tim] #dataframe: columns are time in this case
+                    else: #assume Numpy
+                        curparam = self.data[iparam][:,itime] #assuming 2-D numpy array
+                    dfmask = np.isfinite(curparam)
+                    curparam = curparam[dfmask]
+                    npmask=dfmask.values if usepandas else dfmask #have to do this for proper indexing of numpy arrays!
+                    coordkeep = curcoords[npmask,:]
                     intparam = spinterp.griddata(coordkeep,curparam,new_coords,method,fill_value)
                     New_param[:,itime] = intparam
                 self.data[iparam] = New_param
@@ -188,7 +200,7 @@ class GeoData(object):
             self.coordnames=newcoordname
         else:
             New_param = np.zeros((NNlocs,Nt),dtype=self.data[ikey].dtype)
-            for itime in np.arange(Nt):
+            for itime in range(Nt):
                 curparam =self.data[ikey][:,itime]
                 datakeep = ~np.isnan(curparam)
                 curparam = curparam[datakeep]
@@ -315,48 +327,11 @@ def copyinst(obj1):
     return(obj1.data.copy(),(obj1.coordnames+'.')[:-1],obj1.dataloc.copy(),obj1.sensorloc.copy(),obj1.times.copy())
 
 def is_numeric(obj):
-    attrs = ['__add__', '__sub__', '__mul__', '__div__', '__pow__']
-    return all(hasattr(obj, attr) for attr in attrs)
+    return isinstance(obj,(integer_types,float))
+    #attrs = ['__add__', '__sub__', '__mul__', '__div__', '__pow__']
+    #return all(hasattr(obj, attr) for attr in attrs)
 # TODO might want to make this private method
 # currently just give this to the init function and it will create a class instance.
-def read_h5_main(filename):
-    ''' Read in the structured h5 file.'''
-    h5file=tables.openFile(filename)
-    output={}
-    # Read in all of the info from the h5 file and put it in a dictionary.
-    for group in h5file.walkGroups(posixpath.sep):
-        output[group._v_pathname]={}
-        for array in h5file.listNodes(group, classname = 'Array'):
-            output[group._v_pathname][array.name]=array.read()
-    h5file.close()
-    #pdb.set_trace()
-    # find the base paths which could be dictionaries or the base directory
-    outarr = [pathparts(ipath) for ipath in output.keys() if len(pathparts(ipath))>0]
-    outlist = []
-    basekeys  = output[posixpath.sep].keys()
-    # Determine assign the entries to each entry in the list of variables.
-    # Have to do this in order because of the input being a list instead of a dictionary
-    for ivar in VARNAMES:
-        dictout = False
-        #dictionary
-        for npath,ipath in enumerate(outarr):
-            if ivar==ipath[0]:
-                outlist.append(output[output.keys()[npath]])
-                dictout=True
-                break
-        if dictout:
-            continue
-        # for non-dicitonary
-        for ikeys in basekeys:
-            if ikeys==ivar:
-                # Have to check for MATLAB type strings, for some reason python does not like to register them as strings
-                curdata = output[posixpath.sep][ikeys]
-                if type(curdata)==np.ndarray:
-                    if curdata.dtype.kind=='S':
-                        curdata=str(curdata)
-                outlist.append(curdata)
-
-    return tuple(outlist)
 
 def readSRI_h5(filename,paramstr,timelims = None):
     '''This will read the SRI formated h5 files for RISR and PFISR.'''
@@ -391,8 +366,8 @@ def readSRI_h5(filename,paramstr,timelims = None):
     # Read in the data
     data = {}
     for istr in paramstr:
-        if not istr in pathdict.keys():
-            print 'Warning: ' +istr + ' is not a valid parameter name.'
+        if not istr in list(pathdict.keys()):
+            warn(istr + ' is not a valid parameter name.')
             continue
         curpath = pathdict[istr][0]
         curint = pathdict[istr][-1]

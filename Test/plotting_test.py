@@ -7,31 +7,37 @@ The output is a 2D colorplot with the OMTI data on the bottom in grayscale and t
 
 @author: Anna Stuhlmacher
 """
+from __future__ import division, absolute_import
+import numpy as np
+import matplotlib.pyplot as plt
+#
+debug=True
+if debug: #use code without installing
+    import sys;  sys.path.append('../')
+
 from GeoData import GeoData
 from GeoData import utilityfuncs
-from pylab import *
-import numpy as np
-from GeoData.plotting import *
+import GeoData.plotting as GP
 
 def revpower(x1,x2):
-    return np.power(x2,x1)
+    return x2**x1
 
 #path names to h5 files
 risrName = 'ran120219.004.hdf5'
 omtiName = 'OMTIdata.h5'
 
 #creating GeoData objects of the 2 files, given a specific parameter
-omti_class = GeoData.GeoData(utilityfuncs.readOMTI,(omtiName, ['optical']))
-risr_class = GeoData.GeoData(utilityfuncs.readMad_hdf5,(risrName, ['nel']))
+omti = GeoData.GeoData(utilityfuncs.readOMTI,(omtiName, ['optical']))
+risr = GeoData.GeoData(utilityfuncs.readMad_hdf5,(risrName, ['nel']))
 #converting logarthmic electron density (nel) array into electron density (ne) array
-risr_class.changedata('nel','ne',revpower,[10.0])
+risr.changedata('nel','ne',revpower,[10])
 
 #first object in geodatalist is being overlayed over by the second object
-geodatalist = [omti_class, risr_class]
+geodatalist = [omti, risr]
 altlist = [300]
 xyvecs = [np.linspace(-100.0,500.0),np.linspace(0.0,600.0)]
-vbounds = [[200,800],[5e10,5e11]]
+vbounds = [[200,800],[5e10,5e11]] #[5e10,5e11]
 title='OMTI data and NE linear interpolation'
 
-alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title)
-
+GP.alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title)
+#plt.show()
