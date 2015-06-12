@@ -12,6 +12,7 @@ import numpy as np
 import scipy as sp
 import scipy.interpolate as spinterp
 import time
+import pdb
 from warnings import warn
 #from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
@@ -26,6 +27,10 @@ try:
     from CoordTransforms import angles2xy
 except:
     from .CoordTransforms import angles2xy
+
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif')
 
 def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None):
     """
@@ -301,7 +306,9 @@ def make_polax(fig,ax,zenith):
     frame1 = plt.gca()
     frame1.axes.get_xaxis().set_visible(False)
     frame1.axes.get_yaxis().set_visible(False)
-def slice2DGD(geod,axstr,slicenum,vbounds=None,titlestr='',time = 0,gkey = None,cmap='jet',fig=None,ax=None,title='',units=''):
+
+
+def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',fig=None,ax=None,title='',units=''):
 
     #xyzvecs is the area that the data covers.
 
@@ -325,6 +332,7 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,titlestr='',time = 0,gkey = None,
     rec_coords = {axdict[veckeys[0]]:M1.flatten(),axdict[veckeys[1]]:M2.flatten(),
                   axdict[axis]:slicenum*sp.ones(M2.size)}
 
+
     new_coords = sp.zeros((M1.size,3))
     #make coordinates
     for ckey in rec_coords.keys():
@@ -335,13 +343,8 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,titlestr='',time = 0,gkey = None,
     # get the data location
     dataout = geod.datareducelocation(new_coords,'Cartesian',gkey)[:,time]
 
-#    # get the data using the getdatalocations
-#    if dataout:
-#        dataout = dataout[:,time]
-#    if not dataout:
-#        gd2 = geod.copy().timeslice([time])
-#        gd2.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
-#        dataout = gd2.data[gkey]
+
+    title = insertinfo(title,gkey,geod.times[time,0],geod.times[time,1])
     dataout = sp.reshape(dataout,M1.shape)
 
     if (ax is None) and (fig is None):

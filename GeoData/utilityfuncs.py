@@ -10,6 +10,7 @@ import numpy as np
 import tables as tb
 import posixpath
 import scipy as sp
+import tables
 from pandas import DataFrame
 from warnings import warn
 try:
@@ -104,7 +105,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
         # filt_data has already been filtered for time and location with 'nel' riding along.
          #Just reshape it!
             data[p] = DataFrame(data=filt_data['nel'].reshape((dataloc.shape[0],uniq_times.shape[0]),order='F'),
-                           columns=uniq_times)
+                           columns=uniq_times).values
         else:
             #example with CPython
             vec = filt_data[p].values #list of parameter pulled from all_data

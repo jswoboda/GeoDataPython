@@ -159,7 +159,6 @@ class GeoData(object):
             loclist = np.where(ix)[0]
 
         gd2 = self.copy()
-
         if gd2.times.ndim==1:
             gd2.times = gd2.times[loclist]
         else:
