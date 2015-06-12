@@ -104,7 +104,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
         # example of doing via numpy
         # filt_data has already been filtered for time and location with 'nel' riding along.
          #Just reshape it!
-            data[p] = DataFrame(data=filt_data['nel'].reshape((dataloc.shape[0],uniq_times.shape[0]),order='F'),
+            data[p] = DataFrame(data=filt_data[p].reshape((dataloc.shape[0],uniq_times.shape[0]),order='F'),
                            columns=uniq_times).values
         else:
             #example with CPython

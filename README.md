@@ -1,4 +1,5 @@
 ##GeoDataPython
+![alt text](https://raw.github.com/jswoboda/GeoDataPython/master/logo/logo1.png "GeoDataPython")
 
 #Overview
 This is the repository for the Python version of GeoData to plot and analyze data from geophysics sources such as radar and optical systems.

@@ -108,9 +108,9 @@ class GeoData(object):
             list2 = sp.argwhere(l[1]<times2[:,1])
             if (list1.size==0) or (list2.size==0):
                continue
-            ind1 = list1[0][-1]
+            ind1 = list1[-1][0]
             ind2 = list2[0][0]
-            outcell[k]=sp.arange(ind1,ind2).astype('int64')
+            outcell[k]=sp.arange(ind1,ind2+1).astype('int64')
         return outcell
 
 
