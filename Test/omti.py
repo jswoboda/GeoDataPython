@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Creates a GeoData object from an omti h5 files and outputs a 2D colorplot in gray scale.
@@ -32,7 +33,7 @@ def selftest(h5name):
     #Plotting in gray scale, with colorbar
     fig = plt.figure(facecolor='white'); ax= fig.gca()
     omtiplot = ax.imshow(p,origin = 'lower', aspect = 'auto',extent=extent,
-                         vmin=200,vmax=800,cmap=plt.get_cmap('gray'))
+                         interpolation='none',vmin=200,vmax=800,cmap='gray')
     ax.set_title("OMTI data")
     cbar=fig.colorbar(omtiplot)
     cbar.set_label('OMTI')

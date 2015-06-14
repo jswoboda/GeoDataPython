@@ -16,7 +16,7 @@ import numpy as np
 import scipy as sp
 import scipy.interpolate as spinterp
 import tables
-import sys
+#import sys
 from pandas import DataFrame
 import pdb
 from warnings import warn
@@ -79,13 +79,8 @@ class GeoData(object):
                             h5file.createArray(group2,ikeys,vardict[cvar][ikeys],'Static array')
                     else:
                         h5file.createArray('/',cvar,vardict[cvar],'Static array')
-            except: # catch *all* exceptions
-                h5file.close()
-
-                e = sys.exc_info()
-                sys.exit(str(e))
-
-            h5file.close()
+            except Exception as e: # catch *all* exceptions
+                exit('problem writing ' + str(filename) + ' due to ' +str(e))
 
     #%% Time registration
     def timeregister(self,self2):
