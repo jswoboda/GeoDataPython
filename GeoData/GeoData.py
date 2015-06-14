@@ -382,7 +382,7 @@ def timerepair(timear):
     if (sp.ndim(timear)==2):
         if timear.shape[1] ==2:
             return timear
-        timear = timear.flatten()
+        timear = timear.ravel()
     avdiff = sp.mean(sp.diff(timear))
     timear2 = sp.roll(timear,-1)
     timear2[-1]=timear2[-2]+avdiff
