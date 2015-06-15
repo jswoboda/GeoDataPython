@@ -4,18 +4,20 @@ Requires Python 2.x due to Mayavi
 
 @author: John Swoboda
 """
-
+from __future__ import division,absolute_import
 import os
 import matplotlib.pyplot as plt
 import numpy as np
 #
 if True: import sys; sys.path.append('..') #for testing without install
 try:
+    from .GeoData.GeoData import GeoData
+    from .GeoData import utilityfuncs
+    from .GeoData.plotting import slice2DGD,plot3Dslice,plotbeamposGD,insertinfo
+except:
     from GeoData.GeoData import GeoData
     from GeoData import utilityfuncs
     from GeoData.plotting import slice2DGD,plot3Dslice,plotbeamposGD,insertinfo
-except:
-    pass
 try:
     from mayavi import mlab
 except ImportError as e:
