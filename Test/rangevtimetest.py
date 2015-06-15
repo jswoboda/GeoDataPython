@@ -14,9 +14,9 @@ try:
     from .GeoData.plotting import rangevstime,insertinfo
 except: #when testing without install
     import sys; sys.path.append('..')
-    from .GeoData.GeoData import GeoData
-    from .GeoData import utilityfuncs
-    from .GeoData.plotting import rangevstime,insertinfo
+    from GeoData.GeoData import GeoData
+    from GeoData import utilityfuncs
+    from GeoData.plotting import rangevstime,insertinfo
 
 import pdb
 
