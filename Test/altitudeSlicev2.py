@@ -17,7 +17,7 @@ from __future__ import division,absolute_import
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
-import pickle
+import h5py
 #
 if True: #debug for running without install
     import sys; sys.path.append('..')
@@ -40,7 +40,7 @@ def interpLin(dataClass, new_coords, interpMeth,x):
     pb = interpDataB[:,0].reshape(x.shape)
     return pa, pb
 
-def demo(h5name):
+def demo(h5name,h5out=None):
     # set up interpolation
     xvec = np.linspace(-100,500)
     yvec = np.linspace(0,600)
@@ -49,7 +49,7 @@ def demo(h5name):
 
     # min and max of plots
     Tminmax = [500,2000]
-    Neminmax =np.array([5e10,5e11])
+    Neminmax =[5e10,5e11]
 
     new_coords = np.column_stack((x.ravel(),y.ravel(),z.ravel()))
     extent=[xvec.min(),xvec.max(),yvec.min(),yvec.max()]
@@ -62,43 +62,40 @@ def demo(h5name):
     p1a, p1b = interpLin(gdL.copy(), new_coords, 'linear',x)
     p2a, p2b = interpLin(gdL.copy(), new_coords, 'nearest',x)
 
-    pickle.dump((p1a, p2a), open("nel.p", "wb"))
-    pickle.dump((p1b, p2b), open("ti.p", "wb"))
+    if h5out is not None:
+        print('writing '+str(h5out))
+        with h5py.File('altitudeSliceOutput.h5','w',libver='latest') as fo:
+            fo['/nel/p1a'] = p1a
+            fo['/nel/p2a'] = p2a
+            fo['/ti/p1b'] = p1b
+            fo['/ti/p2b'] = p2b
 
     #plotting.overlayPlots(p2a, p1a, extent, 0.9)
 
-    f, axarr = plt.subplots(2, 2, facecolor='white')
+    fg, axarr = plt.subplots(2, 2, facecolor='white',sharex=True,sharey=True)
     im1 = axarr[0, 0].imshow(p1a,extent=extent,origin = 'lower',vmin=Neminmax[0],vmax=Neminmax[1])
-    axarr[0, 0].set_title('NE-Linear')
-    cbar1 = plt.colorbar(im1,ax=axarr[0, 0])
-    cbar1.ax.get_yaxis().labelpad = 15
-    cbar1.ax.set_ylabel('$m^{-3}$', rotation=270)
+    plotlbl(fg,axarr[0,0],im1,'NE-Linear','$m^{-3}$')
 
     im2 = axarr[0, 1].imshow(p1b,extent=extent,origin = 'lower',vmin=Tminmax[0],vmax=Tminmax[1])
-    axarr[0, 1].set_title('TI-Linear')
-    cbar2 = plt.colorbar(im2,ax=axarr[0, 1])
-    cbar2.ax.get_yaxis().labelpad = 15
-    cbar2.ax.set_ylabel('K', rotation=270)
+    plotlbl(fg,axarr[0,1],im2,'TI-Linear','K')
 
     im3 = axarr[1, 0].imshow(p2a,extent=extent,origin = 'lower',vmin=Neminmax[0],vmax=Neminmax[1])
-    axarr[1, 0].set_title('NE-Nearest')
-    cbar3 = plt.colorbar(im3,ax=axarr[1, 0])
-    cbar3.ax.get_yaxis().labelpad = 15
-    cbar3.ax.set_ylabel('$m^{-3}$', rotation=270)
+    plotlbl(fg,axarr[1,0],im3,'NE-Nearest Neighbor','$m^{-3}$')
+
 
     im4 = axarr[1, 1].imshow(p2b,extent=extent,origin = 'lower',vmin=Tminmax[0],vmax=Tminmax[1])
-    axarr[1, 1].set_title('TI-Nearest')
-    cbar4 = plt.colorbar(im4,ax=axarr[1, 1])
-    cbar4.ax.get_yaxis().labelpad = 15
-    cbar4.ax.set_ylabel('K', rotation=270)
+    plotlbl(fg,axarr[1,1],im4,'TI-Nearest Neighbor','K')
 
-    # Fine-tune figure; hide x ticks for top plots and y ticks for right plots
-    plt.setp([a.get_xticklabels() for a in axarr[0, :]], visible=False)
-    plt.setp([a.get_yticklabels() for a in axarr[:, 1]], visible=False)
-    plt.suptitle('Altitude Slice at 300km')
+    fg.suptitle('Altitude Slice at 300km')
+
+def plotlbl(fg,ax,im,txt,lbl):
+    ax.set_title(txt)
+    cbar1 = fg.colorbar(im,ax=ax)
+    cbar1.ax.get_yaxis().labelpad = 15
+    cbar1.ax.set_ylabel(lbl, rotation=270)
 
 if __name__ == '__main__':
-    demo('ran120219.004.hdf5')
+    demo('ran120219.004.hdf5','altitudeSliceTestOutput.h5')
     plt.show()
 
 
