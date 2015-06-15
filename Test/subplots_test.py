@@ -12,8 +12,7 @@ from __future__ import division, absolute_import
 import matplotlib.pyplot as plt
 import numpy as np
 #
-if True:
-    import sys; sys.path.append('..') #for testing without install
+if True: import sys; sys.path.append('..') #for testing without install
 try:
     from GeoData import GeoData
     from GeoData import utilityfuncs

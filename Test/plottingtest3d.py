@@ -1,17 +1,26 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 """
-INCOMPLETE...plots blank graph underneath ax2 handle
+Requires Python 2.x due to Mayavi
 
 @author: John Swoboda
 """
+
 import os
 import matplotlib.pyplot as plt
-from GeoData.GeoData import GeoData
-from GeoData import utilityfuncs
 import numpy as np
-from GeoData.plotting import slice2DGD,plot3Dslice,plotbeamposGD,insertinfo
-from mayavi import mlab
-import pdb
+#
+if True: import sys; sys.path.append('..') #for testing without install
+try:
+    from GeoData.GeoData import GeoData
+    from GeoData import utilityfuncs
+    from GeoData.plotting import slice2DGD,plot3Dslice,plotbeamposGD,insertinfo
+except:
+    pass
+try:
+    from mayavi import mlab
+except ImportError as e:
+    exit('must have Python 2.x with Mayavi.  conda install mayavi     {}'.format(e))
+
 
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
@@ -20,9 +29,7 @@ def revpower(x1,x2):
     return np.power(x2,x1)
 
 
-def make_data():
-    risrName = 'ran120219.004.hdf5'
-    omtiName = 'OMTIdata.h5'
+def make_data(risrName,omtiName):
 
     #creating GeoData objects of the 2 files, given a specific parameter
     omti_class = GeoData(utilityfuncs.readOMTI,(omtiName, ['optical']))
@@ -39,22 +46,23 @@ def make_data():
     xvec,yvec,zvec = [np.linspace(-100.0,500.0,25),np.linspace(0.0,600.0,25),np.linspace(100.0,500.0,25)]
     x,y,z = np.meshgrid(xvec,yvec,zvec)
     x2d,y2d = np.meshgrid(xvec,yvec)
-    new_coords =np.column_stack((x.flatten(),y.flatten(),z.flatten()))
-    new_coords2 = np.column_stack((x2d.flatten(),y2d.flatten(),140.0*np.ones(y2d.size)))
+    new_coords =np.column_stack((x.ravel(),y.ravel(),z.ravel()))
+    new_coords2 = np.column_stack((x2d.ravel(),y2d.ravel(),140.0*np.ones(y2d.size)))
     #interpolate risr data
     risr_classred.interpolate(new_coords, newcoordname='Cartesian', method='linear', fill_value=np.nan)
     # interpolate omti data
     omti_class.interpolate(new_coords2, newcoordname='Cartesian', twodinterp = True,method='linear', fill_value=np.nan)
     return (risr_classred,risr_class,omti_class,reglistfinal)
+
 def plotting(risr_classred,risr_class,omti_class,reglistfinal):
     #path names to h5 files
     figdir = 'Figdump'
-    figcount =0
-    if not os.path.exists(figdir):
-        os.makedirs(figdir)
+
+    try: os.makedirs(figdir) #avoids path.exists race condition
+    except OSError: pass
 
     for iomti,ilist in enumerate(reglistfinal):
-        for irisr in ilist:
+        for figcount,irisr in enumerate(ilist):
             mfig = mlab.figure(fgcolor=(1, 1, 1), bgcolor=(1, 1, 1))
             omtitime = iomti
             risrtime =  irisr
@@ -85,7 +93,7 @@ def plotting(risr_classred,risr_class,omti_class,reglistfinal):
             figname = os.path.join(figdir,'figure{0:0>2}.png'.format(figcount))
             plt.savefig(figname,format='png',dpi = 600)
             plt.close(figmplf)
-            figcount = figcount+1
+
 if __name__ == "__main__":
-    (risr_classred,risr_class,omti_class,reglistfinal) = make_data()
+    (risr_classred,risr_class,omti_class,reglistfinal) = make_data('ran120219.004.hdf5','OMTIdata.h5')
     plotting(risr_classred,risr_class,omti_class,reglistfinal)
