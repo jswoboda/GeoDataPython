@@ -8,6 +8,7 @@ from __future__ import division,absolute_import
 import pdb
 import numpy as np
 import tables as tb
+import h5py
 import posixpath
 import scipy as sp
 import tables
@@ -18,12 +19,12 @@ try:
 except Exception:
     import CoordTransforms as CT
 
-
+usepandas = True #20x speedup vs CPython
 
 VARNAMES = ['data','coordnames','dataloc','sensorloc','times']
 
 def readMad_hdf5 (filename, paramstr): #timelims=None
-    """@author: Anna Stuhlmacher
+    """@author: Michael Hirsch / Anna Stuhlmacher
     madgrigal h5 read in function for the python implementation of GeoData for Madrigal Sondrestrom data
     Input:
     filename path to hdf5 file
@@ -32,6 +33,9 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     dictionary with keys are the Madrigal parameter string, the value is an array
     rows are unique data locations (data_loc) = (rng, azm, el1)
     columns are unique times
+
+    Here we use Pandas DataFrames internally to speed the reading process by 20+ times,
+    while still passing out Numpy arrays
     """
     #open hdf5 file
     with tb.openFile(filename, mode = "r", title = 'Sondrestrom1') as files:
@@ -50,7 +54,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
         radar = 3
         print ("RISR data")
     else:
-        exit("Error: Radar type not supported by program in this version.")
+        exit("Error: Radar type "+str(instrument) +" not supported by program in this version.")
 
     # get the data location (range, el1, azm)
     if radar == 1:
@@ -84,9 +88,8 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
 
 
     #initialize and fill data dictionary with parameter arrays
-    usenumpy = True
     #notnan = filt_data.index
-    if not usenumpy:
+    if not usepandas:
         all_loc=filt_data[['range','az','el']].values.tolist()
         all_times = filt_data['ut1'].values.tolist()
         dataloclist = dataloc.values.tolist()
@@ -97,15 +100,15 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     for p in paramstr:
         if not p in all_data.dtype.names:
             warn('{} is not a valid parameter name.'.format(p))
-
             continue
 
-        if usenumpy:
+        if usepandas:
         # example of doing via numpy
-        # filt_data has already been filtered for time and location with 'nel' riding along.
+        # filt_data has already been filtered for time and location with the isr parameter(s) riding along.
          #Just reshape it!
+            #TODO take off the .values to pass the DataFrame
             data[p] = DataFrame(data=filt_data[p].reshape((dataloc.shape[0],uniq_times.shape[0]),order='F'),
-                           columns=uniq_times).values
+                                               columns=uniq_times).values
         else:
             #example with CPython
             vec = filt_data[p].values #list of parameter pulled from all_data
@@ -129,10 +132,10 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
 
     #get the sensor location (lat, long, rng)
     lat,lon,sensor_alt = sensor_data[7][1],sensor_data[8][1],sensor_data[9][1]
-    sensorloc = np.array([lat,lon,sensor_alt], dtype='f')
+    sensorloc = np.array([lat,lon,sensor_alt], dtype=float) #they are bytes so we NEED float!
     coordnames = 'Spherical'
-
-    return (data,coordnames,dataloc[['range','az','el']].values,sensorloc,uniq_times)
+    #TODO temporarily passing dataloc as Numpy array till rest of program is updated to Pandas
+    return (data,coordnames,dataloc.values,sensorloc,uniq_times)
 
 def readSRI_h5(filename,paramstr,timelims = None):
     '''This will read the SRI formated h5 files for RISR and PFISR.'''
@@ -163,7 +166,10 @@ def readSRI_h5(filename,paramstr,timelims = None):
     repangles = np.tile(angles,(1,2.0*nrng))
     allaz = repangles[:,::2]
     allel = repangles[:,1::2]
-    dataloc =np.vstack((rng.flatten(),allaz.flatten(),allel.flatten())).transpose()
+#   TODO dataloc = DataFrame(index=times,
+#                              {'rng':rng.ravel(),
+#                               'allaz':allaz.ravel(),'allel':allel.ravel()})
+    dataloc =np.vstack((rng.ravel(),allaz.ravel(),allel.ravel())).transpose()
     # Read in the data
     data = {}
     for istr in paramstr:
@@ -184,7 +190,11 @@ def readSRI_h5(filename,paramstr,timelims = None):
     return (data,coordnames,dataloc,sensorloc,times)
 
 def read_h5_main(filename):
-    ''' Read in the structured h5 file.'''
+    '''
+    Read in the structured h5 file.
+    use caution with this function -- indexing dicts is less safe
+    because the index order of dicts is not deterministic.
+    '''
     with tb.openFile(filename) as h5file:
         output={}
         # Read in all of the info from the h5 file and put it in a dictionary.
@@ -229,15 +239,17 @@ def pathparts(path):
         components.append(tail)
 
 def readOMTI(filename, paramstr):
-    out = read_h5_main(filename)
-    optical = out['data']
-    enu = out['dataloc']
-    dataloc = CT.enu2cartisian(enu)
-    coordnames = 'Cartesian'
-    sensorloc = out['sensorloc']
-    times = out['times']
+    """
+    The data paths are known a priori, so read directly ~10% faster than pytables
+    """
+    with h5py.File(filename,'r') as f:
+        optical = {'optical':f['data/optical'].value} #for legacy API compatibility
+        dataloc = CT.enu2cartisian(f['dataloc'].value)
+        coordnames = 'Cartesian'
+        sensorloc = f['sensorloc'].value.squeeze()
+        times = f['times'].value
 
-    return (optical, coordnames, dataloc, sensorloc, times)
+    return optical, coordnames, dataloc, sensorloc, times
 
 def readIono(iono):
     """ This function will bring in instances of the IonoContainer class into GeoData.

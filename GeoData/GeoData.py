@@ -16,7 +16,7 @@ import numpy as np
 import scipy as sp
 import scipy.interpolate as spinterp
 import tables
-import sys
+#import sys
 from pandas import DataFrame
 import pdb
 from warnings import warn
@@ -79,13 +79,8 @@ class GeoData(object):
                             h5file.createArray(group2,ikeys,vardict[cvar][ikeys],'Static array')
                     else:
                         h5file.createArray('/',cvar,vardict[cvar],'Static array')
-            except: # catch *all* exceptions
-                h5file.close()
-
-                e = sys.exc_info()
-                sys.exit(str(e))
-
-            h5file.close()
+            except Exception as e: # catch *all* exceptions
+                exit('problem writing ' + str(filename) + ' due to ' +str(e))
 
     #%% Time registration
     def timeregister(self,self2):
@@ -214,7 +209,7 @@ class GeoData(object):
             # Loop through parameters and create temp variable
             for iparam in self.data.keys():
                 usepandas=True if isinstance(self.data[iparam],DataFrame) else False
-                # FIXME won't it virtually always be float?
+                # won't it virtually always be float?
                 New_param = np.empty((NNlocs,Nt))#,dtype=self.data[iparam].dtype)
                 for itime,tim in enumerate(self.times):
                     if usepandas:
@@ -384,11 +379,11 @@ def pathparts(path):
         components.append(tail)
 
 def timerepair(timear):
-    if (sp.ndim(timear)==2):
+    if timear.ndim==2:
         if timear.shape[1] ==2:
             return timear
-        timear = timear.flatten()
-    avdiff = sp.mean(sp.diff(timear))
+        timear = timear.ravel()
+    avdiff = sp.diff(timear).mean()
     timear2 = sp.roll(timear,-1)
     timear2[-1]=timear2[-2]+avdiff
     return sp.column_stack((timear,timear2))
