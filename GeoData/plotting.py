@@ -12,10 +12,12 @@ import numpy as np
 import scipy as sp
 import scipy.interpolate as spinterp
 import time
+import datetime as dt
 import pdb
 from warnings import warn
 #from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
+import matplotlib.dates as mdates
 #import matplotlib as mpl
 #from matplotlib import ticker
 try:
@@ -253,22 +255,22 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='j
         return surflist
 
 def plotbeamposGD(geod,fig=None,ax=None,title='Beam Positions'):
-        assert geod.coordnames.lower() =='spherical'
+    assert geod.coordnames.lower() =='spherical'
 
-        if (ax is None) and (fig is None):
-            fig = plt.figure(facecolor='white')
-            ax = fig.gca()
-        elif ax is None:
-            ax = fig.gca()
+    if (ax is None) and (fig is None):
+        fig = plt.figure(facecolor='white')
+        ax = fig.gca()
+    elif ax is None:
+        ax = fig.gca()
 
-        make_polax(fig,ax,False)
-        plt.hold(True)
-        (azvec,elvec) = (geod.dataloc[:,1],geod.dataloc[:,2])
+    make_polax(fig,ax,False)
+    plt.hold(True)
+    (azvec,elvec) = (geod.dataloc[:,1],geod.dataloc[:,2])
 
-        (xx2,yy2) = angles2xy(azvec,elvec,False)
-        plotsout = plt.plot(xx2,yy2,'o',c='b', markersize=10)
-        plt.title(title)
-        return plotsout
+    (xx2,yy2) = angles2xy(azvec,elvec,False)
+    plotsout = plt.plot(xx2,yy2,'o',c='b', markersize=10)
+    plt.title(title)
+    return plotsout
 def make_polax(fig,ax,zenith):
     """ This makes the polar axes for the beams"""
     if zenith:
@@ -363,6 +365,54 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
 
     return(ploth)
 
+def rangevstime(geod,beam,vbounds=None,gkey = None,cmap='jet',fig=None,ax=None,title='',units=''):
+    assert geod.coordnames.lower() =='spherical'
+
+    if (ax is None) and (fig is None):
+        fig = plt.figure(facecolor='white')
+        ax = fig.gca()
+    elif ax is None:
+        ax = fig.gca()
+
+    if gkey is None:
+        gkey = geod.data.keys[0]
+
+
+    a = geod.dataloc[:,1:]
+    b=np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))
+    (beaminds,beamnums) = np.unique(b,return_index=True, return_inverse=True)[1:]
+    beams = a[beaminds]
+
+    if isinstance(beam, (int, long, float, complex)):
+        beamind = beam
+    else:
+        pdb.set_trace()
+        atol = np.abs(beams).sum(axis=1)
+        btol = np.abs(beam).sum(axis=-1)
+        beamdiff= np.abs(beams-np.repeat(beam[np.newaxis,:],beams.shape[0],axis=0)).sum(axis=1)
+        beamind = sp.argmin(beamdiff)
+        if beamdiff[beamind]>(atol[beamind]+btol)*1e-5:
+            raise('beam given not close enough to other beams')
+    title = insertinfo(title,gkey)
+    beamlocs = np.argwhere(beamnums==beamind).flatten()
+    rngind = beamlocs[np.argsort(geod.dataloc[beamlocs,0])]
+    dataout = geod.data[gkey][rngind]
+    rngval = geod.dataloc[rngind,0]
+    timelims = [geod.times[0,0],geod.times[-1,0]]
+    x_lims = list(map(dt.datetime.fromtimestamp, timelims))
+    x_lims = mdates.date2num(x_lims)
+    y_lims = [rngval[0],rngval[-1]]
+
+    ploth = ax.imshow(dataout, extent = [x_lims[0],x_lims[1],y_lims[0],y_lims[1]], aspect='auto',vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
+    ax.xaxis_date()
+    cbar2 = plt.colorbar(ploth, ax=ax, format='%.0e')
+    cbar2.set_label(gkey+' in ' +units)
+    ax.set_title(title)
+    ax.set_xlabel('Time in UT')
+    ax.set_ylabel('range in km')
+
+    return ploth
+
 
 def insertinfo(strin,key='',posix=None,posixend = None):
 
@@ -376,7 +426,6 @@ def insertinfo(strin,key='',posix=None,posixend = None):
 
         strout = strin[k].replace('$k',key)
         if posix is None:
-            strout.replace()
             strout=strout.strip('$tu')
             strout=strout.strip('$tdu')
         else:
