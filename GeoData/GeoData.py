@@ -21,12 +21,8 @@ from pandas import DataFrame
 import pdb
 from warnings import warn
 #
-try:
-    from . import CoordTransforms as CT
-    from .utilityfuncs import read_h5_main
-except Exception:
-    import CoordTransforms as CT
-    from utilityfuncs import read_h5_main
+from . import CoordTransforms as CT
+from .utilityfuncs import read_h5_main
 
 
 VARNAMES = ['data','coordnames','dataloc','sensorloc','times']

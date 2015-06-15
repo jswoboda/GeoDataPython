@@ -12,14 +12,16 @@ from __future__ import division, absolute_import
 import matplotlib.pyplot as plt
 import numpy as np
 #
-if True: import sys; sys.path.append('..') #for testing without install
+
 try:
-    from GeoData import GeoData
-    from GeoData import utilityfuncs
-    import GeoData.plotting as GP
-except:
     from .Geodata import GeoData
     from .GeoData import utilityfuncs
+    from .GeoData import plotting as GP
+except:
+    import sys; sys.path.append('..') #for testing without install
+    from GeoData import GeoData
+    from GeoData import utilityfuncs
+    from GeoData import plotting as GP
 
 def revpower(x1,x2):
     return x2**x1

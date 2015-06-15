@@ -24,11 +24,9 @@ try:
     from mayavi import mlab
 except Exception as e:
     warn('could not import Mayavi. Some 3-D plots will be disabled.  {}'.format(e))
+#
+from .CoordTransforms import angles2xy
 
-try:
-    from .CoordTransforms import angles2xy
-except:
-    from CoordTransforms import angles2xy
 
 
 plt.rc('text', usetex=True)

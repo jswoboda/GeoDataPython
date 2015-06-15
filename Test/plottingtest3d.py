@@ -9,15 +9,16 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 #
-if True: import sys; sys.path.append('..') #for testing without install
 try:
     from .GeoData.GeoData import GeoData
     from .GeoData import utilityfuncs
     from .GeoData.plotting import slice2DGD,plot3Dslice,plotbeamposGD,insertinfo
 except:
+    import sys; sys.path.append('..') #for testing without install
     from GeoData.GeoData import GeoData
     from GeoData import utilityfuncs
     from GeoData.plotting import slice2DGD,plot3Dslice,plotbeamposGD,insertinfo
+
 try:
     from mayavi import mlab
 except ImportError as e:

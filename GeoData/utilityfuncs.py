@@ -14,10 +14,8 @@ import scipy as sp
 import tables
 from pandas import DataFrame
 from warnings import warn
-try:
-    from . import CoordTransforms as CT
-except Exception:
-    import CoordTransforms as CT
+#
+from . import CoordTransforms as CT
 
 usepandas = True #20x speedup vs CPython
 

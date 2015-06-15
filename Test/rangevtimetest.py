@@ -4,12 +4,20 @@ INCOMPLETE...plots blank graph underneath ax2 handle
 
 @author: John Swoboda
 """
+from __future__ import division,absolute_import
 import os
 import matplotlib.pyplot as plt
-from GeoData.GeoData import GeoData
-from GeoData import utilityfuncs
 import numpy as np
-from GeoData.plotting import rangevstime,insertinfo
+try:
+    from .GeoData.GeoData import GeoData
+    from .GeoData import utilityfuncs
+    from .GeoData.plotting import rangevstime,insertinfo
+except: #when testing without install
+    import sys; sys.path.append('..')
+    from .GeoData.GeoData import GeoData
+    from .GeoData import utilityfuncs
+    from .GeoData.plotting import rangevstime,insertinfo
+
 import pdb
 
 plt.rc('text', usetex=True)
