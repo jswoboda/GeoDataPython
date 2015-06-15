@@ -7,7 +7,7 @@ Created on Fri Jan 02 09:38:14 2015
 plotting
 """
 from __future__ import division, absolute_import
-from six import integer_types
+from six import integer_types,string_types
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sp
