@@ -180,8 +180,8 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='j
     mlab.figure(fig)
     #determine if list of slices or surfaces are given
 
-    islists = type(surfs[0])==list
-    if type(surfs[0])==np.ndarray:
+    islists = isinstance(surfs[0],list)
+    if isinstance(surfs[0],np.ndarray):
         onedim = surfs[0].ndim==1
     #get slices for each dimension out
     surflist = []
@@ -317,10 +317,7 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
 
     axdict = {'x':0,'y':1,'z':2}
     veckeys = ['x','y','z']
-    if type(axstr)==str:
-        axis=axstr
-    else:
-        axis= veckeys[axstr]
+    axis=axstr if isinstance(axstr,string_types) else veckeys[axstr]
     veckeys.remove(axis.lower())
     datacoords = geod.dataloc
     xyzvecs = {l:sp.unique(datacoords[:,axdict[l]]) for l in veckeys}
@@ -362,7 +359,7 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
     ax.set_xlabel(veckeys[0])
     ax.set_ylabel(veckeys[1])
 
-    return(ploth)
+    return ploth
 
 def rangevstime(geod,beam,vbounds=None,gkey = None,cmap='jet',fig=None,ax=None,title='',units=''):
     assert geod.coordnames.lower() =='spherical'
