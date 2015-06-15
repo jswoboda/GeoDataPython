@@ -7,6 +7,7 @@ Created on Fri Jan 02 09:38:14 2015
 plotting
 """
 from __future__ import division, absolute_import
+from six import integer_types
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sp
@@ -381,7 +382,7 @@ def rangevstime(geod,beam,vbounds=None,gkey = None,cmap='jet',fig=None,ax=None,t
     (beaminds,beamnums) = np.unique(b,return_index=True, return_inverse=True)[1:]
     beams = a[beaminds]
 
-    if isinstance(beam, (int, long, float, complex)):
+    if isinstance(beam, (integer_types, float, complex)):
         beamind = beam
     else:
         pdb.set_trace()
@@ -414,7 +415,7 @@ def rangevstime(geod,beam,vbounds=None,gkey = None,cmap='jet',fig=None,ax=None,t
 
 def insertinfo(strin,key='',posix=None,posixend = None):
 
-    listin = type(strin)==list
+    listin = isinstance(strin,list)
     if listin:
         stroutall = []
     else:
