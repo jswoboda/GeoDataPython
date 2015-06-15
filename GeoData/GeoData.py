@@ -209,7 +209,7 @@ class GeoData(object):
             # Loop through parameters and create temp variable
             for iparam in self.data.keys():
                 usepandas=True if isinstance(self.data[iparam],DataFrame) else False
-                # FIXME won't it virtually always be float?
+                # won't it virtually always be float?
                 New_param = np.empty((NNlocs,Nt))#,dtype=self.data[iparam].dtype)
                 for itime,tim in enumerate(self.times):
                     if usepandas:
@@ -379,11 +379,11 @@ def pathparts(path):
         components.append(tail)
 
 def timerepair(timear):
-    if (sp.ndim(timear)==2):
+    if timear.ndim==2:
         if timear.shape[1] ==2:
             return timear
         timear = timear.ravel()
-    avdiff = sp.mean(sp.diff(timear))
+    avdiff = sp.diff(timear).mean()
     timear2 = sp.roll(timear,-1)
     timear2[-1]=timear2[-2]+avdiff
     return sp.column_stack((timear,timear2))

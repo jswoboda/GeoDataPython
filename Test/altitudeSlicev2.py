@@ -29,7 +29,7 @@ except:
 
 #function used for change data
 def revpower(x1,x2):
-    return np.power(x2,x1)
+    return x2**x1
 
 def interpLin(dataClass, new_coords, interpMeth,x):
     gd2 = dataClass.timeslice([1,2])
@@ -40,12 +40,12 @@ def interpLin(dataClass, new_coords, interpMeth,x):
     pb = interpDataB[:,0].reshape(x.shape)
     return pa, pb
 
-def demo():
+def demo(h5name):
     # set up interpolation
-    xvec = np.linspace(-100.0,500.0)
-    yvec = np.linspace(0.0,600.0)
+    xvec = np.linspace(-100,500)
+    yvec = np.linspace(0,600)
     x,y = sp.meshgrid(xvec,yvec)
-    z = np.ones(x.shape)*300.0
+    z = np.ones_like(x)*300.0
 
     # min and max of plots
     Tminmax = [500,2000]
@@ -53,16 +53,14 @@ def demo():
 
     new_coords = np.column_stack((x.ravel(),y.ravel(),z.ravel()))
     extent=[xvec.min(),xvec.max(),yvec.min(),yvec.max()]
-    h5name = 'ran120219.004.hdf5'
 
     gdL = GeoData.GeoData(utilityfuncs.readMad_hdf5,(h5name, ['ti','nel']) )
     # change data call
     gdL.changedata('nel','ne',revpower,[10.0])
-    gdN = gdL.copy()#GeoData.GeoData(utilityfuncs.readMad_hdf5,(h5name, ['ti','nel']) )
 
     # a is nel
     p1a, p1b = interpLin(gdL.copy(), new_coords, 'linear',x)
-    p2a, p2b = interpLin(gdN.copy(), new_coords, 'nearest',x)
+    p2a, p2b = interpLin(gdL.copy(), new_coords, 'nearest',x)
 
     pickle.dump((p1a, p2a), open("nel.p", "wb"))
     pickle.dump((p1b, p2b), open("ti.p", "wb"))
@@ -100,7 +98,7 @@ def demo():
     plt.suptitle('Altitude Slice at 300km')
 
 if __name__ == '__main__':
-    demo()
+    demo('ran120219.004.hdf5')
     plt.show()
 
 
