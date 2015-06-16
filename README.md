@@ -5,23 +5,30 @@
 This is the repository for the Python version of GeoData to plot and analyze data from geophysics sources such as radar and optical systems.
 
 # Requirements
-This runs on Python 2.7.9. The packages required include
+This runs on Python 2.7 / 3.4, except 3-D plotting which requires 2.7 due to Mayavi. The packages required include
 
 * numpy
 * scipy
 * pytables
 * matplotlib
+* h5py
+* pandas
 * VTK
 * Mayavi
 
 #Installation
-To install first clone repository:
+Installation is optional, in any case, clone repository:
 
 	$ git clone https://github.com/jswoboda/GeoDataPython.git
-Then move to the main directory and run the Python setup script, which should be run in develop mode.
 
+If you which to install,
 	$ cd GeoDataPython
 	$ python setup.py develop
+
+If you wish to use WITHOUT installing, install prereqs with either of:
+``` conda install --file requirements.txt ```
+or 
+``` pip install -r requirements.txt ```
 
 #Software Structure
 
