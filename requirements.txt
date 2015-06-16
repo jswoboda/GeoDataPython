@@ -1,0 +1,6 @@
+numpy>=1.9
+scipy
+pandas>=0.16
+matplotlib>=1.4
+tables
+mayavi
