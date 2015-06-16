@@ -1,6 +1,7 @@
 numpy>=1.9
-scipy
+h5py>=2
+scipy>=0.15
 pandas>=0.16
 matplotlib>=1.4
-tables
+pytables>=3
 mayavi
