@@ -13,7 +13,8 @@ import posixpath
 import scipy as sp
 import tables
 from pandas import DataFrame
-from warnings import warn
+from warnings import warn,simplefilter
+simplefilter('ignore', tables.NaturalNameWarning) #b/c of po+ field in full ISR data files
 #
 from . import CoordTransforms as CT
 

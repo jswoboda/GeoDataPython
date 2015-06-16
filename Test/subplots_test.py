@@ -12,7 +12,6 @@ from __future__ import division, absolute_import
 import matplotlib.pyplot as plt
 import numpy as np
 #
-
 try:
     from .Geodata import GeoData
     from .GeoData import utilityfuncs
