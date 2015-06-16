@@ -17,18 +17,22 @@ This runs on Python 2.7 / 3.4, except 3-D plotting which requires 2.7 due to May
 * Mayavi
 
 #Installation
-Installation is optional, in any case, clone repository:
+Installation is optional; in any case, clone repository:
 
 	$ git clone https://github.com/jswoboda/GeoDataPython.git
 
 If you which to install,
+
 	$ cd GeoDataPython
 	$ python setup.py develop
 
 If you wish to use WITHOUT installing, install prereqs with either of:
-``` conda install --file requirements.txt ```
+
+	$ conda install --file requirements.txt
+
 or 
-``` pip install -r requirements.txt ```
+
+	$ pip install -r requirements.txt
 
 #Software Structure
 
