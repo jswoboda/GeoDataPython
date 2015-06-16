@@ -21,6 +21,10 @@ Installation is optional; in any case, clone repository:
 
 	$ git clone https://github.com/jswoboda/GeoDataPython.git
 
+install dvipng:
+
+    $ sudo apt-get install dvipng
+
 If you which to install,
 
 	$ cd GeoDataPython
