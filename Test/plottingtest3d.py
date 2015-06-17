@@ -80,7 +80,6 @@ def plotting(risr_classred,risr_class,omti_class,reglistfinal):
 
             ax1.imshow(arr)
             ax1.set_title(newtitle)
-            ax1.set_title(newtitle)
             ax1.axis('off')
 
             slice2 = slice2DGD(risr_classred,'z',400,vbounds[1],title='$N_e$ at $thm',

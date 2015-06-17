@@ -256,7 +256,6 @@ def readIono(iono):
     this is using the set up from my own code"""
     pnames = iono.Param_Names
     Param_List = iono.Param_List
-    pdb.set_trace()
     (nloc,nt) = Param_List.shape[:2]
     if type(pnames) == sp.ndarray:
         if pnames.ndim>1:
