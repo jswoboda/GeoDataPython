@@ -39,3 +39,11 @@ The read functions will be placed in utilityfuncs.py file. The names of the func
 The properties names will be all lower case. While all function names will be lower case with _ to separate words. The classes will have capitalized words with no spaces. Directories will be capitalized with _ to separate words.
 
 If the user would like to create test code please do this in the Test folder. Also this code is not be uploaded to the main code base on GitHub. 
+
+Having difficulty?
+------------------
+Fast 3-D plotting typically involves OpenGL these days. Mayavi/VTK use OpenGL to make highly dense 3-D plots beautiful. If you get [an OpenGL error like this](https://gist.github.com/scienceopen/da7f89e22ced7929c09f) try:
+	$ sudo apt-get install mayavi2
+	$ /usr/bin/python2 mycode.py
+	
+where ``` mycode.py ``` is the file you want to run. This uses your distribution's setup of Mayavi, which implicitly ought to be the most likely one to work!
