@@ -39,9 +39,7 @@ def plotisropt(risrName,omtiName):
     title='OMTI data and NE linear interpolation'
 
     fig3, (ax1, ax2) = plt.subplots(1,2,figsize=(10,5), facecolor='white')
-    ax1 = fig3.add_subplot(121)
     ax1 = GP.alt_slice_overlay((omti, risr), altlist, xyvecs, vbounds, title, axis=ax1)
-    ax2 = fig3.add_subplot(122)
     ax2 = GP.alt_contour_overlay((omti, risr), altlist, xyvecs, vbounds, title, axis=ax2)
 
     ax1.set_ylabel('y')
