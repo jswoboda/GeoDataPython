@@ -386,7 +386,6 @@ def rangevstime(geod,beam,vbounds=None,gkey = None,cmap='jet',fig=None,ax=None,t
     if isinstance(beam, (int, long, float, complex)):
         beamind = beam
     else:
-        pdb.set_trace()
         atol = np.abs(beams).sum(axis=1)
         btol = np.abs(beam).sum(axis=-1)
         beamdiff= np.abs(beams-np.repeat(beam[np.newaxis,:],beams.shape[0],axis=0)).sum(axis=1)
