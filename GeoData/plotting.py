@@ -28,10 +28,11 @@ except Exception as e:
 #
 from .CoordTransforms import angles2xy
 
-
-
-plt.rc('text', usetex=True)
-plt.rc('font', family='serif')
+""" latex is harder to use on Windows, people may not have latex installed """
+from platform import system
+if system() !='Windows':
+    plt.rc('text', usetex=True)
+    plt.rc('font', family='serif')
 
 def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None):
     """
@@ -113,12 +114,14 @@ def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None)
 
     if axis == None:
         fg= plt.figure(facecolor='white'); ax=fg.gca()
-        bottom = ax.imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
+        bottom = ax.imshow(omti, cmap=cm.gray, extent=extent, origin='lower',
+                           vmin=vbounds[0][0],vmax=vbounds[0][1])
         cbar1 = plt.colorbar(bottom, orientation='horizontal')
         cbar1.set_label(key0[0])
         ax.hold(True)
 
-        top = ax.contour(x,y, risr, cmap=cm.jet,extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
+        top = ax.contour(x,y, risr, cmap=cm.jet,extent=extent, origin='lower',
+                         vmin=vbounds[1][0],vmax=vbounds[1][1])
         #clabel(top,inline=1,fontsize=10, fmt='%1.0e')
         cbar2 = fg.colorbar(top, format='%.0e')
         cbar2.set_label(key1[0])

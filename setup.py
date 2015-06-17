@@ -22,7 +22,7 @@ config = {
     'download_url': 'https://github.com/jswoboda/GeoDataPython.git',
     'author_email': 'swoboj@bu.edu',
     'version': '0.2',
-    'install_requires': ['numpy', 'scipy', 'tables','h5py','pandas','mayavi','matplotlib','six'],
+    'install_requires': ['numpy', 'scipy', 'tables','h5py','pandas','mayavi','matplotlib'],
     'packages': ['GeoData'],
     'scripts': [],
     'name': 'GeoData'

@@ -20,9 +20,6 @@ except: #when testing without install
 
 import pdb
 
-plt.rc('text', usetex=True)
-plt.rc('font', family='serif')
-
 def revpower(x1,x2):
     return np.power(x2,x1)
 

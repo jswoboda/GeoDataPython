@@ -7,7 +7,6 @@ Created on Thu Sep 11 15:29:27 2014
 from __future__ import division,absolute_import
 import pdb
 import numpy as np
-import tables as tb
 import h5py
 import posixpath
 import scipy as sp
@@ -37,9 +36,9 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     while still passing out Numpy arrays
     """
     #open hdf5 file
-    with tb.openFile(filename, mode = "r", title = 'Sondrestrom1') as files:
-        all_data = files.getNode('/Data/Table Layout').read()
-        sensor_data = files.getNode('/Metadata/Experiment Parameters').read()
+    with h5py.File(filename, "r", libver='latest') as f:
+        all_data = f['/Data/Table Layout'].value
+        sensor_data = f['/Metadata/Experiment Parameters'].value
 
 
     instrument = str(sensor_data[0][1]) #instrument type string, comes out as bytes so cast to str
@@ -139,28 +138,34 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
 def readSRI_h5(filename,paramstr,timelims = None):
     '''This will read the SRI formated h5 files for RISR and PFISR.'''
     coordnames = 'Spherical'
-    h5file=tables.openFile(filename)
-    # Set up the dictionary to find the data
-    pathdict = {'Ne':('/FittedParams/Ne',None),'dNe':('/FittedParams/Ne',None),
-                'Vi':('/FittedParams/Fits',(0,3)),'dVi':('/FittedParams/Errors',(0,3)),
-                'Ti':('/FittedParams/Fits',(0,1)),'dTi':('/FittedParams/Errors',(0,1)),
-                'Te':('/FittedParams/Fits',(-1,1)),'Ti':('/FittedParams/Errors',(-1,1))}
 
-    # Get the times and time lims
-    times = h5file.getNode('/Time/UnixTime').read()
+        # Set up the dictionary to find the data
+    pathdict = {'Ne':('/FittedParams/Ne', None),
+                'dNe':('/FittedParams/Ne',None),
+                'Vi':('/FittedParams/Fits',   (0,3)),
+                'dVi':('/FittedParams/Errors',(0,3)),
+                'Ti':('/FittedParams/Fits',   (0,1)),
+                'dTi':('/FittedParams/Errors',(0,1)),
+                'Te':('/FittedParams/Fits',  (-1,1)),
+                'Ti':('/FittedParams/Errors',(-1,1))}
+
+    with h5py.File(filename,'r',libver='latest') as f:
+        # Get the times and time lims
+        times = f['/Time/UnixTime'].value
+        # get the sensor location
+        sensorloc = np.array([f['/Site/Latitude'],
+                              f['/Site/Longitude'],
+                              f['/Site/Altitude']])
+        # Get the locations of the data points
+        rng = f['/FittedParams/Range'].value / 1e3
+        angles = f['/BeamCodes'][:,1:2].value
+
     nt = times.shape[0]
     if timelims is not None:
         timelog = times[:,0]>= timelims[0] and times[:,1]<timelims[1]
         times = times[timelog,:]
         nt = times.shape[0]
-    # get the sensor location
-    lat = h5file.getNode('/Site/Latitude').read()
-    lon = h5file.getNode('/Site/Longitude').read()
-    alt = h5file.getNode('/Site/Altitude').read()
-    sensorloc = np.array([lat,lon,alt])
-    # Get the locations of the data points
-    rng = h5file.getNode('/FittedParams/Range').read()/1e3
-    angles = h5file.getNode('/BeamCodes').read()[:,1:2]
+#
     nrng = rng.shape[1]
     repangles = np.tile(angles,(1,2.0*nrng))
     allaz = repangles[:,::2]
@@ -171,35 +176,42 @@ def readSRI_h5(filename,paramstr,timelims = None):
     dataloc =np.vstack((rng.ravel(),allaz.ravel(),allel.ravel())).transpose()
     # Read in the data
     data = {}
-    for istr in paramstr:
-        if not istr in list(pathdict.keys()):
-            warn(istr + ' is not a valid parameter name.')
+    with h5py.File(filename,'r',libver='latest') as f:
+        for istr in paramstr:
+            if not istr in list(pathdict.keys()):
+                warn(istr + ' is not a valid parameter name.')
 
-            continue
-        curpath = pathdict[istr][0]
-        curint = pathdict[istr][-1]
+                continue
+            curpath = pathdict[istr][0]
+            curint = pathdict[istr][-1]
 
-        if curint is None:
+            if curint is None:
+                tempdata = f[curpath].value
+            else:
+                tempdata = f[curpath][:,:,:,curint[0],curint[1]].value
+            data[istr] = np.array([tempdata[iT,:,:].ravel() for iT in range(nt)]).transpose()
 
-            tempdata = h5file.getNode(curpath).read()
-        else:
-            tempdata = h5file.getNode(curpath).read()[:,:,:,curint[0],curint[1]]
-        data[istr] = np.array([tempdata[iT,:,:].flatten() for iT in range(nt)]).transpose()
-    h5file.close()
     return (data,coordnames,dataloc,sensorloc,times)
 
 def read_h5_main(filename):
     '''
+    TODO update to h5py, this function might be drastically simplified.
+    Not used right now.
+
     Read in the structured h5 file.
     use caution with this function -- indexing dicts is less safe
     because the index order of dicts is not deterministic.
     '''
-    with tb.openFile(filename) as h5file:
+    warn('this function is not reliable and not used right now')
+
+    #with h5py.File(filename,'r',libver='latest') as f: #
+    with tables.openFile(filename) as f:
         output={}
         # Read in all of the info from the h5 file and put it in a dictionary.
-        for group in h5file.walkGroups(posixpath.sep):
+        for group in f.walkGroups(posixpath.sep):
+        #for group in f.visit: #TODO
             output[group._v_pathname]={}
-            for array in h5file.listNodes(group, classname = 'Array'):
+            for array in f.listNodes(group, classname = 'Array'):
                 output[group._v_pathname][array.name]=array.read()
 
     #pdb.set_trace()

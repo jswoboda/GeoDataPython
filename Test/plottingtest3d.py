@@ -25,9 +25,6 @@ except ImportError as e:
     exit('must have Python 2.x with Mayavi.  conda install mayavi     {}'.format(e))
 
 
-plt.rc('text', usetex=True)
-plt.rc('font', family='serif')
-
 def revpower(x1,x2):
     return np.power(x2,x1)
 
