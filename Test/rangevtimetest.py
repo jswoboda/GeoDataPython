@@ -24,11 +24,11 @@ def revpower(x1,x2):
     return x2**x1
 
 
-def makeplot():
+def makeplot(risrName):
     figdir = 'Figdump'
     try: os.makedirs(figdir)
     except OSError: pass
-    risrName = 'ran120219.004.hdf5'
+
 
     risr_class = GeoData(utilityfuncs.readMad_hdf5,(risrName, ['nel']))
     risr_class.changedata('nel','ne',revpower,[10.0])
@@ -46,4 +46,4 @@ def makeplot():
 
 
 if __name__ == "__main__":
-    makeplot()
+    makeplot('ran120219.004.hdf5')
