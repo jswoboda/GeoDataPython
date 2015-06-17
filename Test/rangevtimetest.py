@@ -21,13 +21,13 @@ except: #when testing without install
 import pdb
 
 def revpower(x1,x2):
-    return np.power(x2,x1)
+    return x2**x1
 
 
 def makeplot():
     figdir = 'Figdump'
-    if not os.path.exists(figdir):
-        os.makedirs(figdir)
+    try: os.makedirs(figdir)
+    except OSError: pass
     risrName = 'ran120219.004.hdf5'
 
     risr_class = GeoData(utilityfuncs.readMad_hdf5,(risrName, ['nel']))

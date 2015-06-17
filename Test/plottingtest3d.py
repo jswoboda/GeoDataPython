@@ -26,7 +26,7 @@ except ImportError as e:
 
 
 def revpower(x1,x2):
-    return np.power(x2,x1)
+    return x2**x1
 
 
 def make_data(risrName,omtiName):

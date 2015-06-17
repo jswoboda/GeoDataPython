@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python2
 """
 Created on Sun Nov 30 09:58:20 2014
 
@@ -13,7 +13,6 @@ taking an hdf5
 -plot altitude slice (of NEL)
 """
 from __future__ import division,absolute_import
-#from GeoData import plotting
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
