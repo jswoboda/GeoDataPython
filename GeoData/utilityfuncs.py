@@ -225,8 +225,8 @@ def read_h5_main(filename):
                 if curdata.dtype.kind=='S':
                     curdata=str(curdata)
             outlist[k] = curdata
-
-    return outlist
+    newout = [outlist[x] for x in VARNAMES]
+    return newout
 
 def pathparts(path):
     ''' '''

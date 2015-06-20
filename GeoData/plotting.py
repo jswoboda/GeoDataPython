@@ -241,6 +241,8 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='j
 
     mlab.orientation_axes(xlabel = 'x in km',ylabel = 'y in km',zlabel = 'z in km')
 
+    if view is not None:
+        mlab.view(view[0],view[1])
     if colorbar:
         if len(units)>0:
             titlstr = gkey +' in ' +units
@@ -253,6 +255,168 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='j
         return arr
     else:
         return surflist
+
+def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',fig=None,ax=None,title='',cbar=True):
+
+    #xyzvecs is the area that the data covers.
+
+    assert geod.coordnames.lower() =='cartesian'
+
+    axdict = {'x':0,'y':1,'z':2}
+    veckeys = ['x','y','z']
+    if type(axstr)==str:
+        axis=axstr
+    else:
+        axis= veckeys[axstr]
+    veckeys.remove(axis.lower())
+    datacoords = geod.dataloc
+    xyzvecs = {l:sp.unique(datacoords[:,axdict[l]]) for l in veckeys}
+    veckeys.sort()
+    #make matrices
+    M1,M2 = sp.meshgrid(xyzvecs[veckeys[0]],xyzvecs[veckeys[1]])
+    slicevec = sp.unique(datacoords[:,axdict[axis]])
+    min_idx = sp.argmin(sp.absolute(slicevec-slicenum))
+    slicenum=slicevec[min_idx]
+    rec_coords = {axdict[veckeys[0]]:M1.flatten(),axdict[veckeys[1]]:M2.flatten(),
+                  axdict[axis]:slicenum*sp.ones(M2.size)}
+
+
+    new_coords = sp.zeros((M1.size,3))
+    #make coordinates
+    for ckey in rec_coords.keys():
+        new_coords[:,ckey] = rec_coords[ckey]
+    #determine the data name
+    if gkey is None:
+        gkey = geod.data.keys[0]
+    # get the data location
+    dataout = geod.datareducelocation(new_coords,'Cartesian',gkey)[:,time]
+
+
+    title = insertinfo(title,gkey,geod.times[time,0],geod.times[time,1])
+    dataout = sp.reshape(dataout,M1.shape)
+
+    if (ax is None) and (fig is None):
+        fig = plt.figure(facecolor='white')
+        ax = fig.gca()
+    elif ax is None:
+        ax = fig.gca()
+
+    ploth = ax.pcolor(M1,M2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
+    ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(), xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
+    if cbar:
+        cbar2 = plt.colorbar(ploth, ax=ax, format='%.0e')
+    else:
+        cbar2 = None
+    ax.set_title(title)
+    ax.set_xlabel(veckeys[0])
+    ax.set_ylabel(veckeys[1])
+
+    return(ploth,cbar2)
+
+def contourGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',fig=None,ax=None,title='',cbar=True):
+    assert geod.coordnames.lower() =='cartesian'
+
+    axdict = {'x':0,'y':1,'z':2}
+    veckeys = ['x','y','z']
+    if type(axstr)==str:
+        axis=axstr
+    else:
+        axis= veckeys[axstr]
+    veckeys.remove(axis.lower())
+    datacoords = geod.dataloc
+    xyzvecs = {l:sp.unique(datacoords[:,axdict[l]]) for l in veckeys}
+    veckeys.sort()
+    #make matrices
+    M1,M2 = sp.meshgrid(xyzvecs[veckeys[0]],xyzvecs[veckeys[1]])
+    slicevec = sp.unique(datacoords[:,axdict[axis]])
+    min_idx = sp.argmin(sp.absolute(slicevec-slicenum))
+    slicenum=slicevec[min_idx]
+    rec_coords = {axdict[veckeys[0]]:M1.flatten(),axdict[veckeys[1]]:M2.flatten(),
+                  axdict[axis]:slicenum*sp.ones(M2.size)}
+
+
+    new_coords = sp.zeros((M1.size,3))
+    #make coordinates
+    for ckey in rec_coords.keys():
+        new_coords[:,ckey] = rec_coords[ckey]
+    #determine the data name
+    if gkey is None:
+        gkey = geod.data.keys[0]
+    # get the data location
+    dataout = geod.datareducelocation(new_coords,'Cartesian',gkey)[:,time]
+
+
+    title = insertinfo(title,gkey,geod.times[time,0],geod.times[time,1])
+    dataout = sp.reshape(dataout,M1.shape)
+
+    if (ax is None) and (fig is None):
+        fig = plt.figure(facecolor='white')
+        ax = fig.gca()
+    elif ax is None:
+        ax = fig.gca()
+
+    ploth = ax.contour(M1,M2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
+    ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(), xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
+    if cbar:
+        cbar2 = plt.colorbar(ploth, ax=ax, format='%.0e')
+    else:
+        cbar2 = None
+    ax.set_title(title)
+    ax.set_xlabel(veckeys[0])
+    ax.set_ylabel(veckeys[1])
+
+    return(ploth,cbar2)
+
+
+def rangevstime(geod,beam,vbounds=None,gkey = None,cmap='jet',fig=None,ax=None,title='',cbar = True):
+    """ This method will create a color graph of range vs time for data in spherical coordinates"""
+    assert geod.coordnames.lower() =='spherical'
+
+    if (ax is None) and (fig is None):
+        fig = plt.figure(facecolor='white')
+        ax = fig.gca()
+    elif ax is None:
+        ax = fig.gca()
+
+    if gkey is None:
+        gkey = geod.data.keys[0]
+
+
+    a = geod.dataloc[:,1:]
+    b=np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))
+    (beaminds,beamnums) = np.unique(b,return_index=True, return_inverse=True)[1:]
+    beams = a[beaminds]
+
+    if isinstance(beam, (int, long, float, complex)):
+        beamind = beam
+    else:
+        atol = np.abs(beams).sum(axis=1)
+        btol = np.abs(beam).sum(axis=-1)
+        beamdiff= np.abs(beams-np.repeat(beam[np.newaxis,:],beams.shape[0],axis=0)).sum(axis=1)
+        beamind = sp.argmin(beamdiff)
+        if beamdiff[beamind]>(atol[beamind]+btol)*1e-5:
+            raise('beam given not close enough to other beams')
+    title = insertinfo(title,gkey)
+    beamlocs = np.argwhere(beamnums==beamind).flatten()
+    rngind = beamlocs[np.argsort(geod.dataloc[beamlocs,0])]
+    dataout = geod.data[gkey][rngind]
+    rngval = geod.dataloc[rngind,0]
+    timelims = [geod.times[0,0],geod.times[-1,0]]
+    x_lims = list(map(dt.datetime.fromtimestamp, timelims))
+    x_lims = mdates.date2num(x_lims)
+    y_lims = [rngval[0],rngval[-1]]
+
+    ploth = ax.imshow(dataout, extent = [x_lims[0],x_lims[1],y_lims[0],y_lims[1]], aspect='auto',vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
+    ax.xaxis_date()
+    if cbar:
+        cbar2 = plt.colorbar(ploth, ax=ax, format='%.0e')
+    else:
+        cbar2 = None
+    ax.set_title(title)
+    ax.set_xlabel('Time in UT')
+    ax.set_ylabel('range in km')
+
+    return (ploth,cbar2)
 
 def plotbeamposGD(geod,fig=None,ax=None,title='Beam Positions'):
     assert geod.coordnames.lower() =='spherical'
@@ -308,111 +472,6 @@ def make_polax(fig,ax,zenith):
     frame1 = plt.gca()
     frame1.axes.get_xaxis().set_visible(False)
     frame1.axes.get_yaxis().set_visible(False)
-
-
-def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',fig=None,ax=None,title='',units=''):
-
-    #xyzvecs is the area that the data covers.
-
-    assert geod.coordnames.lower() =='cartesian'
-
-    axdict = {'x':0,'y':1,'z':2}
-    veckeys = ['x','y','z']
-    if type(axstr)==str:
-        axis=axstr
-    else:
-        axis= veckeys[axstr]
-    veckeys.remove(axis.lower())
-    datacoords = geod.dataloc
-    xyzvecs = {l:sp.unique(datacoords[:,axdict[l]]) for l in veckeys}
-    veckeys.sort()
-    #make matrices
-    M1,M2 = sp.meshgrid(xyzvecs[veckeys[0]],xyzvecs[veckeys[1]])
-    slicevec = sp.unique(datacoords[:,axdict[axis]])
-    min_idx = sp.argmin(sp.absolute(slicevec-slicenum))
-    slicenum=slicevec[min_idx]
-    rec_coords = {axdict[veckeys[0]]:M1.flatten(),axdict[veckeys[1]]:M2.flatten(),
-                  axdict[axis]:slicenum*sp.ones(M2.size)}
-
-
-    new_coords = sp.zeros((M1.size,3))
-    #make coordinates
-    for ckey in rec_coords.keys():
-        new_coords[:,ckey] = rec_coords[ckey]
-    #determine the data name
-    if gkey is None:
-        gkey = geod.data.keys[0]
-    # get the data location
-    dataout = geod.datareducelocation(new_coords,'Cartesian',gkey)[:,time]
-
-
-    title = insertinfo(title,gkey,geod.times[time,0],geod.times[time,1])
-    dataout = sp.reshape(dataout,M1.shape)
-
-    if (ax is None) and (fig is None):
-        fig = plt.figure(facecolor='white')
-        ax = fig.gca()
-    elif ax is None:
-        ax = fig.gca()
-
-    ploth = ax.pcolor(M1,M2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
-    ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(), xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
-    cbar2 = plt.colorbar(ploth, ax=ax, format='%.0e')
-    cbar2.set_label(gkey+' in ' +units)
-    ax.set_title(title)
-    ax.set_xlabel(veckeys[0])
-    ax.set_ylabel(veckeys[1])
-
-    return(ploth)
-
-def rangevstime(geod,beam,vbounds=None,gkey = None,cmap='jet',fig=None,ax=None,title='',units=''):
-    assert geod.coordnames.lower() =='spherical'
-
-    if (ax is None) and (fig is None):
-        fig = plt.figure(facecolor='white')
-        ax = fig.gca()
-    elif ax is None:
-        ax = fig.gca()
-
-    if gkey is None:
-        gkey = geod.data.keys[0]
-
-
-    a = geod.dataloc[:,1:]
-    b=np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))
-    (beaminds,beamnums) = np.unique(b,return_index=True, return_inverse=True)[1:]
-    beams = a[beaminds]
-
-    if isinstance(beam, (int, long, float, complex)):
-        beamind = beam
-    else:
-        atol = np.abs(beams).sum(axis=1)
-        btol = np.abs(beam).sum(axis=-1)
-        beamdiff= np.abs(beams-np.repeat(beam[np.newaxis,:],beams.shape[0],axis=0)).sum(axis=1)
-        beamind = sp.argmin(beamdiff)
-        if beamdiff[beamind]>(atol[beamind]+btol)*1e-5:
-            raise('beam given not close enough to other beams')
-    title = insertinfo(title,gkey)
-    beamlocs = np.argwhere(beamnums==beamind).flatten()
-    rngind = beamlocs[np.argsort(geod.dataloc[beamlocs,0])]
-    dataout = geod.data[gkey][rngind]
-    rngval = geod.dataloc[rngind,0]
-    timelims = [geod.times[0,0],geod.times[-1,0]]
-    x_lims = list(map(dt.datetime.fromtimestamp, timelims))
-    x_lims = mdates.date2num(x_lims)
-    y_lims = [rngval[0],rngval[-1]]
-
-    ploth = ax.imshow(dataout, extent = [x_lims[0],x_lims[1],y_lims[0],y_lims[1]], aspect='auto',vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
-    ax.xaxis_date()
-    cbar2 = plt.colorbar(ploth, ax=ax, format='%.0e')
-    cbar2.set_label(gkey+' in ' +units)
-    ax.set_title(title)
-    ax.set_xlabel('Time in UT')
-    ax.set_ylabel('range in km')
-
-    return ploth
-
-
 def insertinfo(strin,key='',posix=None,posixend = None):
 
     listin = type(strin)==list

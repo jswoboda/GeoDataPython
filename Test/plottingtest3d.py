@@ -8,12 +8,13 @@ Requires Python 2.x due to Mayavi
 import os
 import matplotlib.pyplot as plt
 import numpy as np
+import pdb
 #
 if True: import sys; sys.path.append('..') #for testing without install
 try:
     from GeoData.GeoData import GeoData
     from GeoData import utilityfuncs
-    from GeoData.plotting import slice2DGD,plot3Dslice,plotbeamposGD,insertinfo
+    from GeoData.plotting import slice2DGD,plot3Dslice,plotbeamposGD,insertinfo,contourGD
 except:
     pass
 try:
@@ -60,9 +61,9 @@ def plotting(risr_classred,risr_class,omti_class,reglistfinal):
 
     try: os.makedirs(figdir) #avoids path.exists race condition
     except OSError: pass
-
+    figcount = 0
     for iomti,ilist in enumerate(reglistfinal):
-        for figcount,irisr in enumerate(ilist):
+        for irisr in ilist:
             mfig = mlab.figure(fgcolor=(1, 1, 1), bgcolor=(1, 1, 1))
             omtitime = iomti
             risrtime =  irisr
@@ -72,7 +73,7 @@ def plotting(risr_classred,risr_class,omti_class,reglistfinal):
             surflist1 = plot3Dslice(omti_class, omtislices, vbounds[0],
                         time = omtitime,cmap='gray',gkey = 'optical',fig=mfig)
             arr = plot3Dslice(risr_classred, risrslices, vbounds[1],
-                        time = risrtime,cmap='jet',gkey = 'ne',fig=mfig,units = 'm^{-3}',colorbar = True,outimage=True)
+                        time = risrtime,cmap='jet',gkey = 'ne',fig=mfig,units = 'm^{-3}',colorbar = True,view=[50,60],outimage=True)
             titlestr1 = '$N_e$ and OMTI at $thm'
             newtitle = insertinfo(titlestr1,'',risr_classred.times[risrtime,0],risr_classred.times[risrtime,1])
 
@@ -82,16 +83,20 @@ def plotting(risr_classred,risr_class,omti_class,reglistfinal):
             ax1.set_title(newtitle)
             ax1.axis('off')
 
-            slice2 = slice2DGD(risr_classred,'z',400,vbounds[1],title='$N_e$ at $thm',
+            (slice2,cbar2) = slice2DGD(risr_classred,'z',400,vbounds[1],title='$N_e$ at $thm',
                         time = risrtime,cmap='jet',gkey = 'ne',fig=figmplf,ax=ax2)
-
-            slice3 = slice2DGD(omti_class,'z',omtislices[-1][0],vbounds[0],title='OMTI at $thm',
-                        time = omtitime,cmap='Greys',gkey = 'optical',fig=figmplf,ax=ax3)
-
+            cbar2.set_label('$N_e$ in $m^{-3}$')
+            (slice3,cbar3) = slice2DGD(omti_class,'z',omtislices[-1][0],vbounds[0],title='OMTI at $thm',
+                        time = omtitime,cmap='Greys',gkey = 'optical',fig=figmplf,ax=ax3,cbar=False)
+            plt.hold(True)
+            (slice4,cbar4) = contourGD(risr_classred,'z',400,vbounds[1],title='$N_e$ at $thm',
+                        time = risrtime,cmap='jet',gkey = 'ne',fig=figmplf,ax=ax3)
+            cbar4.set_label('$N_e$ in $m^{-3}$')
             bmpos = plotbeamposGD(risr_class,fig=figmplf,ax=ax4)
             figname = os.path.join(figdir,'figure{0:0>2}.png'.format(figcount))
             plt.savefig(figname,format='png',dpi = 600)
             plt.close(figmplf)
+            figcount=figcount+1
 
 if __name__ == "__main__":
     (risr_classred,risr_class,omti_class,reglistfinal) = make_data('ran120219.004.hdf5','OMTIdata.h5')
