@@ -253,7 +253,7 @@ def readOMTI(filename, paramstr):
 
 def readIono(iono):
     """ This function will bring in instances of the IonoContainer class into GeoData.
-    this is using the set up from my own code"""
+    This is using the set up from the RadarDataSim codebase"""
     pnames = iono.Param_Names
     Param_List = iono.Param_List
     (nloc,nt) = Param_List.shape[:2]
@@ -266,21 +266,22 @@ def readIono(iono):
     else:
         ionkeys=pnames
     paramdict = {ikeys:Param_List[:,:,ikeyn] for ikeyn, ikeys in enumerate(ionkeys)}
-    Nis = {}
-    Tis = {}
-    # Add Ti
-    for ikey in ionkeys:
-        if 'Ti_' ==ikey[:3]:
-            Tis[ikey[3:]] = paramdict[ikey]
-        elif 'Ni_' ==ikey[:3]:
-            Nis[ikey[3:]] = paramdict[ikey]
-    Nisum = sp.zeros((nloc,nt),dtype=Param_List.dtype)
-    Ti = sp.zeros_like(Nisum)
-    for ikey in Tis.keys():
-        Ti =Tis[ikey]*Nis[ikey] +Ti
-        Nisum = Nis[ikey]+Nisum
-    if len(Ti)!=0:
-        paramdict['Ti'] = Ti/Nisum
+    if 'Ti' not in ionkeys:
+        Nis = {}
+        Tis = {}
+        # Add Ti
+        for ikey in ionkeys:
+            if 'Ti_' ==ikey[:3]:
+                Tis[ikey[3:]] = paramdict[ikey]
+            elif 'Ni_' ==ikey[:3]:
+                Nis[ikey[3:]] = paramdict[ikey]
+        Nisum = sp.zeros((nloc,nt),dtype=Param_List.dtype)
+        Ti = sp.zeros_like(Nisum)
+        for ikey in Tis.keys():
+            Ti =Tis[ikey]*Nis[ikey] +Ti
+            Nisum = Nis[ikey]+Nisum
+        if len(Ti)!=0:
+            paramdict['Ti'] = Ti/Nisum
     if iono.Coord_Vecs == ['r','theta','phi']:
         coordnames = 'Spherical'
         coords = iono.Sphere_Coords
