@@ -12,7 +12,9 @@ import h5py
 import posixpath
 import scipy as sp
 import tables
+from astropy.io import fits
 from pandas import DataFrame
+from datetime import datetime
 from warnings import warn
 try:
     from . import CoordTransforms as CT
@@ -292,3 +294,39 @@ def readIono(iono):
     return (paramdict,coordnames,coords,sp.array(iono.Sensor_loc),iono.Time_Vector)
 
 #data, coordnames, dataloc, sensorloc, times = readMad_hdf5('/Users/anna/Research/Ionosphere/2008WorldDaysPDB/son081001g.001.hdf5', ['ti', 'dti', 'nel'])
+
+def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc):
+
+    if type(flist)==str:
+        flist=[flist]
+    header = fits.open(flist[0])
+    img = header[0].data
+    data = np.zeros((img.size,len(flist)))
+    dataloc = np.zeros((img.size,3))
+    times = np.zeros((len(flist),2))
+    for i in range(len(flist)):
+        try:
+            fn = flist[i]
+            fund = fn.find('PKR')
+            date = (datetime(int(fn[fund+14:fund+18]),int(fn[fund+18:fund+20]),
+                int(fn[fund+20:fund+22]),int(fn[fund+23:fund+25]),int(fn[fund+25:fund+27]),
+                int(fn[fund+27:fund+29]))-datetime(1970,1,1,0,0,0)).total_seconds()
+            times[i] = [date,date+1]
+            header = fits.open(fn)
+            img = header[0].data
+            data[:,i] = img.flatten()
+        except:
+            print fn,'has error'
+    data = {'image':data}
+
+    coordnames="Spherical"
+
+    az = fits.open(azmap)[0].data
+    el = fits.open(elmap)[0].data
+    dataloc[:,0] = heightkm #
+    dataloc[:,1] = az.flatten()
+    dataloc[:,2] = el.flatten()
+
+    sensorloc=sensorloc
+
+    return (data,coordnames,dataloc,sensorloc,times)
