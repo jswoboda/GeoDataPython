@@ -75,6 +75,20 @@ Once the data set is now in the proper format the user can go about augmenting i
 
 At this point the user can plot their results. Each of the plotting tools are set up in different functions in the Plotting folder. These plotting tools will output handles to figures that we plotted along with handles to colorbars if included.
 
+Examples
+========
+run all these from the GeoDataPython/Test/ directory
+
+================== ===========
+Test               Description
+================== ===========
+subplots_test.py   overlays Ne data in transparent and contour forms in two panels
+plottingtest3d.py  quad plot of radar beams, and three cool image/radar overlays (python 2.7 only)
+rangevtime.py      of the radar only
+altitudeslicev2.py
+================== ===========
+
+
 
 Having difficulty?
 ------------------

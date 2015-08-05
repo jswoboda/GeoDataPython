@@ -13,16 +13,13 @@ from __future__ import division, absolute_import
 from matplotlib.pyplot import subplots,show
 import numpy as np
 #
-from GeoData import GeoData
-from GeoData import utilityfuncs
 import GeoData.plotting as GP
-
-def revpower(x1,x2):
-    return x2**x1
+#
+from load_risromti import load_risromti
 
 def plotisropt(risrName,omtiName):
 
-    omti,risr = load_testdata(risrName,omtiName)
+    risr,omti = load_risromti(risrName,omtiName)
     #first object in geodatalist is being overlayed over by the second object
     altlist = [300]
     xyvecs = [np.linspace(-100.0,500.0),np.linspace(0.0,600.0)]
@@ -39,15 +36,6 @@ def plotisropt(risrName,omtiName):
     ax1.set_xlabel('x')
     ax2.set_ylabel('y')
     ax2.set_xlabel('x')
-
-def load_testdata(risrName,omtiName):
-    #creating GeoData objects of the 2 files, given a specific parameter
-    omti = GeoData.GeoData(utilityfuncs.readOMTI,(omtiName, ['optical']))
-    risr = GeoData.GeoData(utilityfuncs.readMad_hdf5,(risrName, ['nel']))
-    #converting logarthmic electron density (nel) array into electron density (ne) array
-    risr.changedata('nel','ne',revpower,[10.0])
-
-    return omti,risr
 
 if __name__ == '__main__':
     plotisropt(risrName='ran120219.004.hdf5',omtiName='OMTIdata.h5')

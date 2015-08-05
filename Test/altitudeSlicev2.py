@@ -19,13 +19,9 @@ import scipy as sp
 import matplotlib.pyplot as plt
 import h5py
 #
-if True: #debug for running without install
-    import sys; sys.path.append('..')
-try:
-    from GeoData import GeoData
-    from GeoData import utilityfuncs
-except:
-    from .GeoData import utilityfuncs
+from GeoData import GeoData
+from GeoData import utilityfuncs
+
 
 #function used for change data
 def revpower(x1,x2):

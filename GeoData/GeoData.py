@@ -16,17 +16,13 @@ import numpy as np
 import scipy as sp
 import scipy.interpolate as spinterp
 import tables
-#import sys
 from pandas import DataFrame
 import pdb
 from warnings import warn
 #
-try:
-    from . import CoordTransforms as CT
-    from .utilityfuncs import read_h5_main
-except Exception:
-    import CoordTransforms as CT
-    from utilityfuncs import read_h5_main
+from . import CoordTransforms as CT
+from .utilityfuncs import read_h5_main
+
 
 
 VARNAMES = ['data','coordnames','dataloc','sensorloc','times']

@@ -13,7 +13,7 @@ import scipy as sp
 import scipy.interpolate as spinterp
 import time
 import datetime as dt
-import pdb
+from six import integer_types
 from warnings import warn
 #from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
@@ -387,7 +387,7 @@ def rangevstime(geod,beam,vbounds=None,gkey = None,cmap='jet',fig=None,ax=None,t
     (beaminds,beamnums) = np.unique(b,return_index=True, return_inverse=True)[1:]
     beams = a[beaminds]
 
-    if isinstance(beam, (int, long, float, complex)):
+    if isinstance(beam, (integer_types, float, complex)):
         beamind = beam
     else:
         atol = np.abs(beams).sum(axis=1)

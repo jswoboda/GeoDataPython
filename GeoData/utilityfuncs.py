@@ -316,7 +316,7 @@ def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc):
             img = header[0].data
             data[:,i] = img.flatten()
         except:
-            print fn,'has error'
+            print(fn + ' has error')
     data = {'image':data}
 
     coordnames="Spherical"
