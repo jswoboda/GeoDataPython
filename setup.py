@@ -2,7 +2,7 @@
 """
 setup.py
 This is the setup file for the GeoData python package.
-To install as a package in development type 
+To install as a package in development type
 python setup.py develop
 To uninstall type
 python setup.py develop --uninstall
@@ -15,6 +15,9 @@ try:
 except ImportError:
     from distutils.core import setup
 
+with open('README.rst') as f:
+	long_description = f.read()
+
 config = {
     'description': 'GeoData class and needed functions.',
     'author': 'John Swoboda',
@@ -22,10 +25,11 @@ config = {
     'download_url': 'https://github.com/jswoboda/GeoDataPython.git',
     'author_email': 'swoboj@bu.edu',
     'version': '0.2',
-    'install_requires': ['numpy', 'scipy', 'tables'],
+    'install_requires': ['numpy', 'scipy', 'tables','h5py'],
     'packages': ['GeoData'],
     'scripts': [],
-    'name': 'GeoData'
+    'name': 'GeoData',
+    'long_description': long_description
 }
 
 curpath = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
