@@ -30,9 +30,11 @@ try:
 except:
     from .CoordTransforms import angles2xy
 
-
-plt.rc('text', usetex=True)
-plt.rc('font', family='serif')
+try:
+    plt.rc('text', usetex=True)
+    plt.rc('font', family='serif')
+except Except as e:
+    print('Latex install not complete, falling back to basic fonts.  sudo apt-get install dvipng')
 
 def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None):
     """
