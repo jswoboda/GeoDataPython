@@ -261,11 +261,15 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='j
 def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',fig=None,ax=None,title='',cbar=True):
 
     #xyzvecs is the area that the data covers.
+    poscoords = ['cartesian','wgs84','enu','ecef']
+    assert geod.coordnames.lower() in poscoords
 
-    assert geod.coordnames.lower() =='cartesian'
-
-    axdict = {'x':0,'y':1,'z':2}
-    veckeys = ['x','y','z']
+    if geod.coordnames.lower() in ['cartesian','enu','ecef']:
+        axdict = {'x':0,'y':1,'z':2}
+        veckeys = ['x','y','z']
+    elif geod.coordnames.lower() == 'wgs84':
+        axdict = {'lat':0,'long':1,'alt':2}
+        veckeys = ['lat','long','alt']
     if type(axstr)==str:
         axis=axstr
     else:
@@ -291,7 +295,7 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
     if gkey is None:
         gkey = geod.data.keys[0]
     # get the data location
-    dataout = geod.datareducelocation(new_coords,'Cartesian',gkey)[:,time]
+    dataout = geod.datareducelocation(new_coords,geod.coordnames,gkey)[:,time]
 
 
     title = insertinfo(title,gkey,geod.times[time,0],geod.times[time,1])
@@ -316,10 +320,15 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
     return(ploth,cbar2)
 
 def contourGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',fig=None,ax=None,title='',cbar=True):
-    assert geod.coordnames.lower() =='cartesian'
+    poscoords = ['cartesian','wgs84','enu','ecef']
+    assert geod.coordnames.lower() in poscoords
 
-    axdict = {'x':0,'y':1,'z':2}
-    veckeys = ['x','y','z']
+    if geod.coordnames.lower() in ['cartesian','enu','ecef']:
+        axdict = {'x':0,'y':1,'z':2}
+        veckeys = ['x','y','z']
+    elif geod.coordnames.lower() == 'wgs84':
+        axdict = {'lat':0,'long':1,'alt':2}
+        veckeys = ['lat','long','alt']
     if type(axstr)==str:
         axis=axstr
     else:
@@ -369,6 +378,61 @@ def contourGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
 
     return(ploth,cbar2)
 
+def sliceGDsphere(geod,coordnames ='cartesian' ,vbounds=None,time = 0,gkey = None,cmap='jet',fig=None,ax=None,title='',cbar=True):
+
+    assert geod.coordnames.lower() =='spherical'
+
+    if coordnames.lower() in ['cartesian','enu','ecef']:
+        veckeys = ['x','y','z']
+    elif coordnames.lower() == 'wgs84':
+        veckeys = ['lat','long','alt']
+
+    if (ax is None) and (fig is None):
+        fig = plt.figure(facecolor='white')
+        ax = fig.gca()
+    elif ax is None:
+        ax = fig.gca()
+
+     #determine the data name
+    if gkey is None:
+        gkey = geod.data.keys[0]
+
+    title = insertinfo(title,gkey,geod.times[time,0],geod.times[time,1])
+
+    xycoords = geod.__changecoords__(coordnames)
+
+    xvec = xycoords[:,0]
+    yvec = xycoords[:,1]
+    curdata =geod.data[gkey][:,time]
+    ploth = ax.tripcolor(xvec,yvec,curdata)
+    if cbar:
+        cbar2 = plt.colorbar(ploth, ax=ax, format='%.0e')
+    else:
+        cbar2 = None
+
+    ax.set_title(title)
+    ax.set_xlabel(veckeys[0])
+    ax.set_ylabel(veckeys[1])
+
+    return(ploth,cbar2)
+
+def plotbeamposfig(geod,height,coordnames,fig=None,ax=None,title=''):
+    d2r = sp.pi/180.
+    if (ax is None) and (fig is None):
+        fig = plt.figure(facecolor='white')
+        ax = fig.gca()
+    elif ax is None:
+        ax = fig.gca()
+
+    (beams,beaminds,beamnums) = uniquerows(geod.dataloc[:,1:])
+    az = beams[:,0]
+    el = beams[:,1]
+    rho = height*sp.tan((90-el)*d2r)
+    y = rho*sp.cos(az*d2r)
+    x = rho*sp.sin(az*d2r)
+
+    ploth = ax.scatter(x,y)
+    return(ploth)
 
 def rangevstime(geod,beam,vbounds=None,gkey = None,cmap='jet',fig=None,ax=None,title='',cbar = True):
     """ This method will create a color graph of range vs time for data in spherical coordinates"""
@@ -384,11 +448,11 @@ def rangevstime(geod,beam,vbounds=None,gkey = None,cmap='jet',fig=None,ax=None,t
         gkey = geod.data.keys[0]
 
 
-    a = geod.dataloc[:,1:]
-    b=np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))
-    (beaminds,beamnums) = np.unique(b,return_index=True, return_inverse=True)[1:]
-    beams = a[beaminds]
-
+#    a = geod.dataloc[:,1:]
+#    b=np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))
+#    (beaminds,beamnums) = np.unique(b,return_index=True, return_inverse=True)[1:]
+#    beams = a[beaminds]
+    (beams,beaminds,beamnums) = uniquerows(geod.dataloc[:,1:])
     if isinstance(beam, (integer_types, float, complex)):
         beamind = beam
     else:
@@ -419,7 +483,11 @@ def rangevstime(geod,beam,vbounds=None,gkey = None,cmap='jet',fig=None,ax=None,t
     ax.set_ylabel('range in km')
 
     return (ploth,cbar2)
-
+def uniquerows(a):
+    b=np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))
+    (rowsinds,rownums) = np.unique(b,return_index=True, return_inverse=True)[1:]
+    rows = a[rowsinds]
+    return (rows,rowsinds,rownums)
 def plotbeamposGD(geod,fig=None,ax=None,title='Beam Positions'):
     assert geod.coordnames.lower() =='spherical'
 

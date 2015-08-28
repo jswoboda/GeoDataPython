@@ -231,7 +231,7 @@ def read_h5_main(filename):
     return newout
 
 def pathparts(path):
-    ''' '''
+    '''This will return all of the parts of a posix path in a list. '''
     components = []
     while True:
         (path,tail) = posixpath.split(path)
@@ -254,7 +254,8 @@ def readOMTI(filename, paramstr):
     return optical, coordnames, dataloc, sensorloc, times
 
 def readIono(iono):
-    """ This function will bring in instances of the IonoContainer class into GeoData.
+    """ @author:John Swoboda
+    This function will bring in instances of the IonoContainer class into GeoData.
     This is using the set up from the RadarDataSim codebase"""
     pnames = iono.Param_Names
     Param_List = iono.Param_List
@@ -296,7 +297,17 @@ def readIono(iono):
 #data, coordnames, dataloc, sensorloc, times = readMad_hdf5('/Users/anna/Research/Ionosphere/2008WorldDaysPDB/son081001g.001.hdf5', ['ti', 'dti', 'nel'])
 
 def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc):
+    """ @author: Greg Star
+    This function will read a Fits file into the proper GeoData variables.
+    inputs
+    flist - A list of Fits files that will be read in.
+    azmap - A file name of the az mapping.
+    elmap - A file name of the elevation maping
+    hightkm - The height the data will be projected on to in km
+    sensorloc - A numpy array of latitude longitude and altitude in wgs coordinates of
+    the location of the sensor.
 
+    """
     if type(flist)==str:
         flist=[flist]
     header = fits.open(flist[0])

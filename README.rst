@@ -63,6 +63,22 @@ The properties names will be all lower case. While all function names will be lo
 
 If the user would like to create test code please do this in the Test folder. Also this code is not be uploaded to the main code base on GitHub.
 
+Class Structure========The GeoData software is built around a class where each instance is a data set from a sensor. The user will simply have to make a function to read the data into the class and which at that point will give them access to other tools such as interpolations and plotting methods that can be used to augment or display the data. The class will be made up of the following variablesdata - This will hold the data for the data set. In python this will be a dictionary where the keys are the names of the data and the values will be numpy arrays that hold the data. In MATLAB the field names will be the data names and the arrays will be the values.  Each data set will be held in a flattened array structure or can be an NxT array where N is the number of locations of measurements and T will be the number of times. coordnames – This string will hold the types of coordinates for the data. There will be a set number of coordinate types seen in the table below. More can be added as needed,
+
+
+.. csv-table:: Possible Coordinate Names
+   :header: "String Name", "Definition"
+   :widths: 10, 20
+
+   "wgs84", "Latitude Longitude Altitude (deg,deg,m)"
+   "Spherical",  "Range azimuth and elevation (km, deg, deg) elevation angle is referenced to z=0 plane."
+   "Spherical2",  "Range azimuth and elevation (km, deg, deg) elevation angle is referenced to x=y=0 line."
+   "ENU","East north up (m,m,m). sensorloc holds the origin."
+   "ECEF","Earth centered earth fixed (m,m,m)."
+   "Cartesian","Local Cartesian grid (km,km,km). Pretty much the same as ENU but in km."
+      
+dataloc – This will be a NxP array of locations in the coordinate system of  choice. P is the number of elementssensorloc – This will be an array that holds the location of the sensor in wgs84. If there are multiple sensors such as a set of satellite measurements the array will be filled with nans.times – A Tx2 array of times in posix format showing the ending and beginning of a measurement.
+
 Workflow
 ========
 The GeoData take advantage of a standardized structure of data to give the user access to the avalible tools. It's built off of container class where each instances is a specfic data set. In all cases the user needs to put their data in this structure. This first task will require a line of code similar to the following to start the process::
