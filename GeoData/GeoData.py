@@ -379,6 +379,11 @@ def timerepair(timear):
         if timear.shape[1] ==2:
             return timear
         timear = timear.ravel()
+    if timear.size==1:
+        # XXX Using this for my simulator program because old data does not have end times.
+        warn('Timear is only of size 1. Making second element that is 60 seconds ahead of the original')
+        return  sp.array([[timear[0],timear[0]+60]])
+
     avdiff = sp.diff(timear).mean()
     timear2 = sp.roll(timear,-1)
     timear2[-1]=timear2[-2]+avdiff
