@@ -5,7 +5,7 @@ GeoDataPython
 .. image:: logo/logo1.png
    :alt: GeoDataPython example of OMTI and RISR data
 
-
+.. contents::
 
 Overview
 ========
@@ -77,7 +77,7 @@ Class Structure========The GeoData software is built around a class where each
    "ECEF","Earth centered earth fixed (m,m,m)."
    "Cartesian","Local Cartesian grid (km,km,km). Pretty much the same as ENU but in km."
       
-dataloc – This will be a NxP array of locations in the coordinate system of  choice. P is the number of elementssensorloc – This will be an array that holds the location of the sensor in wgs84. If there are multiple sensors such as a set of satellite measurements the array will be filled with nans.times – A Tx2 array of times in posix format showing the ending and beginning of a measurement.
+dataloc – This will be a NxP array of locations in the coordinate system of  choice. P is the number of elementssensorloc – This will be an array that holds the location of the sensor in wgs84. If there are multiple sensors such as a set of satellite measurements the array will be filled with nans.times – A Tx2 array of times in posix format showing the ending and beginning of a measurement.
 
 Workflow
 ========
