@@ -5,7 +5,7 @@ GeoDataPython
 .. image:: logo/logo1.png
    :alt: GeoDataPython example of OMTI and RISR data
 
-:Primary Author: John Swobdoa
+:Primary Author: John Swoboda
 :Co-Authors: Anna Stuhlmacher, Michael Hirsch
 
 .. contents::
