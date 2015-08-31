@@ -139,7 +139,9 @@ Having difficulty?
 
 Fast 3-D plotting typically involves OpenGL these days.
 Mayavi/VTK use OpenGL to make highly dense 3-D plots beautiful.
-If you get `an OpenGL error like this <https://gist.github.com/scienceopen/da7f89e22ced7929c09f>`_ try::
+If you get `an OpenGL error like this <https://gist.github.com/scienceopen/da7f89e22ced7929c09f>`_ try
+
+.. code:: bash
 
 	$ sudo apt-get install mayavi2
 	$ /usr/bin/python2 mycode.py
