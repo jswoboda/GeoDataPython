@@ -20,11 +20,7 @@ Full functionality requires Python 2.7 due to Mayavi/VTK.
 Non-mayavi functionality also available in Python 3.
 The packages required include:
 
-* numpy
-* scipy
-* pytables
-* matplotlib
-* Mayavi (inlcludes VTK)
+``numpy  scipy  pytables  matplotlib  mayavi``
 
 Installation
 ============
