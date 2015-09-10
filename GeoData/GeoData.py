@@ -160,6 +160,13 @@ class GeoData(object):
             else: #assume numpy array
                 gd2.data[idata] = gd2.data[idata][:,loclist]
         return gd2
+#%% Satellite Data
+    def issatellite(self):
+        """Checks if the instance is satellite data. It will give true if the sensorloc array is all nans"""
+        if sp.all(sp.isnan(self.sensorloc)):
+            return True
+        else:
+            return False
 #%% Changing data based on location
     def interpolate(self,new_coords,newcoordname,method='nearest',fill_value=np.nan,twodinterp = False,ikey=None):
         """This method will take the data points in the dictionary data and spatially.
