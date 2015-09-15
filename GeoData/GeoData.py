@@ -37,7 +37,7 @@ class GeoData(object):
     sensorloc - A numpy array with the WGS coordinates of the sensor.
     times - A numpy array that is holding the times associated with the measurements.'''
     def __init__(self,readmethod,inputs):
-        if type(readmethod)=='pass':
+        if type(readmethod)==str:
             (self.data,self.coordnames,self.dataloc,self.sensorloc,self.times) = inputs
         else:
             '''This will create an instance of the GeoData class by giving it a read method and the inputs in a tuple'''
@@ -110,18 +110,18 @@ class GeoData(object):
         """This method will combine the times and content of two instances of the GeoData class.
         The first object will be extendent in time."""
         datakeys = self.data.keys()
-        assert(set(datakeys) ==set(self2.data.keys()),'Data must have the same names.')
+        assert set(datakeys) ==set(self2.data.keys()),'Data must have the same names.'
         # Look at the coordinate names
-        assert(self.coordnames==self2.coordnames,'Must be same coordinate same.')
+        assert self.coordnames==self2.coordnames,'Must be same coordinate same.'
         # Look at the data location
         a = np.ma.array(self.dataloc,mask=np.isnan(self.dataloc))
         blah = np.ma.array(self2.dataloc,mask=np.isnan(self2.dataloc))
-        assert(np.ma.allequal(a,blah),'Location points must be the same')
+        assert np.ma.allequal(a,blah),'Location points must be the same'
 
         # Look at the sensor location
         a = np.ma.array(self.sensorloc,mask=np.isnan(self.sensorloc))
         blah = np.ma.array(self2.sensorloc,mask=np.isnan(self2.sensorloc))
-        assert(np.ma.allequal(a,blah),'Sensor Locations must be the same')
+        assert np.ma.allequal(a,blah),'Sensor Locations must be the same'
 
         alltimes = sp.vstack((timerepair(self.times),timerepair(self2.times)))
 
