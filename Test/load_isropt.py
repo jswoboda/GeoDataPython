@@ -16,3 +16,15 @@ def load_risromti(risrName,omtiName=None):
     risr.changedata('nel','ne',revpower,[10.0])
 
     return risr,omti
+
+def load_pfisr_neo(pfisrName,neoName=None):
+    if neoName:
+        neo = GeoData.GeoData(utilityfuncs.readNeo,(pfisrName,['nel']))
+    else:
+        neo = None
+
+    pfisr = GeoData.GeoData(utilityfuncs.readMad_hdf5,(pfisrName['nel']))
+
+    pfisr.changedata('nel','ne',revpower,[10.])
+
+    return pfisr,neo
