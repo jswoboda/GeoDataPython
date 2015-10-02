@@ -14,6 +14,8 @@ import numpy as np
 import GeoData.plotting as GP
 #
 from load_isropt import load_pfisr_neo
+#
+picktimeind = [14,15] #arbitrary user time index choice
 
 def plotisropt(isrName,optName,azelfn,heightkm):
 
@@ -26,9 +28,11 @@ def plotisropt(isrName,optName,azelfn,heightkm):
 
     fig3, (ax1, ax2) = subplots(1,2,figsize=(10,5), facecolor='white')
     ax1 = fig3.add_subplot(121)
-    ax1 = GP.alt_slice_overlay((opt, isr), altlist, xyvecs, vbounds, title, axis=ax1)
+    ax1 = GP.alt_slice_overlay((opt, isr), altlist, xyvecs, vbounds, title, axis=ax1,
+                               picktimeind=picktimeind)
     ax2 = fig3.add_subplot(122)
-    ax2 = GP.alt_contour_overlay((opt, isr), altlist, xyvecs, vbounds, title, axis=ax2)
+    ax2 = GP.alt_contour_overlay((opt, isr), altlist, xyvecs, vbounds, title, axis=ax2,
+                                 picktimeind=picktimeind)
 
     ax1.set_ylabel('y')
     ax1.set_xlabel('x')
@@ -36,8 +40,20 @@ def plotisropt(isrName,optName,azelfn,heightkm):
     ax2.set_xlabel('x')
 
 if __name__ == '__main__':
-    plotisropt(isrName='~/data/pfa110301.003.hdf5',
-               optName='~/data/CMOS/110301_1043.h5',
-               azelfn='~/data/CMOS/calMishap2011Mar.h5',
+    from argparse import ArgumentParser
+    p = ArgumentParser(description='March 1,2011 example at PFISR with Neo sCMOS camera')
+    p.add_argument('--radaronly',help='load only radar data',action='store_true')
+    p = p.parse_args()
+
+    if p.radaronly:
+        optName = None
+        azelfn = None
+    else:
+        optName = '~/data/2011-03-01/110301_1043.h5'
+        azelfn = '~/data/CMOS/calMishap2011Mar.h5'
+
+    plotisropt(isrName='~/data/2011-03-01/pfa110301.003.hdf5',
+               optName=optName,
+               azelfn=azelfn,
                heightkm=140.)
     show()
