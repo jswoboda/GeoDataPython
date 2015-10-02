@@ -17,7 +17,7 @@ def sphereical2Cartisian(spherecoords):
     Output
     cartcoords - A 3xN numpy array with X, Y and Z in a cartisian coordinate space.
     The coordinates are in units of kilometers."""
-    d2r = np.pi/180
+
     (dir1,dir2) = spherecoords.shape
     transcoords = False
     if dir2==3:
@@ -27,8 +27,8 @@ def sphereical2Cartisian(spherecoords):
         raise ValueError('Neither of the dimensions are of length 3')
     (R,Az,El) = spherecoords[:]
 
-    Azr = Az*d2r
-    Elr = El*d2r
+    Azr = np.radians(Az)
+    Elr = np.radians(El)
 
     kx = np.sin(Azr) * np.cos(Elr)
     ky = np.cos(Azr) * np.cos(Elr)
