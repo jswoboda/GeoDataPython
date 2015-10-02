@@ -34,104 +34,140 @@ try:
     plt.rc('text', usetex=True)
     plt.rc('font', family='serif')
 except Exception as e:
-    print('Latex install not complete, falling back to basic fonts.  sudo apt-get install dvipng')
+    warn('Latex install not complete, falling back to basic fonts.  sudo apt-get install dvipng')
 
-def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None):
+
+def _dointerp(geodatalist,altlist,xyvecs,picktimeind):
+    opt=None; isr=None #in case of failure
+    xvec = xyvecs[0]
+    yvec = xyvecs[1]
+    x,y = np.meshgrid(xvec, yvec)
+    z = np.ones(x.shape)*altlist
+    new_coords = np.column_stack((x.ravel(),y.ravel(),z.ravel()))
+    extent=[xvec.min(),xvec.max(),yvec.min(),yvec.max()]
+
+    key={}
+#%% optical
+    try:
+        key['opt']=list(geodatalist[0].data.keys()) #list necessary for Python3
+        gd0 = geodatalist[0].timeslice(picktimeind)
+        gd0.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
+        interpData = gd0.data[key['opt'][0]]
+        opt = interpData[:,0].reshape(x.shape)
+    except AttributeError as e:
+        warn('skipping instrument   {}'.format(e))
+#%% isr
+    try:
+        key['isr'] = list(geodatalist[1].data.keys()) #list necessary for Python3
+        gd2 = geodatalist[1].timeslice(picktimeind)
+        gd2.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
+        interpData = gd2.data[key['isr'][0]]
+        isr = interpData[:,0].reshape(x.shape)
+    except AttributeError as e:
+        warn('skipping instrument   {}'.format(e))
+
+    return opt,isr,extent,key,x,y
+
+def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,picktimeind=[1,2]):
     """
     geodatalist - A list of geodata objects that will be overlayed, first object is on the bottom and in gray scale
     altlist - A list of the altitudes that we can overlay.
     xyvecs- A list of x and y numpy arrays that have the x and y coordinates that the data will be interpolated over. ie, xyvecs=[np.linspace(-100.0,500.0),np.linspace(0.0,600.0)]
     vbounds = a list of bounds for each geodata object. ie, vbounds=[[500,2000], [5e10,5e11]]
     title - A string that holds for the overall image
+    picktimeind - indices in time to extract and plot (arbitrary choice)
     Returns an image of an overlayed plot at a specific altitude.
     """
-    xvec = xyvecs[0]
-    yvec = xyvecs[1]
-    x,y = np.meshgrid(xvec, yvec)
-    z = np.ones(x.shape)*altlist
-    new_coords = np.column_stack((x.ravel(),y.ravel(),z.ravel()))
-    extent=[xvec.min(),xvec.max(),yvec.min(),yvec.max()]
 
-    key0 = list(geodatalist[0].data.keys()) #list necessary for Python3
-    key1 = list(geodatalist[1].data.keys())
-# isr
-    gd2 = geodatalist[1].timeslice([1,2]) #second and third times in array
-    gd2.interpolate(new_coords, newcoordname='Cartesian', method='linear', fill_value=np.nan)
-    interpData = gd2.data[key1[0]]
-    isr = interpData[:,0].reshape(x.shape)
-# optical
-    gd0 = geodatalist[0].timeslice([1,2])
-    gd0.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
-    interpData = gd0.data[key0[0]]
-    opt = interpData[:,0].reshape(x.shape)
-
+    opt,isr,extent,key,x,y = _dointerp(geodatalist,altlist,xyvecs,picktimeind)
+#%% plots
     if axis is None:
-        fg = plt.figure(facecolor='white'); ax=fg.gca()
-        bottom = ax.imshow(opt, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
-        cbar1 = fg.colorbar(bottom)
-        cbar1.set_label(key0[0])
-        ax.hold(True)
-
-        top = ax.imshow(isr, cmap=cm.jet, alpha=0.4, extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
-        cbar2 = fg.colorbar(top)
-        cbar2.set_label(key1[0])
+        fg = plt.figure(facecolor='white')
+        ax=fg.gca()
         ax.set_title(title)
         ax.set_xlabel('x')
         ax.set_ylabel('y')
 
+        try:
+            bottom = ax.imshow(opt, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
+            cbar1 = fg.colorbar(bottom)
+            cbar1.set_label(key['opt'][0])
+        except Exception as e:
+            warn('problem plotting instrument  {}'.format(e))
+
+        ax.hold(True)
+
+        try:
+            top = ax.imshow(isr, cmap=cm.jet, alpha=0.4, extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
+            cbar2 = fg.colorbar(top)
+            cbar2.set_label(key['isr'][0])
+        except Exception as e:
+            warn('problem plotting instrument  {}'.format(e))
+
     else:
-        axis.imshow(opt, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
+        try:
+            axis.imshow(opt, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
+        except Exception as e:
+            warn('problem plotting instrument  {}'.format(e))
+
         axis.hold(True)
-        axis.imshow(isr, cmap=cm.jet, alpha=0.4, extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
+
+        try:
+            axis.imshow(isr, cmap=cm.jet, alpha=0.4, extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
+        except Exception as e:
+            warn('problem plotting instrument  {}'.format(e))
+
         return axis
 
-def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None):
+def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,picktimeind=[1,2]):
     """
     geodatalist - A list of geodata objects that will be overlayed, first object is on the bottom and in gray scale
     altlist - A list of the altitudes that we can overlay.
     xyvecs- A list of x and y numpy arrays that have the x and y coordinates that the data will be interpolated over.
     vbounds = a list of bounds for each geodata object. ie, vbounds=[[500,2000], [5e10,5e11]]
     title - A string that holds for the overall image
+    picktimeind - indices in time to extract and plot (arbitrary choice)
     Returns an image of an overlayed plot at a specific altitude.
     """
-    xvec = xyvecs[0]
-    yvec = xyvecs[1]
-    x,y = np.meshgrid(xvec, yvec)
-    z = np.ones(x.shape)*altlist
-    new_coords = np.column_stack((x.ravel(),y.ravel(),z.ravel()))
-    extent=[xvec.min(),xvec.max(),yvec.min(),yvec.max()]
-
-    key0 = list(geodatalist[0].data.keys()) #list needed for Python3
-    key1 = list(geodatalist[1].data.keys())
-
-    gd2 = geodatalist[1].timeslice([1,2])
-    gd2.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
-    interpData = gd2.data[key1[0]]
-    risr = interpData[:,0].reshape(x.shape)
-
-    gd3 = geodatalist[0].timeslice([1,2])
-    gd3.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
-    interpData = gd3.data[key0[0]]
-    omti = interpData[:,0].reshape(x.shape)
-
-    if axis == None:
-        fg= plt.figure(facecolor='white'); ax=fg.gca()
-        bottom = ax.imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
-        cbar1 = plt.colorbar(bottom, orientation='horizontal')
-        cbar1.set_label(key0[0])
-        ax.hold(True)
-
-        top = ax.contour(x,y, risr, cmap=cm.jet,extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
-        #clabel(top,inline=1,fontsize=10, fmt='%1.0e')
-        cbar2 = fg.colorbar(top, format='%.0e')
-        cbar2.set_label(key1[0])
+    opt,isr,extent,key,x,y = _dointerp(geodatalist,altlist,xyvecs,picktimeind)
+#%% plots
+    if axis is None:
+        fg= plt.figure(facecolor='white')
+        ax=fg.gca()
         ax.set_title(title)
         ax.set_xlabel('x')
         ax.set_ylabel('y')
+
+        try:
+            bottom = ax.imshow(opt, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
+            cbar1 = plt.colorbar(bottom, orientation='horizontal')
+            cbar1.set_label(key['opt'][0])
+        except Exception as e:
+            warn('problem plotting instrument  {}'.format(e))
+
+        ax.hold(True)
+
+        try:
+            top = ax.contour(x,y, isr, cmap=cm.jet,extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
+            #clabel(top,inline=1,fontsize=10, fmt='%1.0e')
+            cbar2 = fg.colorbar(top, format='%.0e')
+            cbar2.set_label(key['isr'][0])
+        except Exception as e:
+            warn('problem plotting instrument  {}'.format(e))
+
     else:
-        axis.imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
+        try:
+            axis.imshow(opt, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
+        except Exception as e:
+            warn('problem plotting instrument  {}'.format(e))
+
         axis.hold(True)
-        axis.contour(x,y, risr, cmap=cm.jet,extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
+
+        try:
+            axis.contour(x,y, isr, cmap=cm.jet,extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
+        except Exception as e:
+            warn('problem plotting instrument  {}'.format(e))
+
         return axis
 
 
