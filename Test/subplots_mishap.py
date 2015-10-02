@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Example code on using the alt_slice_overlay function in the plotting.py file.
 Takes two h5 files--a PFISR file and a Neo sCMOS file-- and creates 2 objects. This is inputed into alt_slice_overlay.
