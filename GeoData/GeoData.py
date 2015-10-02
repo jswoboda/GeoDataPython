@@ -6,7 +6,7 @@ Created on Thu Jul 17 12:46:46 2014
 @author: John Swoboda
 """
 from __future__ import division,absolute_import
-from six import integer_types
+from six import integer_types,string_types
 #import os
 #import time
 
@@ -37,7 +37,7 @@ class GeoData(object):
     sensorloc - A numpy array with the WGS coordinates of the sensor.
     times - A numpy array that is holding the times associated with the measurements.'''
     def __init__(self,readmethod,inputs):
-        if type(readmethod)==str:
+        if isinstance(readmethod,string_types):
             (self.data,self.coordnames,self.dataloc,self.sensorloc,self.times) = inputs
         else:
             '''This will create an instance of the GeoData class by giving it a read method and the inputs in a tuple'''
@@ -152,13 +152,20 @@ class GeoData(object):
         gd2 = self.copy()
         if gd2.times.ndim==1:
             gd2.times = gd2.times[loclist]
-        else:
+        elif gd2.times.ndim==2:
             gd2.times = gd2.times[loclist,:]
+        else:
+            raise TypeError('i only expect 1 or 2 dimensions for time')
+
         for idata in gd2.datanames():
             if isinstance(gd2.data[idata],DataFrame):
                 gd2.data[idata] = gd2.data[idata][gd2.times] #data is a vector
-            else: #assume numpy array
+            elif gd2.data[idata].ndim==2:
                 gd2.data[idata] = gd2.data[idata][:,loclist]
+            elif gd2.data[idata].ndim==3:
+                gd2.data[idata] = gd2.data[idata][loclist,:,:]
+            else:
+                raise TypeError('unknown data shape for gd2 data')
         return gd2
 #%% Satellite Data
     def issatellite(self):
@@ -218,12 +225,25 @@ class GeoData(object):
                     if usepandas:
                         curparam = self.data[iparam][tim] #dataframe: columns are time in this case
                     else: #assume Numpy
-                        curparam = self.data[iparam][:,itime] #assuming 2-D numpy array
-                    dfmask = np.isfinite(curparam)
-                    curparam = curparam[dfmask]
-                    npmask=dfmask.values if usepandas else dfmask #have to do this for proper indexing of numpy arrays!
-                    coordkeep = curcoords[npmask,:]
-                    intparam = spinterp.griddata(coordkeep,curparam,new_coords,method,fill_value)
+                        if self.data[iparam].ndim==2: #assuming 2-D numpy array
+                            curparam = self.data[iparam][:,itime]
+                        elif self.data[iparam].ndim==3:
+                            curparam = self.data[iparam][itime,:,:].ravel()
+                        else:
+                            raise ValueError('incorrect data matrix shape')
+
+                    if iparam != 'optical':
+                        dfmask = np.isfinite(curparam)
+                        curparam = curparam[dfmask]
+                        npmask=dfmask.values if usepandas else dfmask #have to do this for proper indexing of numpy arrays!
+                        coordkeep = curcoords[npmask,:]
+                    else:
+                        coordkeep = curcoords
+
+                    if len(coordkeep)>0: # at least one finite value
+                        intparam = spinterp.griddata(coordkeep,curparam,new_coords,method,fill_value)
+                    else: # no finite values
+                        intparam = np.nan
                     New_param[:,itime] = intparam
                 self.data[iparam] = New_param
 

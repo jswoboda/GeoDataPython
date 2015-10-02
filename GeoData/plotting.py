@@ -33,7 +33,7 @@ except:
 try:
     plt.rc('text', usetex=True)
     plt.rc('font', family='serif')
-except Except as e:
+except Exception as e:
     print('Latex install not complete, falling back to basic fonts.  sudo apt-get install dvipng')
 
 def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None):
@@ -54,25 +54,25 @@ def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None):
 
     key0 = list(geodatalist[0].data.keys()) #list necessary for Python3
     key1 = list(geodatalist[1].data.keys())
-
+# isr
     gd2 = geodatalist[1].timeslice([1,2]) #second and third times in array
     gd2.interpolate(new_coords, newcoordname='Cartesian', method='linear', fill_value=np.nan)
     interpData = gd2.data[key1[0]]
-    risr = interpData[:,0].reshape(x.shape)
-
-    gd3 = geodatalist[0].timeslice([1,2])
-    gd3.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
-    interpData = gd3.data[key0[0]]
-    omti = interpData[:,0].reshape(x.shape)
+    isr = interpData[:,0].reshape(x.shape)
+# optical
+    gd0 = geodatalist[0].timeslice([1,2])
+    gd0.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
+    interpData = gd0.data[key0[0]]
+    opt = interpData[:,0].reshape(x.shape)
 
     if axis is None:
         fg = plt.figure(facecolor='white'); ax=fg.gca()
-        bottom = ax.imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
+        bottom = ax.imshow(opt, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
         cbar1 = fg.colorbar(bottom)
         cbar1.set_label(key0[0])
         ax.hold(True)
 
-        top = ax.imshow(risr, cmap=cm.jet, alpha=0.4, extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
+        top = ax.imshow(isr, cmap=cm.jet, alpha=0.4, extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
         cbar2 = fg.colorbar(top)
         cbar2.set_label(key1[0])
         ax.set_title(title)
@@ -80,9 +80,9 @@ def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None):
         ax.set_ylabel('y')
 
     else:
-        axis.imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
+        axis.imshow(opt, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
         axis.hold(True)
-        axis.imshow(risr, cmap=cm.jet, alpha=0.4, extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
+        axis.imshow(isr, cmap=cm.jet, alpha=0.4, extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
         return axis
 
 def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None):

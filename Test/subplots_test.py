@@ -15,7 +15,7 @@ import numpy as np
 #
 import GeoData.plotting as GP
 #
-from load_risromti import load_risromti
+from load_isropt import load_risromti
 
 def plotisropt(risrName,omtiName):
 
@@ -38,5 +38,6 @@ def plotisropt(risrName,omtiName):
     ax2.set_xlabel('x')
 
 if __name__ == '__main__':
-    plotisropt(risrName='ran120219.004.hdf5',omtiName='OMTIdata.h5')
+    plotisropt(risrName='~/data/ran120219.004.hdf5',
+               omtiName='~/data/OMTIdata.h5')
     show()

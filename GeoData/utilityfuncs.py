@@ -16,6 +16,7 @@ from astropy.io import fits
 from pandas import DataFrame
 from datetime import datetime
 from warnings import warn
+from os.path import expanduser
 try:
     from . import CoordTransforms as CT
 except Exception:
@@ -39,6 +40,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     Here we use Pandas DataFrames internally to speed the reading process by 20+ times,
     while still passing out Numpy arrays
     """
+    filename = expanduser(filename)
     #open hdf5 file
     with tb.openFile(filename, mode = "r", title = 'Sondrestrom1') as files:
         all_data = files.getNode('/Data/Table Layout').read()
@@ -206,7 +208,7 @@ def read_h5_main(filename):
                 output[group._v_pathname][array.name]=array.read()
 
     #pdb.set_trace()
-    # find the base paths which could be dictionaries or the base directory
+    # find the base paOMTIdata.h5ths which could be dictionaries or the base directory
 #    outarr = [pathparts(ipath) for ipath in output.keys() if len(pathparts(ipath))>0]
     outlist = {}
     basekeys  = output[posixpath.sep].keys()
@@ -218,7 +220,7 @@ def read_h5_main(filename):
         if ipath[1:] in VARNAMES:
             outlist[ipath[1:]] = output[ipath]
             continue
-    # for non-dicitonary
+    # for non-dictionary
     for k in basekeys:
         if k in VARNAMES:
             # Have to check for MATLAB type strings, for some reason python does not like to register them as strings
@@ -244,6 +246,7 @@ def readOMTI(filename, paramstr):
     """
     The data paths are known a priori, so read directly ~10% faster than pytables
     """
+    filename = expanduser(filename)
     with h5py.File(filename,'r') as f:
         optical = {'optical':f['data/optical'].value} #for legacy API compatibility
         dataloc = CT.enu2cartisian(f['dataloc'].value)
@@ -297,7 +300,7 @@ def readIono(iono):
 #data, coordnames, dataloc, sensorloc, times = readMad_hdf5('/Users/anna/Research/Ionosphere/2008WorldDaysPDB/son081001g.001.hdf5', ['ti', 'dti', 'nel'])
 
 def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc):
-    """ @author: Greg Star
+    """ @author: Greg Starr
     This function will read a Fits file into the proper GeoData variables.
     inputs
     flist - A list of Fits files that will be read in.
@@ -313,7 +316,7 @@ def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc):
     header = fits.open(flist[0])
     img = header[0].data
     data = np.zeros((img.size,len(flist)))
-    dataloc = np.zeros((img.size,3))
+    dataloc = np.empty((img.size,3))
     times = np.zeros((len(flist),2))
     for i in range(len(flist)):
         try:
@@ -341,3 +344,24 @@ def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc):
     sensorloc=sensorloc
 
     return (data,coordnames,dataloc,sensorloc,times)
+
+def readNeoCMOS(imgfn, azelfn, heightkm):
+    imgfn = expanduser(imgfn)
+    azelfn = expanduser(azelfn)
+
+    with h5py.File(imgfn,'r') as f:
+        optical = {'optical':f['rawimg'].value}
+        sensorloc = f['/sensorloc'].value
+        times = f['/ut1_unix'].value
+
+        npix = f['/rawimg'].shape[1] * f['/rawimg'].shape[2]
+        dataloc = np.empty((npix,3))
+
+    coordnames = 'Spherical'
+    dataloc[:,0] = heightkm
+    with h5py.File(azelfn,'r',libver='latest') as f:
+        dataloc[:,1] = f['/az'].value.ravel()
+        dataloc[:,2] = f['/el'].value.ravel()
+
+
+    return optical, coordnames, dataloc, sensorloc, times
