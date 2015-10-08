@@ -5,7 +5,6 @@ Created on Thu Sep 11 15:29:27 2014
 @author: John Swoboda
 """
 from __future__ import division,absolute_import
-import pdb
 import numpy as np
 import tables as tb
 import h5py
@@ -17,13 +16,10 @@ from pandas import DataFrame
 from datetime import datetime
 from warnings import warn
 from os.path import expanduser
-try:
-    from . import CoordTransforms as CT
-except Exception:
-    import CoordTransforms as CT
+#
+from . import CoordTransforms as CT
 
-usepandas = True #20x speedup vs CPython
-
+USEPANDAS = True #20x speedup vs CPython
 VARNAMES = ['data','coordnames','dataloc','sensorloc','times']
 
 def readMad_hdf5 (filename, paramstr): #timelims=None
@@ -93,7 +89,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
 
     #initialize and fill data dictionary with parameter arrays
     #notnan = filt_data.index
-    if not usepandas:
+    if not USEPANDAS:
         all_loc=filt_data[['range','az','el']].values.tolist()
         all_times = filt_data['ut1'].values.tolist()
         dataloclist = dataloc.values.tolist()
@@ -106,11 +102,11 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
             warn('{} is not a valid parameter name.'.format(p))
             continue
 
-        if usepandas:
+        if USEPANDAS:
         # example of doing via numpy
         # filt_data has already been filtered for time and location with the isr parameter(s) riding along.
          #Just reshape it!
-            #TODO take off the .values to pass the DataFrame
+            #NOTE: take off the .values to pass the DataFrame
             data[p] = DataFrame(data=filt_data[p].reshape((dataloc.shape[0],uniq_times.shape[0]),order='F'),
                                                columns=uniq_times).values
         else:
@@ -138,7 +134,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     lat,lon,sensor_alt = sensor_data[7][1],sensor_data[8][1],sensor_data[9][1]
     sensorloc = np.array([lat,lon,sensor_alt], dtype=float) #they are bytes so we NEED float!
     coordnames = 'Spherical'
-    #TODO temporarily passing dataloc as Numpy array till rest of program is updated to Pandas
+    #NOTE temporarily passing dataloc as Numpy array till rest of program is updated to Pandas
     return (data,coordnames,dataloc.values,sensorloc,uniq_times)
 
 def readSRI_h5(filename,paramstr,timelims = None):
@@ -170,7 +166,7 @@ def readSRI_h5(filename,paramstr,timelims = None):
     repangles = np.tile(angles,(1,2.0*nrng))
     allaz = repangles[:,::2]
     allel = repangles[:,1::2]
-#   TODO dataloc = DataFrame(index=times,
+#   NOTE dataloc = DataFrame(index=times,
 #                              {'rng':rng.ravel(),
 #                               'allaz':allaz.ravel(),'allel':allel.ravel()})
     dataloc =np.vstack((rng.ravel(),allaz.ravel(),allel.ravel())).transpose()
@@ -207,7 +203,6 @@ def read_h5_main(filename):
             for array in h5file.listNodes(group, classname = 'Array'):
                 output[group._v_pathname][array.name]=array.read()
 
-    #pdb.set_trace()
     # find the base paOMTIdata.h5ths which could be dictionaries or the base directory
 #    outarr = [pathparts(ipath) for ipath in output.keys() if len(pathparts(ipath))>0]
     outlist = {}
@@ -349,12 +344,12 @@ def readNeoCMOS(imgfn, azelfn, heightkm):
     imgfn = expanduser(imgfn)
     azelfn = expanduser(azelfn)
 
-    with h5py.File(imgfn,'r') as f:
-        optical = {'optical':f['rawimg'].value}
+    with h5py.File(imgfn,'r',libver='latest') as f:
+        optical = {'optical':f['/rawimg'].value}
         sensorloc = f['/sensorloc'].value
         times = f['/ut1_unix'].value
 
-        npix = f['/rawimg'].shape[1] * f['/rawimg'].shape[2]
+        npix = f['/rawimg'].shape[1] * f['/rawimg'].shape[2] #number of pixels in one image
         dataloc = np.empty((npix,3))
 
     coordnames = 'Spherical'
@@ -362,6 +357,5 @@ def readNeoCMOS(imgfn, azelfn, heightkm):
     with h5py.File(azelfn,'r',libver='latest') as f:
         dataloc[:,1] = f['/az'].value.ravel()
         dataloc[:,2] = f['/el'].value.ravel()
-
 
     return optical, coordnames, dataloc, sensorloc, times

@@ -15,7 +15,7 @@ import GeoData.plotting as GP
 #
 from load_isropt import load_pfisr_neo
 #
-picktimeind = [14,15] #arbitrary user time index choice
+picktimeind = [3,4] #arbitrary user time index choice
 
 def plotisropt(isrName,optName,azelfn,heightkm):
 
@@ -50,7 +50,7 @@ if __name__ == '__main__':
         azelfn = None
     else:
         optName = '~/data/2011-03-01/110301_1043.h5'
-        azelfn = '~/data/CMOS/calMishap2011Mar.h5'
+        azelfn = '~/data/2011-03/calMishap2011Mar.h5'
 
     plotisropt(isrName='~/data/2011-03-01/pfa110301.003.hdf5',
                optName=optName,
