@@ -23,14 +23,14 @@ def plotisropt(isrName,optName,azelfn,heightkm):
     #first object in geodatalist is being overlayed over by the second object
     altlist = [300]
     xyvecs = [np.linspace(-100.0,500.0),np.linspace(0.0,600.0)]
-    vbounds = [[200,800],[5e10,5e11]]
+    vbounds = [(None,None),(None,None)]
     title='Neo data and Ne linear interpolation'
 
     fig3, (ax1, ax2) = subplots(1,2,figsize=(10,5), facecolor='white')
-    ax1 = fig3.add_subplot(121)
+
     ax1 = GP.alt_slice_overlay((opt, isr), altlist, xyvecs, vbounds, title, axis=ax1,
                                picktimeind=picktimeind)
-    ax2 = fig3.add_subplot(122)
+
     ax2 = GP.alt_contour_overlay((opt, isr), altlist, xyvecs, vbounds, title, axis=ax2,
                                  picktimeind=picktimeind)
 
