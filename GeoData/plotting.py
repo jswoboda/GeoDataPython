@@ -26,12 +26,21 @@ except Exception as e:
     pass
 #
 from .CoordTransforms import angles2xy
-
+#
 try:
     plt.rc('text', usetex=True)
     plt.rc('font', family='serif')
 except Exception as e:
     logging.info('Latex install not complete, falling back to basic fonts.  sudo apt-get install dvipng')
+#
+try:
+    import seaborn as sns
+    sns.color_palette(sns.color_palette("cubehelix"))
+    sns.set(context='paper', style='whitegrid')
+    sns.set(rc={'image.cmap': 'cubehelix_r'}) #for contour
+
+except Exception as e:
+    logging.info('could not import seaborn  {}'.format(e))
 
 #%%
 def _dointerp(geodatalist,altlist,xyvecs,picktimeind):
@@ -111,7 +120,7 @@ def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,pi
         logging.info('problem plotting instrument  {}'.format(e))
 #%%
     try:
-        top = ax.imshow(isr, cmap='jet', alpha=0.4, extent=extent, origin='lower',interpolation='none',
+        top = ax.imshow(isr, alpha=0.4, extent=extent, origin='lower',interpolation='none',
                         vmin=vbounds[1][0],vmax=vbounds[1][1])
         c = fg.colorbar(top,ax=ax)
         c.set_label(key['isr'][0])
@@ -143,14 +152,16 @@ def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,
         fg = ax.get_figure()
 #%%
     try:
-        bottom = ax.imshow(opt, cmap='gray', extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
+        bottom = ax.imshow(opt, cmap='gray', extent=extent, origin='lower', interpolation='none',
+                           vmin=vbounds[0][0],vmax=vbounds[0][1])
         cbar1 = plt.colorbar(bottom, orientation='horizontal',ax=ax)
         cbar1.set_label(key['opt'][0])
     except Exception as e:
         logging.info('problem plotting instrument  {}'.format(e))
 
     try:
-        top = ax.contour(x,y, isr, cmap='jet',extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
+        top = ax.contour(x,y, isr,extent=extent, origin='lower', interpolation='none',
+                         vmin=vbounds[1][0],vmax=vbounds[1][1])
         #clabel(top,inline=1,fontsize=10, fmt='%1.0e')
         cbar2 = fg.colorbar(top, format='%.0e',ax=ax)
         cbar2.set_label(key['isr'][0])

@@ -411,7 +411,7 @@ def timerepair(timear):
         warn('Timear is only of size 1. Making second element that is 60 seconds ahead of the original')
         return  sp.array([[timear[0],timear[0]+60]])
 
-    avdiff = sp.diff(timear).mean()
-    timear2 = sp.roll(timear,-1)
+    avdiff = np.diff(timear).mean()
+    timear2 = np.roll(timear,-1)
     timear2[-1]=timear2[-2]+avdiff
-    return sp.column_stack((timear,timear2))
+    return np.column_stack((timear,timear2))
