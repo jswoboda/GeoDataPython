@@ -59,26 +59,24 @@ def _dointerp(geodatalist,altlist,xyvecs,picktimeind):
 #                logging.warning('skipping instrument   {}'.format(e))
 #%% optical
     g = geodatalist[0]
-    if g is not None:
-        try:
-            key['opt'] = list(g.data.keys()) #list necessary for Python3
-            G = g.timeslice(picktimeind)
-            G.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
-            interpData = G.data[key['opt'][0]]
-            opt = interpData[:,0].reshape(x.shape)
-        except Exception as e:
-            logging.warning('skipping instrument   {}'.format(e))
+    try:
+        key['opt'] = list(g.data.keys()) #list necessary for Python3
+        G = g.timeslice(picktimeind)
+        G.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
+        interpData = G.data[key['opt'][0]]
+        opt = interpData[:,0].reshape(x.shape)
+    except Exception as e:
+        logging.warning('skipping instrument   {}'.format(e))
 #%% isr
     g = geodatalist[1]
-    if g is not None:
-        try:
-            key['isr'] = list(g.data.keys()) #list necessary for Python3
-            G = g.timeslice(picktimeind)
-            G.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
-            interpData = G.data[key['isr'][0]]
-            isr = interpData[:,0].reshape(x.shape)
-        except Exception as e:
-            logging.warning('skipping instrument   {}'.format(e))
+    try:
+        key['isr'] = list(g.data.keys()) #list necessary for Python3
+        G = g.timeslice(picktimeind)
+        G.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
+        interpData = G.data[key['isr'][0]]
+        isr = interpData[:,0].reshape(x.shape)
+    except Exception as e:
+        logging.warning('skipping instrument   {}'.format(e))
 
     return opt,isr,extent,key,x,y
 #%%
@@ -104,23 +102,21 @@ def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,pi
     else:
         fg = ax.get_figure()
 #%%
-    if opt is not None:
-        try:
-            bottom = ax.imshow(opt, cmap='gray', extent=extent, origin='lower', interpolation='none',
-                               vmin=vbounds[0][0],vmax=vbounds[0][1])
-            c = fg.colorbar(bottom,ax=ax)
-            c.set_label(key['opt'][0])
-        except Exception as e:
-            logging.warning('problem plotting instrument  {}'.format(e))
+    try:
+        bottom = ax.imshow(opt, cmap='gray', extent=extent, origin='lower', interpolation='none',
+                           vmin=vbounds[0][0],vmax=vbounds[0][1])
+        c = fg.colorbar(bottom,ax=ax)
+        c.set_label(key['opt'][0])
+    except Exception as e:
+        logging.info('problem plotting instrument  {}'.format(e))
 #%%
-    if isr is not None:
-        try:
-            top = ax.imshow(isr, cmap='jet', alpha=0.4, extent=extent, origin='lower',interpolation='none',
-                            vmin=vbounds[1][0],vmax=vbounds[1][1])
-            c = fg.colorbar(top,ax=ax)
-            c.set_label(key['isr'][0])
-        except Exception as e:
-            logging.warning('problem plotting instrument  {}'.format(e))
+    try:
+        top = ax.imshow(isr, cmap='jet', alpha=0.4, extent=extent, origin='lower',interpolation='none',
+                        vmin=vbounds[1][0],vmax=vbounds[1][1])
+        c = fg.colorbar(top,ax=ax)
+        c.set_label(key['isr'][0])
+    except Exception as e:
+        logging.info('problem plotting instrument  {}'.format(e))
 
     return ax
 #%%
@@ -146,22 +142,20 @@ def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,
     else:
         fg = ax.get_figure()
 #%%
-    if opt is not None:
-        try:
-            bottom = ax.imshow(opt, cmap='gray', extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
-            cbar1 = plt.colorbar(bottom, orientation='horizontal',ax=ax)
-            cbar1.set_label(key['opt'][0])
-        except Exception as e:
-            logging.warning('problem plotting instrument  {}'.format(e))
+    try:
+        bottom = ax.imshow(opt, cmap='gray', extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
+        cbar1 = plt.colorbar(bottom, orientation='horizontal',ax=ax)
+        cbar1.set_label(key['opt'][0])
+    except Exception as e:
+        logging.info('problem plotting instrument  {}'.format(e))
 
-    if isr is not None:
-        try:
-            top = ax.contour(x,y, isr, cmap='jet',extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
-            #clabel(top,inline=1,fontsize=10, fmt='%1.0e')
-            cbar2 = fg.colorbar(top, format='%.0e',ax=ax)
-            cbar2.set_label(key['isr'][0])
-        except Exception as e:
-            logging.warning('problem plotting instrument  {}'.format(e))
+    try:
+        top = ax.contour(x,y, isr, cmap='jet',extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
+        #clabel(top,inline=1,fontsize=10, fmt='%1.0e')
+        cbar2 = fg.colorbar(top, format='%.0e',ax=ax)
+        cbar2.set_label(key['isr'][0])
+    except Exception as e:
+        logging.info('problem plotting instrument  {}'.format(e))
 
     return ax
 
