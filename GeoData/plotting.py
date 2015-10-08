@@ -7,6 +7,7 @@ Created on Fri Jan 02 09:38:14 2015
 plotting
 """
 from __future__ import division, absolute_import
+import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sp
@@ -14,29 +15,25 @@ import scipy.interpolate as spinterp
 import time
 import datetime as dt
 from six import integer_types
-from warnings import warn
 #from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import cm
+#from matplotlib import cm
 import matplotlib.dates as mdates
 #import matplotlib as mpl
 #from matplotlib import ticker
 try:
     from mayavi import mlab
 except Exception as e:
-    warn('could not import Mayavi. Some 3-D plots will be disabled.  {}'.format(e))
-
-try:
-    from CoordTransforms import angles2xy
-except:
-    from .CoordTransforms import angles2xy
+    pass
+#
+from .CoordTransforms import angles2xy
 
 try:
     plt.rc('text', usetex=True)
     plt.rc('font', family='serif')
 except Exception as e:
-    warn('Latex install not complete, falling back to basic fonts.  sudo apt-get install dvipng')
+    logging.info('Latex install not complete, falling back to basic fonts.  sudo apt-get install dvipng')
 
-
+#%%
 def _dointerp(geodatalist,altlist,xyvecs,picktimeind):
     opt=None; isr=None #in case of failure
     xvec = xyvecs[0]
@@ -47,27 +44,44 @@ def _dointerp(geodatalist,altlist,xyvecs,picktimeind):
     extent=[xvec.min(),xvec.max(),yvec.min(),yvec.max()]
 
     key={}
+#%% iterative demo, not used yet
+#    inst = []
+#    for g in geodatalist:
+#        if g is None:
+#            continue
+#        for k in g.data.keys():
+#            try:
+#                G = g.timeslice(picktimeind)
+#                G.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
+#                interpData = G.data[k]
+#                inst.append(interpData[:,0].reshape(x.shape))
+#            except Exception as e:
+#                logging.warning('skipping instrument   {}'.format(e))
 #%% optical
-    try:
-        key['opt']=list(geodatalist[0].data.keys()) #list necessary for Python3
-        gd0 = geodatalist[0].timeslice(picktimeind)
-        gd0.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
-        interpData = gd0.data[key['opt'][0]]
-        opt = interpData[:,0].reshape(x.shape)
-    except AttributeError as e:
-        warn('skipping instrument   {}'.format(e))
+    g = geodatalist[0]
+    if g is not None:
+        try:
+            key['opt'] = list(g.data.keys()) #list necessary for Python3
+            G = g.timeslice(picktimeind)
+            G.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
+            interpData = G.data[key['opt'][0]]
+            opt = interpData[:,0].reshape(x.shape)
+        except Exception as e:
+            logging.warning('skipping instrument   {}'.format(e))
 #%% isr
-    try:
-        key['isr'] = list(geodatalist[1].data.keys()) #list necessary for Python3
-        gd2 = geodatalist[1].timeslice(picktimeind)
-        gd2.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
-        interpData = gd2.data[key['isr'][0]]
-        isr = interpData[:,0].reshape(x.shape)
-    except AttributeError as e:
-        warn('skipping instrument   {}'.format(e))
+    g = geodatalist[1]
+    if g is not None:
+        try:
+            key['isr'] = list(g.data.keys()) #list necessary for Python3
+            G = g.timeslice(picktimeind)
+            G.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
+            interpData = G.data[key['isr'][0]]
+            isr = interpData[:,0].reshape(x.shape)
+        except Exception as e:
+            logging.warning('skipping instrument   {}'.format(e))
 
     return opt,isr,extent,key,x,y
-
+#%%
 def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,picktimeind=[1,2]):
     """
     geodatalist - A list of geodata objects that will be overlayed, first object is on the bottom and in gray scale
@@ -78,47 +92,38 @@ def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,pi
     picktimeind - indices in time to extract and plot (arbitrary choice)
     Returns an image of an overlayed plot at a specific altitude.
     """
-
+    ax = axis #less typing
     opt,isr,extent,key,x,y = _dointerp(geodatalist,altlist,xyvecs,picktimeind)
 #%% plots
-    if axis is None:
+    if ax is None:
         fg = plt.figure(facecolor='white')
         ax=fg.gca()
         ax.set_title(title)
         ax.set_xlabel('x')
         ax.set_ylabel('y')
-
-        try:
-            bottom = ax.imshow(opt, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
-            cbar1 = fg.colorbar(bottom)
-            cbar1.set_label(key['opt'][0])
-        except Exception as e:
-            warn('problem plotting instrument  {}'.format(e))
-
-        ax.hold(True)
-
-        try:
-            top = ax.imshow(isr, cmap=cm.jet, alpha=0.4, extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
-            cbar2 = fg.colorbar(top)
-            cbar2.set_label(key['isr'][0])
-        except Exception as e:
-            warn('problem plotting instrument  {}'.format(e))
-
     else:
+        fg = ax.get_figure()
+#%%
+    if opt is not None:
         try:
-            axis.imshow(opt, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
+            bottom = ax.imshow(opt, cmap='gray', extent=extent, origin='lower', interpolation='none',
+                               vmin=vbounds[0][0],vmax=vbounds[0][1])
+            c = fg.colorbar(bottom,ax=ax)
+            c.set_label(key['opt'][0])
         except Exception as e:
-            warn('problem plotting instrument  {}'.format(e))
-
-        axis.hold(True)
-
+            logging.warning('problem plotting instrument  {}'.format(e))
+#%%
+    if isr is not None:
         try:
-            axis.imshow(isr, cmap=cm.jet, alpha=0.4, extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
+            top = ax.imshow(isr, cmap='jet', alpha=0.4, extent=extent, origin='lower',interpolation='none',
+                            vmin=vbounds[1][0],vmax=vbounds[1][1])
+            c = fg.colorbar(top,ax=ax)
+            c.set_label(key['isr'][0])
         except Exception as e:
-            warn('problem plotting instrument  {}'.format(e))
+            logging.warning('problem plotting instrument  {}'.format(e))
 
-        return axis
-
+    return ax
+#%%
 def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,picktimeind=[1,2]):
     """
     geodatalist - A list of geodata objects that will be overlayed, first object is on the bottom and in gray scale
@@ -129,6 +134,7 @@ def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,
     picktimeind - indices in time to extract and plot (arbitrary choice)
     Returns an image of an overlayed plot at a specific altitude.
     """
+    ax = axis #less typing
     opt,isr,extent,key,x,y = _dointerp(geodatalist,altlist,xyvecs,picktimeind)
 #%% plots
     if axis is None:
@@ -137,41 +143,30 @@ def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,
         ax.set_title(title)
         ax.set_xlabel('x')
         ax.set_ylabel('y')
-
+    else:
+        fg = ax.get_figure()
+#%%
+    if opt is not None:
         try:
-            bottom = ax.imshow(opt, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
-            cbar1 = plt.colorbar(bottom, orientation='horizontal')
+            bottom = ax.imshow(opt, cmap='gray', extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
+            cbar1 = plt.colorbar(bottom, orientation='horizontal',ax=ax)
             cbar1.set_label(key['opt'][0])
         except Exception as e:
-            warn('problem plotting instrument  {}'.format(e))
+            logging.warning('problem plotting instrument  {}'.format(e))
 
-        ax.hold(True)
-
+    if isr is not None:
         try:
-            top = ax.contour(x,y, isr, cmap=cm.jet,extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
+            top = ax.contour(x,y, isr, cmap='jet',extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
             #clabel(top,inline=1,fontsize=10, fmt='%1.0e')
-            cbar2 = fg.colorbar(top, format='%.0e')
+            cbar2 = fg.colorbar(top, format='%.0e',ax=ax)
             cbar2.set_label(key['isr'][0])
         except Exception as e:
-            warn('problem plotting instrument  {}'.format(e))
+            logging.warning('problem plotting instrument  {}'.format(e))
 
-    else:
-        try:
-            axis.imshow(opt, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
-        except Exception as e:
-            warn('problem plotting instrument  {}'.format(e))
-
-        axis.hold(True)
-
-        try:
-            axis.contour(x,y, isr, cmap=cm.jet,extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
-        except Exception as e:
-            warn('problem plotting instrument  {}'.format(e))
-
-        return axis
+    return ax
 
 
-
+#%%
 def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='jet', ax=None,fig=None,method='linear',fill_value=np.nan,view = None,units='',colorbar=False,outimage=False):
     """ This function create 3-D slice image given either a surface or list of coordinates to slice through
     Inputs:
