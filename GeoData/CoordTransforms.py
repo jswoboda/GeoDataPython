@@ -17,7 +17,7 @@ def sphereical2Cartisian(spherecoords):
     Output
     cartcoords - A 3xN numpy array with X, Y and Z in a cartisian coordinate space.
     The coordinates are in units of kilometers."""
-
+    d2r = np.pi/180
     (dir1,dir2) = spherecoords.shape
     transcoords = False
     if dir2==3:
@@ -27,8 +27,8 @@ def sphereical2Cartisian(spherecoords):
         raise ValueError('Neither of the dimensions are of length 3')
     (R,Az,El) = spherecoords[:]
 
-    Azr = np.radians(Az)
-    Elr = np.radians(El)
+    Azr = Az*d2r
+    Elr = El*d2r
 
     kx = np.sin(Azr) * np.cos(Elr)
     ky = np.cos(Azr) * np.cos(Elr)
@@ -121,7 +121,7 @@ def wgs2ecef(WGS_COORDS):
     f = 1/298.257223563 # the flattening factor
     b = a*(1-f)# semiminor axis in meters
 
-    e = np.sqrt(a**2-b**2)/a;# first eccentricity
+    e = np.sqrt(a**2-b**2)/a# first eccentricity
 
     M_e = (a*(1-e**2))/(1-e**2*np.sin(phi))**(3.0/2.0)# Meridian radius of curvature
     n =  a/np.sqrt(1-e**2*np.sin(phi)**2) # prime verticl radius of curvature
@@ -493,7 +493,7 @@ def nthroot(X,N):
 def angles2xy(az,el,zenith=False):
     """ This will take az and el angles and move them to a Cartisian space for plotting"""
 
-    azt = (az)*np.pi/180.0
+    azt = np.radians(az)
     if not zenith:
         el = 90-el
     xout = el*np.sin(azt)
@@ -505,13 +505,13 @@ def xy2angles(x,y):
     azout = (180.0/np.pi)*np.arctan2(x,y)
     return (azout,elout)
 def angles2xyz(az,el):
-    elrad = el*np.pi/180.0
-    azrad = az*np.pi/180.0
+    elrad = np.radians(el)
+    azrad = np.radians(az)
     x = np.cos(elrad)*np.cos(azrad)
     y = np.cos(elrad)*np.sin(azrad)
     z = np.sin(elrad)
     return (x,y,z)
 def xyz2angles(x,y,z):
-    el = np.arcsin(z)*180.0/np.pi
-    az = np.arctan2(y,x)*180/np.pi
+    el = np.degrees(np.arcsin(z))
+    az = np.degrees(np.arctan2(y,x))
     return(az,el)
