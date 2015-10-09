@@ -13,16 +13,12 @@ from GeoData.plotting import rangevstime
 from load_isropt import load_pfisr_neo
 
 def makeplot(isrName):
-    risr = load_pfisr_neo(isrName)[0]
+    isr = load_pfisr_neo(isrName)[0]
 #%%
-    (figmplf, [ax1,ax2]) = subplots(2, 1,figsize=(16, 10))
-
     vbnd = [1e10,5e11]
-    beamnum=1
-    beampair = risr.dataloc[0,1:]
+    beamazel = [-159.5,78.]
 
-    rangevstime(risr,beamnum,vbnd,'ne',fig=figmplf,ax=ax1)
-    rangevstime(risr,beampair,vbnd,'ne',fig=figmplf,ax=ax2)
+    rangevstime(isr,beamazel,vbnd,'ne')
 
 if __name__ == "__main__":
     makeplot('~/data/2011-03-01/pfa110301.003.hdf5')
