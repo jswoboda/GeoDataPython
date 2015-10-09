@@ -17,13 +17,13 @@ def load_risromti(risrName,omtiName=None,isrParams=['nel']):
 
     return risr,omti
 
-def load_pfisr_neo(isrName,optName=None,azelfn=None,heightkm=None,isrParam=['nel']):
+def load_pfisr_neo(isrName,optName=None,azelfn=None,heightkm=None,isrParams=['nel']):
     if optName:
         neo = GeoData.GeoData(utilityfuncs.readNeoCMOS,(optName,azelfn,heightkm))
     else:
         neo = None
 
-    pfisr = GeoData.GeoData(utilityfuncs.readMad_hdf5,(isrName,isrParam))
+    pfisr = GeoData.GeoData(utilityfuncs.readMad_hdf5,(isrName,isrParams))
 
     pfisr.changedata('nel','ne',revpower,[10.])
 
