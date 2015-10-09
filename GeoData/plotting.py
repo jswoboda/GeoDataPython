@@ -470,12 +470,12 @@ def plotbeamposfig(geod,height,coordnames,fig=None,ax=None,title=''):
     ploth = ax.scatter(x,y)
     return(ploth)
 
-def rangevstime(geod,beam,vbounds=None,gkey = None,cmap='jet',fig=None,ax=None,title='',cbar = True):
+def rangevstime(geod,beam,vbounds=None,gkey = None,cmap=None,fig=None,ax=None,title='',cbar = True):
     """ This method will create a color graph of range vs time for data in spherical coordinates"""
     assert geod.coordnames.lower() =='spherical'
 
     if (ax is None) and (fig is None):
-        fig = plt.figure(facecolor='white')
+        fig = plt.figure()
         ax = fig.gca()
     elif ax is None:
         ax = fig.gca()
@@ -494,7 +494,7 @@ def rangevstime(geod,beam,vbounds=None,gkey = None,cmap='jet',fig=None,ax=None,t
     else:
         atol = np.abs(beams).sum(axis=1)
         btol = np.abs(beam).sum(axis=-1)
-        beamdiff= np.abs(beams-np.repeat(beam[np.newaxis,:],beams.shape[0],axis=0)).sum(axis=1)
+        beamdiff= np.abs(beams-np.repeat(beam[None,:],beams.shape[0],axis=0)).sum(axis=1)
         beamind = sp.argmin(beamdiff)
         if beamdiff[beamind]>(atol[beamind]+btol)*1e-5:
             raise('beam given not close enough to other beams')
@@ -508,7 +508,9 @@ def rangevstime(geod,beam,vbounds=None,gkey = None,cmap='jet',fig=None,ax=None,t
     x_lims = mdates.date2num(x_lims)
     y_lims = [rngval[0],rngval[-1]]
 
-    ploth = ax.imshow(dataout, extent = [x_lims[0],x_lims[1],y_lims[0],y_lims[1]], aspect='auto',vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
+    ploth = ax.imshow(dataout, extent = [x_lims[0],x_lims[1],y_lims[0],y_lims[1]],
+                      aspect='auto',interpolation='none',
+                      vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
     ax.xaxis_date()
     if cbar:
         cbar2 = plt.colorbar(ploth, ax=ax, format='%.0e')
@@ -519,6 +521,7 @@ def rangevstime(geod,beam,vbounds=None,gkey = None,cmap='jet',fig=None,ax=None,t
     ax.set_ylabel('range in km')
 
     return (ploth,cbar2)
+
 def uniquerows(a):
     b=np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))
     (rowsinds,rownums) = np.unique(b,return_index=True, return_inverse=True)[1:]

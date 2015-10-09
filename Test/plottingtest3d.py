@@ -15,9 +15,6 @@ from load_risromti import load_risromti
 #
 from mayavi import mlab
 
-plt.rc('text', usetex=True)
-plt.rc('font', family='serif')
-
 def make_data(risrName,omtiName):
 
     risr,omti = load_risromti(risrName,omtiName)

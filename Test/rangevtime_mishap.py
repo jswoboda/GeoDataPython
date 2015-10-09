@@ -10,14 +10,14 @@ from matplotlib.pyplot import subplots, show
 #
 from GeoData.plotting import rangevstime
 #
-from load_isropt import load_risromti
+from load_isropt import load_pfisr_neo
 
-def makeplot(risrName):
-    risr = load_risromti(risrName)[0]
+def makeplot(isrName):
+    risr = load_pfisr_neo(isrName)[0]
 #%%
     (figmplf, [ax1,ax2]) = subplots(2, 1,figsize=(16, 10))
 
-    vbnd = [5e10,5e11]
+    vbnd = [1e10,5e11]
     beamnum=1
     beampair = risr.dataloc[0,1:]
 
@@ -25,5 +25,5 @@ def makeplot(risrName):
     rangevstime(risr,beampair,vbnd,'ne',fig=figmplf,ax=ax2)
 
 if __name__ == "__main__":
-    makeplot('ran120219.004.hdf5')
+    makeplot('~/data/2011-03-01/pfa110301.003.hdf5')
     show()

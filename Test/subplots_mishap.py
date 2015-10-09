@@ -26,7 +26,7 @@ def plotisropt(isrName,optName,azelfn,heightkm):
     vbounds = [(None,None),(None,None)]
     title='Neo data and Ne linear interpolation'
 
-    fig3, (ax1, ax2) = subplots(1,2,figsize=(10,5), facecolor='white')
+    fig3, (ax1, ax2) = subplots(1,2,figsize=(10,5))
 
     ax1 = GP.alt_slice_overlay((opt, isr), altlist, xyvecs, vbounds, title, axis=ax1,
                                picktimeind=picktimeind)
