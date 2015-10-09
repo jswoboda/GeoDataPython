@@ -219,8 +219,8 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='j
     mlab.figure(fig)
     #determine if list of slices or surfaces are given
 
-    islists = type(surfs[0])==list
-    if type(surfs[0])==np.ndarray:
+    islists = isinstance(surfs[0],list)
+    if isinstance(surfs[0],np.ndarray):
         onedim = surfs[0].ndim==1
     #get slices for each dimension out
     surflist = []
@@ -524,6 +524,7 @@ def uniquerows(a):
     (rowsinds,rownums) = np.unique(b,return_index=True, return_inverse=True)[1:]
     rows = a[rowsinds]
     return (rows,rowsinds,rownums)
+
 def plotbeamposGD(geod,fig=None,ax=None,title='Beam Positions'):
     assert geod.coordnames.lower() =='spherical'
 
@@ -580,7 +581,7 @@ def make_polax(fig,ax,zenith):
     frame1.axes.get_yaxis().set_visible(False)
 def insertinfo(strin,key='',posix=None,posixend = None):
 
-    listin = type(strin)==list
+    listin = isinstance(strin,list)
     if listin:
         stroutall = []
     else:
