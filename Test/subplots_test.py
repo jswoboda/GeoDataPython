@@ -28,7 +28,7 @@ def plotisropt(risrName,omtiName):
     vbounds = [[200,800],[5e10,5e11]]
     title='OMTI data and NE linear interpolation'
 
-    fig3, (ax1, ax2) = subplots(1,2,figsize=(10,5), facecolor='white')
+    fig3, (ax1, ax2) = subplots(1,2,figsize=(10,5))
     ax1 = GP.alt_slice_overlay((omti, risr), altlist, xyvecs, vbounds, title, axis=ax1,
                                picktimeind=picktimeind)
     ax2 = GP.alt_contour_overlay((omti, risr), altlist, xyvecs, vbounds, title, axis=ax2,
