@@ -14,11 +14,8 @@ import scipy as sp
 import scipy.interpolate as spinterp
 import time
 import datetime as dt
-from six import integer_types
 #from mpl_toolkits.mplot3d import Axes3D
 #from matplotlib import cm
-import matplotlib.dates as mdates
-#import matplotlib as mpl
 #from matplotlib import ticker
 try:
     from mayavi import mlab
@@ -483,42 +480,28 @@ def rangevstime(geod,beam,vbounds=None,gkey = None,cmap=None,fig=None,ax=None,ti
     if gkey is None:
         gkey = geod.data.keys[0]
 
+#%% get unique ranges for plot limits, note beamid is not part of class.
 
-#    a = geod.dataloc[:,1:]
-#    b=np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))
-#    (beaminds,beamnums) = np.unique(b,return_index=True, return_inverse=True)[1:]
-#    beams = a[beaminds]
-    (beams,beaminds,beamnums) = uniquerows(geod.dataloc[:,1:])
-    if isinstance(beam, (integer_types, float, complex)):
-        beamind = beam
-    else:
-        atol = np.abs(beams).sum(axis=1)
-        btol = np.abs(beam).sum(axis=-1)
-        beamdiff= np.abs(beams-np.repeat(beam[None,:],beams.shape[0],axis=0)).sum(axis=1)
-        beamind = sp.argmin(beamdiff)
-        if beamdiff[beamind]>(atol[beamind]+btol)*1e-5:
-            raise('beam given not close enough to other beams')
+    match = np.isclose(geod.dataloc[:,1:],beam).all(axis=1)
+
     title = insertinfo(title,gkey)
-    beamlocs = np.argwhere(beamnums==beamind).flatten()
-    rngind = beamlocs[np.argsort(geod.dataloc[beamlocs,0])]
-    dataout = geod.data[gkey][rngind]
-    rngval = geod.dataloc[rngind,0]
-    timelims = [geod.times[0,0],geod.times[-1,0]]
-    x_lims = list(map(dt.datetime.fromtimestamp, timelims))
-    x_lims = mdates.date2num(x_lims)
-    y_lims = [rngval[0],rngval[-1]]
 
-    ploth = ax.imshow(dataout, extent = [x_lims[0],x_lims[1],y_lims[0],y_lims[1]],
-                      aspect='auto',interpolation='none',
-                      vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
-    ax.xaxis_date()
+    dataout = geod.data[gkey][match]
+    rngval =  geod.dataloc[match,0]
+    t = np.asarray(list(map(dt.datetime.utcfromtimestamp, geod.times[:,0])))
+#%% time limits of display
+
+    ploth = ax.pcolormesh(t,rngval,dataout,
+                          vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
+
     if cbar:
         cbar2 = plt.colorbar(ploth, ax=ax, format='%.0e')
     else:
         cbar2 = None
     ax.set_title(title)
-    ax.set_xlabel('Time in UT')
-    ax.set_ylabel('range in km')
+    ax.set_xlabel('UTC')
+    ax.set_ylabel('slant range [km]')
+    ax.autoscale(True,tight=True) #fills axis
 
     return (ploth,cbar2)
 
