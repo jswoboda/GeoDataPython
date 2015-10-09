@@ -33,7 +33,7 @@ except Exception as e:
 try:
     import seaborn as sns
     sns.color_palette(sns.color_palette("cubehelix"))
-    sns.set(context='paper', style='whitegrid')
+    sns.set(context='poster', style='whitegrid')
     sns.set(rc={'image.cmap': 'cubehelix_r'}) #for contour
 
 except Exception as e:
@@ -100,7 +100,7 @@ def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,pi
     opt,isr,extent,key,x,y = _dointerp(geodatalist,altlist,xyvecs,picktimeind)
 #%% plots
     if ax is None:
-        fg = plt.figure(facecolor='white')
+        fg = plt.figure()
         ax=fg.gca()
         ax.set_title(title)
         ax.set_xlabel('x')
@@ -140,7 +140,7 @@ def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,
     opt,isr,extent,key,x,y = _dointerp(geodatalist,altlist,xyvecs,picktimeind)
 #%% plots
     if axis is None:
-        fg= plt.figure(facecolor='white')
+        fg= plt.figure()
         ax=fg.gca()
         ax.set_title(title)
         ax.set_xlabel('x')
@@ -467,12 +467,13 @@ def plotbeamposfig(geod,height,coordnames,fig=None,ax=None,title=''):
     ploth = ax.scatter(x,y)
     return(ploth)
 
-def rangevstime(geod,beam,vbounds=None,gkey = None,cmap=None,fig=None,ax=None,title='',cbar = True):
+def rangevstime(geod,beam,vbounds=(None,None),gkey = None,cmap=None,fig=None,ax=None,
+                title='',cbar = True,tbounds=(None,None)):
     """ This method will create a color graph of range vs time for data in spherical coordinates"""
     assert geod.coordnames.lower() =='spherical'
 
     if (ax is None) and (fig is None):
-        fig = plt.figure()
+        fig = plt.figure(figsize=(12,8))
         ax = fig.gca()
     elif ax is None:
         ax = fig.gca()
@@ -495,15 +496,15 @@ def rangevstime(geod,beam,vbounds=None,gkey = None,cmap=None,fig=None,ax=None,ti
                           vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
 
     if cbar:
-        cbar2 = plt.colorbar(ploth, ax=ax, format='%.0e')
-    else:
-        cbar2 = None
+        fig.colorbar(ploth, ax=ax, format='%.0e')
+
     ax.set_title(title)
     ax.set_xlabel('UTC')
     ax.set_ylabel('slant range [km]')
-    ax.autoscale(True,tight=True) #fills axis
+    ax.autoscale(axis='y',tight=True) #fills axis
+    fig.autofmt_xdate
 
-    return (ploth,cbar2)
+    ax.set_xlim(tbounds)
 
 def uniquerows(a):
     b=np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))
