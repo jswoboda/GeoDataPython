@@ -471,7 +471,7 @@ def plotbeamposfig(geod,height,coordnames,fig=None,ax=None,title=''):
     return(ploth)
 
 def rangevstime(geod,beam,vbounds=(None,None),gkey = None,cmap=None,fig=None,ax=None,
-                title='',cbar = True,tbounds=(None,None),ic=None,ir=None):
+                title='',cbar=True,tbounds=(None,None),ic=True,ir=True,it=True):
     """ This method will create a color graph of range vs time for data in spherical coordinates"""
     assert geod.coordnames.lower() =='spherical'
 
@@ -485,6 +485,9 @@ def rangevstime(geod,beam,vbounds=(None,None),gkey = None,cmap=None,fig=None,ax=
         gkey = geod.data.keys[0]
 #%% get unique ranges for plot limits, note beamid is not part of class.
     match = np.isclose(geod.dataloc[:,1:],beam,atol=1e-2).all(axis=1) #FIXME what should tolerance be for Sondrestrom mechanical dish
+    if (~match).all(): #couldn't find this beam
+        logging.warning('beam az,el {} not found'.format(beam))
+        return
 
     if not title:
         title = gkey
@@ -499,7 +502,8 @@ def rangevstime(geod,beam,vbounds=(None,None),gkey = None,cmap=None,fig=None,ax=
     if cbar:
         fig.colorbar(ploth, ax=ax, format=sfmt)
 
-    ax.set_title(title)
+    if it:
+        ax.set_title(title)
     if ic:
         ax.set_ylabel('slant range [km]')
     if ir:
