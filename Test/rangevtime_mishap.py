@@ -11,8 +11,14 @@ from GeoData.plotting import rangevstime
 from load_isropt import load_pfisr_neo
 
 vbnd = ((1e9,5e11),(500,2500),(500,2500),(-200,200))
-beamazel = [-159.5,78.]
+beamazel = [[-154.3, 77.5],
+            [-149.69,78.56],
+            [-159.5, 78.],
+            [-154.3, 79.5],
+            [-154.3, 78.5]]
 cmap = (None,None,None,'bwr')
+#titles=('$N_e$','$T_i$','$T_e$','$V_i$')
+titles=(None,)*4
 
 def makeplot(isrName,tbounds,isrparams):
 
@@ -21,10 +27,12 @@ def makeplot(isrName,tbounds,isrparams):
 
 #%% plot data
     #setup subplot to pass axes handles in to be filled with individual plots
-    fg,axs = subplots(1,4,sharex=True,sharey=True,figsize=(15,6))
+    fg,axs = subplots(4,4,sharex=True,sharey=True,figsize=(16,10))
 
-    for i,(b,p,c,ax) in enumerate(zip(vbnd,isrparams,cmap,axs)):
-        rangevstime(isr,beamazel,b,p[:2],tbounds=tbounds,title=p,cmap=c,ax=ax,fig=fg,ind=i)
+    for j,(ae,axc) in enumerate(zip(beamazel,axs)):
+        for i,(b,p,c,ax,tt) in enumerate(zip(vbnd,isrparams,cmap,axc,titles)):
+            rangevstime(isr,ae,b,p[:2],tbounds=tbounds,title=tt,cmap=c,
+                        ax=ax,fig=fg,ic=i==0,ir=j==len(axs)-1)
 
 if __name__ == "__main__":
     tbounds=(parse('2011-03-01T10:15Z'),

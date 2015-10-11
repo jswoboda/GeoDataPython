@@ -471,25 +471,23 @@ def plotbeamposfig(geod,height,coordnames,fig=None,ax=None,title=''):
     return(ploth)
 
 def rangevstime(geod,beam,vbounds=(None,None),gkey = None,cmap=None,fig=None,ax=None,
-                title='',cbar = True,tbounds=(None,None),ind=None):
+                title='',cbar = True,tbounds=(None,None),ic=None,ir=None):
     """ This method will create a color graph of range vs time for data in spherical coordinates"""
     assert geod.coordnames.lower() =='spherical'
 
-    usingsubplot=False
     if (ax is None) and (fig is None):
         fig = plt.figure(figsize=(12,8))
         ax = fig.gca()
     elif ax is None:
         ax = fig.gca()
-    else:
-        usingsubplot=True #assuming sharey
 
     if gkey is None:
         gkey = geod.data.keys[0]
 #%% get unique ranges for plot limits, note beamid is not part of class.
-    match = np.isclose(geod.dataloc[:,1:],beam).all(axis=1)
+    match = np.isclose(geod.dataloc[:,1:],beam,atol=1e-2).all(axis=1) #FIXME what should tolerance be for Sondrestrom mechanical dish
 
-    title = insertinfo(title,gkey)
+    if not title:
+        title = gkey
 
     dataout = geod.data[gkey][match]
     rngval =  geod.dataloc[match,0]
@@ -502,10 +500,11 @@ def rangevstime(geod,beam,vbounds=(None,None),gkey = None,cmap=None,fig=None,ax=
         fig.colorbar(ploth, ax=ax, format=sfmt)
 
     ax.set_title(title)
-    ax.set_xlabel('UTC')
-
-    if usingsubplot and ind==0:
+    if ic:
         ax.set_ylabel('slant range [km]')
+    if ir:
+        ax.set_xlabel('UTC')
+
 
     ax.autoscale(axis='y',tight=True) #fills axis
     ax.xaxis.set_major_formatter(DateFormatter('%H:%M'))
@@ -535,6 +534,7 @@ def plotbeamposGD(geod,fig=None,ax=None,title='Beam Positions'):
     plotsout = plt.plot(xx2,yy2,'o',c='b', markersize=10)
     plt.title(title)
     return plotsout
+
 def make_polax(fig,ax,zenith):
     """ This makes the polar axes for the beams"""
     if zenith:
@@ -572,6 +572,7 @@ def make_polax(fig,ax,zenith):
     frame1 = plt.gca()
     frame1.axes.get_xaxis().set_visible(False)
     frame1.axes.get_yaxis().set_visible(False)
+
 def insertinfo(strin,key='',posix=None,posixend = None):
 
     listin = isinstance(strin,list)
