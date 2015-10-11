@@ -8,12 +8,14 @@ plotting
 """
 from __future__ import division, absolute_import
 import logging
-import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sp
 import scipy.interpolate as spinterp
 import time
 import datetime as dt
+import matplotlib.pyplot as plt
+from matplotlib.dates import DateFormatter
+from matplotlib.ticker import ScalarFormatter
 #from mpl_toolkits.mplot3d import Axes3D
 #from matplotlib import cm
 #from matplotlib import ticker
@@ -24,21 +26,22 @@ except Exception as e:
 #
 from .CoordTransforms import angles2xy
 #
-try:
-    plt.rc('text', usetex=True)
-    plt.rc('font', family='serif')
-except Exception as e:
-    logging.info('Latex install not complete, falling back to basic fonts.  sudo apt-get install dvipng')
+if False:
+    try:
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif')
+    except Exception as e:
+        logging.info('Latex install not complete, falling back to basic fonts.  sudo apt-get install dvipng')
 #
 try:
     import seaborn as sns
     sns.color_palette(sns.color_palette("cubehelix"))
     sns.set(context='poster', style='whitegrid')
     sns.set(rc={'image.cmap': 'cubehelix_r'}) #for contour
-
 except Exception as e:
     logging.info('could not import seaborn  {}'.format(e))
-
+#
+sfmt = ScalarFormatter(useMathText=True)
 #%%
 def _dointerp(geodatalist,altlist,xyvecs,picktimeind):
     opt=None; isr=None #in case of failure
@@ -468,21 +471,22 @@ def plotbeamposfig(geod,height,coordnames,fig=None,ax=None,title=''):
     return(ploth)
 
 def rangevstime(geod,beam,vbounds=(None,None),gkey = None,cmap=None,fig=None,ax=None,
-                title='',cbar = True,tbounds=(None,None)):
+                title='',cbar = True,tbounds=(None,None),ind=None):
     """ This method will create a color graph of range vs time for data in spherical coordinates"""
     assert geod.coordnames.lower() =='spherical'
 
+    usingsubplot=False
     if (ax is None) and (fig is None):
         fig = plt.figure(figsize=(12,8))
         ax = fig.gca()
     elif ax is None:
         ax = fig.gca()
+    else:
+        usingsubplot=True #assuming sharey
 
     if gkey is None:
         gkey = geod.data.keys[0]
-
 #%% get unique ranges for plot limits, note beamid is not part of class.
-
     match = np.isclose(geod.dataloc[:,1:],beam).all(axis=1)
 
     title = insertinfo(title,gkey)
@@ -491,20 +495,22 @@ def rangevstime(geod,beam,vbounds=(None,None),gkey = None,cmap=None,fig=None,ax=
     rngval =  geod.dataloc[match,0]
     t = np.asarray(list(map(dt.datetime.utcfromtimestamp, geod.times[:,0])))
 #%% time limits of display
-
     ploth = ax.pcolormesh(t,rngval,dataout,
                           vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
 
     if cbar:
-        fig.colorbar(ploth, ax=ax, format='%.0e')
+        fig.colorbar(ploth, ax=ax, format=sfmt)
 
     ax.set_title(title)
     ax.set_xlabel('UTC')
-    ax.set_ylabel('slant range [km]')
-    ax.autoscale(axis='y',tight=True) #fills axis
-    fig.autofmt_xdate
 
+    if usingsubplot and ind==0:
+        ax.set_ylabel('slant range [km]')
+
+    ax.autoscale(axis='y',tight=True) #fills axis
+    ax.xaxis.set_major_formatter(DateFormatter('%H:%M'))
     ax.set_xlim(tbounds)
+    fig.autofmt_xdate()
 
 def uniquerows(a):
     b=np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))

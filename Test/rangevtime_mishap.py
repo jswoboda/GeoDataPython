@@ -20,8 +20,11 @@ def makeplot(isrName,tbounds,isrparams):
     isr = load_pfisr_neo(isrName,isrparams=isrparams)[0]
 
 #%% plot data
-    for b,p,c in zip(vbnd,isrparams,cmap):
-        rangevstime(isr,beamazel,b,p[:2],tbounds=tbounds,title=p,cmap=c)
+    #setup subplot to pass axes handles in to be filled with individual plots
+    fg,axs = subplots(1,4,sharex=True,sharey=True,figsize=(15,6))
+
+    for i,(b,p,c,ax) in enumerate(zip(vbnd,isrparams,cmap,axs)):
+        rangevstime(isr,beamazel,b,p[:2],tbounds=tbounds,title=p,cmap=c,ax=ax,fig=fg,ind=i)
 
 if __name__ == "__main__":
     tbounds=(parse('2011-03-01T10:15Z'),
