@@ -505,10 +505,13 @@ def rangevstime(geod,beam,vbounds=(None,None),gkey = None,cmap=None,fig=None,ax=
     if it:
         ax.set_title(title)
     if ic:
-        ax.set_ylabel('slant range [km]')
+        ax.set_ylabel('az,el = {} \n slant range [km]'.format(beam))
     if ir:
         ax.set_xlabel('UTC')
-
+    if tbounds[0]:
+        fig.suptitle(tbounds[0].strftime('%Y-%m-%d'))
+    else:
+        fig.suptitle(t[0].strftime('%Y-%m-%d'))
 
     ax.autoscale(axis='y',tight=True) #fills axis
     ax.xaxis.set_major_formatter(DateFormatter('%H:%M'))
