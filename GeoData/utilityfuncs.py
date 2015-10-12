@@ -341,7 +341,7 @@ def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc):
 
     return (data,coordnames,dataloc,sensorloc,times)
 
-def readNeoCMOS(imgfn, azelfn, heightkm,treq):
+def readNeoCMOS(imgfn, azelfn, heightkm,treq=None):
     """
     treq is pair or vector of UT1 unix epoch times to load--often file is so large we can't load all frames into RAM.
     assumes that /rawimg is a 3-D array
@@ -356,7 +356,11 @@ def readNeoCMOS(imgfn, azelfn, heightkm,treq):
         npix = f['/rawimg'].shape[1] * f['/rawimg'].shape[2] #number of pixels in one image
         dataloc = np.empty((npix,3))
 
-        mask = (times>treq[0]) & (times<treq[-1])
+        if treq is not None:
+            mask = (times>treq[0]) & (times<treq[-1])
+        else:
+            mask = np.ones(f['/rawimg'].shape[0]).astype(bool)
+
         if mask.sum()*npix*2 > 1e9:
             logging.warning('trying to load very large amount of image data, your program may crash')
         try:
