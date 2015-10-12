@@ -87,7 +87,7 @@ if __name__ == "__main__":
 
     makeplot('~/data/2011-03-02/pfa110302.002.hdf5',
              '~/data/2011-03-02/110302_0819.h5',
-             '~/data/2011-03/calMishap2011Mar.h5',tbounds,isrparams)
+             '~/data/2011-03/calMishap2011Mar.h5',tbounds,isrparams,p.showbeams)
 #%%
     if False:
         tbounds=(parse('2011-03-01T10:13Z'),
