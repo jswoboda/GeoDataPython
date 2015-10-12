@@ -416,7 +416,6 @@ def enu2ecef4vec(ENU,LatLong):
     Reference:
         Wikipedia article: http://en.wikipedia.org/wiki/Geodetic_system"""
     #%% Check Input
-    d2r = np.pi/180.0
     (dir1,dir2) = ENU.shape
     transcoords = False
     if dir2==3:
@@ -436,11 +435,11 @@ def enu2ecef4vec(ENU,LatLong):
     if LatLong.size==2:
         lat0 = LatLong[0]
         long0 = LatLong[1]
-        lat0 = lat0*np.ones((1,U.size))*d2r
-        long0 = long0*np.ones((1,U.size))*d2r
+        lat0 = np.radians(lat0*np.ones((1,U.size)))
+        long0 = np.radians(long0*np.ones((1,U.size)))
     else:
-        lat0 = LatLong[0,:]*d2r
-        long0 = LatLong[1,:]*d2r
+        lat0 = np.radians(LatLong[0,:])
+        long0 = np.radians(LatLong[1,:])
     #%% Set up calculation
     a11 = -np.sin(long0)
     a12 = -np.sin(lat0)*np.cos(long0)
@@ -501,8 +500,8 @@ def angles2xy(az,el,zenith=False):
     return (xout,yout)
 
 def xy2angles(x,y):
-    elout = 90-np.sqrt(x**2+y**2)
-    azout = (180.0/np.pi)*np.arctan2(x,y)
+    elout = 90-np.hypot(x,y)
+    azout = np.degrees(np.arctan2(x,y))
     return (azout,elout)
 def angles2xyz(az,el):
     elrad = np.radians(el)

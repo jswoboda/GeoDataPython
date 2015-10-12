@@ -524,26 +524,16 @@ def uniquerows(a):
     rows = a[rowsinds]
     return (rows,rowsinds,rownums)
 
-def plotbeamposGD(geod,fig=None,ax=None,title='Beam Positions'):
+def plotbeamposGD(geod,title='Beam Positions',minel=30,elstep=10):
     assert geod.coordnames.lower() =='spherical'
 
-    if (ax is None) and (fig is None):
-        fig = plt.figure(facecolor='white')
-        ax = fig.gca()
-    elif ax is None:
-        ax = fig.gca()
-
-    make_polax(fig,ax,False)
-    plt.hold(True)
     (azvec,elvec) = (geod.dataloc[:,1],geod.dataloc[:,2])
 
-    (xx2,yy2) = angles2xy(azvec,elvec,False)
-    plotsout = plt.plot(xx2,yy2,'o',c='b', markersize=10)
-    plt.title(title)
-    return plotsout
+    polarplot(azvec,elvec,markerarea=70,title=title,minel=minel,elstep=elstep)
 
-def make_polax(fig,ax,zenith):
-    """ This makes the polar axes for the beams"""
+def make_polax(zenith):
+    """ OBSOLETE
+    This makes the polar axes for the beams"""
     if zenith:
         minel = 0.0
         maxel = 70.0
@@ -579,6 +569,30 @@ def make_polax(fig,ax,zenith):
     frame1 = plt.gca()
     frame1.axes.get_xaxis().set_visible(False)
     frame1.axes.get_yaxis().set_visible(False)
+
+def polarplot(az,el,markerarea=500,title=None,minel=30,elstep=10):
+    """
+    plots hollow circles at az,el coordinates, with area quantitatively defined
+    Michael Hirsch from satkml
+    """
+    az = np.radians(np.asarray(az).astype(float))
+    el = 90-np.asarray(el).astype(float)
+
+    ax=plt.figure().gca(polar=True)
+
+    ax.set_theta_zero_location('N')
+#    ax.set_rmax(90-minel)
+    ax.set_theta_direction(-1)
+
+    ax.scatter(x=az, y=el, marker='o',facecolors='none',edgecolor='red',s=markerarea)
+
+    yt = np.arange(0., 90.-minel+elstep, elstep)
+    ax.set_yticks(yt)
+    ylabel = (yt[::-1]+minel).astype(int).astype(str)
+    ax.set_yticklabels(ylabel,fontsize='x-small')
+
+    ax.set_title(title)
+
 
 def insertinfo(strin,key='',posix=None,posixend = None):
 
