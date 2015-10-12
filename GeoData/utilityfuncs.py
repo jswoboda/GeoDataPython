@@ -5,6 +5,7 @@ Created on Thu Sep 11 15:29:27 2014
 @author: John Swoboda
 """
 from __future__ import division,absolute_import
+import logging
 import numpy as np
 import tables as tb
 import h5py
@@ -340,17 +341,28 @@ def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc):
 
     return (data,coordnames,dataloc,sensorloc,times)
 
-def readNeoCMOS(imgfn, azelfn, heightkm):
+def readNeoCMOS(imgfn, azelfn, heightkm,treq):
+    """
+    treq is pair or vector of UT1 unix epoch times to load--often file is so large we can't load all frames into RAM.
+    assumes that /rawimg is a 3-D array
+    """
     imgfn = expanduser(imgfn)
     azelfn = expanduser(azelfn)
 
     with h5py.File(imgfn,'r',libver='latest') as f:
-        optical = {'optical':f['/rawimg'].value}
-        sensorloc = f['/sensorloc'].value
         times = f['/ut1_unix'].value
+        sensorloc = f['/sensorloc'].value
 
         npix = f['/rawimg'].shape[1] * f['/rawimg'].shape[2] #number of pixels in one image
         dataloc = np.empty((npix,3))
+
+        mask = (times>treq[0]) & (times<treq[-1])
+        if mask.sum()*npix*2 > 1e9:
+            logging.warning('trying to load very large amount of image data, your program may crash')
+        try:
+            optical = {'optical':f['/rawimg'][mask,...]}
+        except Exception as e:
+            logging.error('could not load optical data  {}'.format(e))
 
     coordnames = 'Spherical'
     dataloc[:,0] = heightkm
