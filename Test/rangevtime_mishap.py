@@ -15,6 +15,8 @@ from GeoData.plotting import rangevstime,plotbeamposGD
 #
 from load_isropt import load_pfisr_neo
 
+showbeam=False #takes several seconds
+
 
 epoch = datetime(1970,1,1,tzinfo=UTC)
 
@@ -59,12 +61,13 @@ def makeplot(isrName,optName,azelfn,tbounds,isrparams):
         ht = ax.set_title('')
         #plot beams
         # find indices of closest az,el
-        print('building K-D tree for beam scatter plot')
-        kdtree = cKDTree(opt.dataloc[:,1:]) #az,el
-        for b in beamazel:
-            i = kdtree.query([b[0]%360,b[1]],k=1, distance_upper_bound=0.1)[1]
-            y,x = np.unravel_index(i,opt.data['optical'].shape[1:])
-            ax.scatter(y,x,s=80,facecolor='none',edgecolor='b')
+        if showbeam:
+            print('building K-D tree for beam scatter plot, takes several seconds')
+            kdtree = cKDTree(opt.dataloc[:,1:]) #az,el
+            for b in beamazel:
+                i = kdtree.query([b[0]%360,b[1]],k=1, distance_upper_bound=0.1)[1]
+                y,x = np.unravel_index(i,opt.data['optical'].shape[1:])
+                ax.scatter(y,x,s=80,facecolor='none',edgecolor='b')
         #play video
         for t,im in zip(opt.times[:,0],opt.data['optical']):
             hi.set_data(im)
