@@ -26,12 +26,11 @@ except Exception as e:
 #
 from .CoordTransforms import angles2xy
 #
-if False:
-    try:
-        plt.rc('text', usetex=True)
-        plt.rc('font', family='serif')
-    except Exception as e:
-        logging.info('Latex install not complete, falling back to basic fonts.  sudo apt-get install dvipng')
+try:
+    plt.rc('text', usetex=True)
+    plt.rc('font', family='serif')
+except Exception as e:
+    logging.info('Latex install not complete, falling back to basic fonts.  sudo apt-get install dvipng')
 #
 try:
     import seaborn as sns
