@@ -35,10 +35,18 @@ def makeplot(isrName,tbounds,isrparams):
                         ax=ax,fig=fg,ic=i==0,ir=j==len(axs)-1,it=j==0)
 
 if __name__ == "__main__":
-    tbounds=(parse('2011-03-01T10:15Z'),
-             parse('2011-03-01T11:15Z'))
-
+#%%
     isrparams = ['nel','ti','te','vo']
+#%%
+    tbounds=(parse('2011-03-02T07:30Z'),
+             parse('2011-03-02T09:00Z'))
+
+
+    makeplot('~/data/2011-03-02/pfa110302.002.hdf5',tbounds,isrparams)
+#%%
+    tbounds=(parse('2011-03-01T10:13Z'),
+             parse('2011-03-01T11:13Z'))
 
     makeplot('~/data/2011-03-01/pfa110301.003.hdf5',tbounds,isrparams)
+
     show()
