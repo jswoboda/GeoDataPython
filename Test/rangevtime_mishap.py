@@ -15,9 +15,6 @@ from GeoData.plotting import rangevstime,plotbeamposGD
 #
 from load_isropt import load_pfisr_neo
 
-showbeam=False #takes several seconds
-
-
 epoch = datetime(1970,1,1,tzinfo=UTC)
 
 vbnd = ((1e9,5e11),(500,2500),(500,2500),(-200,200))
@@ -30,7 +27,7 @@ cmap = (None,None,None,'bwr')
 #titles=('$N_e$','$T_i$','$T_e$','$V_i$')
 titles=(None,)*4
 
-def makeplot(isrName,optName,azelfn,tbounds,isrparams):
+def makeplot(isrName,optName,azelfn,tbounds,isrparams,showbeam):
 
     treq = (datetime(2011,3,2,8,20,20,tzinfo=UTC),
               datetime(2011,3,2,8,20,21,tzinfo=UTC))
@@ -77,6 +74,11 @@ def makeplot(isrName,optName,azelfn,tbounds,isrparams):
         logging.error('problem loading images  {}'.format(e))
 
 if __name__ == "__main__":
+    from argparse import ArgumentParser
+    p = ArgumentParser(description='range vs. time plots of key ISR and optical video during March 2011 events')
+    p.add_argument('--showbeams',help='superimpose radar beams on video (takes several seconds)',action='store_true')
+    p = p.parse_args()
+
 #%%
     isrparams = ['nel','ti','te','vo']
 #%%
@@ -91,6 +93,6 @@ if __name__ == "__main__":
         tbounds=(parse('2011-03-01T10:13Z'),
                  parse('2011-03-01T11:13Z'))
 
-        makeplot('~/data/2011-03-01/pfa110301.003.hdf5',tbounds,isrparams)
+        makeplot('~/data/2011-03-01/pfa110301.003.hdf5',tbounds,isrparams,p.showbeams)
 
     show()
