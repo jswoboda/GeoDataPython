@@ -41,7 +41,7 @@ def plotisropt(isrName,optName,azelfn,heightkm):
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
-    p = ArgumentParser(description='March 1,2011 example at PFISR with Neo sCMOS camera')
+    p = ArgumentParser(description='March 2011 example at PFISR with Neo sCMOS camera')
     p.add_argument('--radaronly',help='load only radar data',action='store_true')
     p = p.parse_args()
 
@@ -49,10 +49,10 @@ if __name__ == '__main__':
         optName = None
         azelfn = None
     else:
-        optName = '~/data/2011-03-01/110301_1043.h5'
+        optName = '~/data/2011-03-02/110302_0819.h5'
         azelfn = '~/data/2011-03/calMishap2011Mar.h5'
 
-    plotisropt(isrName='~/data/2011-03-01/pfa110301.003.hdf5',
+    plotisropt(isrName='~/data/2011-03-02/pfa110302.002.hdf5',
                optName=optName,
                azelfn=azelfn,
                heightkm=140.)
