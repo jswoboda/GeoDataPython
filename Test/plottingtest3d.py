@@ -4,16 +4,24 @@ Requires Python 2.x due to Mayavi
 
 @author: John Swoboda
 """
-
+from __future__ import division,print_function
+import logging
 import os
 import matplotlib.pyplot as plt
 import numpy as np
 #
 from GeoData.plotting import slice2DGD,plot3Dslice,plotbeamposGD,insertinfo,contourGD
 #
-from load_risromti import load_risromti
+from load_isropt import load_risromti
 #
-from mayavi import mlab
+try:
+    from mayavi import mlab
+except Exception as e:
+    pass
+
+omtislices =  [[],[],[140]]
+risrslices = [[100],[300],[]]
+vbounds = [[200,800],[5e10,5e11]]
 
 def make_data(risrName,omtiName):
 
@@ -37,48 +45,52 @@ def make_data(risrName,omtiName):
     omti.interpolate(new_coords2, newcoordname='Cartesian', twodinterp = True,method='linear', fill_value=np.nan)
     return (risr_classred,risr,omti,reglistfinal)
 
-def plotting(risr_classred,risr_class,omti_class,reglistfinal):
-    #path names to h5 files
-    figdir = 'Figdump'
+def plotting(risr_classred,risr_class,omti_class,reglistfinal,odir=None):
 
-    try: os.makedirs(figdir) #avoids path.exists race condition
-    except OSError: pass
     figcount = 0
     for iomti,ilist in enumerate(reglistfinal):
         for irisr in ilist:
-            mfig = mlab.figure(fgcolor=(1, 1, 1), bgcolor=(1, 1, 1))
             omtitime = iomti
             risrtime =  irisr
-            omtislices =  [[],[],[140]]
-            risrslices = [[100],[300],[]]
-            vbounds = [[200,800],[5e10,5e11]]
-            surflist1 = plot3Dslice(omti_class, omtislices, vbounds[0],
-                        time = omtitime,cmap='gray',gkey = 'optical',fig=mfig)
-            arr = plot3Dslice(risr_classred, risrslices, vbounds[1],
-                        time = risrtime,cmap='jet',gkey = 'ne',fig=mfig,units = 'm^{-3}',colorbar = True,view=[50,60],outimage=True)
-            titlestr1 = '$N_e$ and OMTI at $thm'
-            newtitle = insertinfo(titlestr1,'',risr_classred.times[risrtime,0],risr_classred.times[risrtime,1])
+
+            try:
+                mfig = mlab.figure(fgcolor=(1, 1, 1), bgcolor=(1, 1, 1))
+                surflist1 = plot3Dslice(omti_class, omtislices, vbounds[0],
+                            time = omtitime,cmap='gray',gkey = 'optical',fig=mfig)
+                arr = plot3Dslice(risr_classred, risrslices, vbounds[1],
+                            time = risrtime,cmap='jet',gkey = 'ne',fig=mfig,units = 'm^{-3}',colorbar = True,view=[50,60],outimage=True)
+                titlestr1 = '$N_e$ and OMTI at $thm'
+                newtitle = insertinfo(titlestr1,'',risr_classred.times[risrtime,0],risr_classred.times[risrtime,1])
+            except Exception as e:
+                logging.error('trouble with 3D plot  {}'.format(e))
 
             (figmplf, [[ax1,ax2],[ax3,ax4]]) = plt.subplots(2, 2,figsize=(16, 12), facecolor='w')
 
-            ax1.imshow(arr)
-            ax1.set_title(newtitle)
-            ax1.axis('off')
+            try:
+                ax1.imshow(arr)
+                ax1.set_title(newtitle)
+                ax1.axis('off')
+            except:
+                pass
 
             (slice2,cbar2) = slice2DGD(risr_classred,'z',400,vbounds[1],title='$N_e$ at $thm',
                         time = risrtime,cmap='jet',gkey = 'ne',fig=figmplf,ax=ax2)
             cbar2.set_label('$N_e$ in $m^{-3}$')
+
             (slice3,cbar3) = slice2DGD(omti_class,'z',omtislices[-1][0],vbounds[0],title='OMTI at $thm',
                         time = omtitime,cmap='Greys',gkey = 'optical',fig=figmplf,ax=ax3,cbar=False)
             plt.hold(True)
+
             (slice4,cbar4) = contourGD(risr_classred,'z',400,vbounds[1],title='$N_e$ at $thm',
                         time = risrtime,cmap='jet',gkey = 'ne',fig=figmplf,ax=ax3)
             cbar4.set_label('$N_e$ in $m^{-3}$')
-            bmpos = plotbeamposGD(risr_class,fig=figmplf,ax=ax4)
-            figname = os.path.join(figdir,'figure{0:0>2}.png'.format(figcount))
-            plt.savefig(figname,format='png',dpi = 600)
-            plt.close(figmplf)
-            figcount=figcount+1
+            bmpos = plotbeamposGD(risr_class)
+
+            if odir is not None:
+                figname = os.path.join(odir,'figure{0:0>2}.png'.format(figcount))
+                figmplf.savefig(figname,format='png',dpi = 600)
+                plt.close(figmplf)
+                figcount=figcount+1
 
 if __name__ == "__main__":
     (risr_classred,risr_class,omti_class,reglistfinal) = make_data('ran120219.004.hdf5','OMTIdata.h5')

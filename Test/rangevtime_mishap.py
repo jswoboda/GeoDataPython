@@ -3,10 +3,10 @@
 load isr data vs time and altitude
 """
 from __future__ import division,absolute_import
-from matplotlib.pyplot import subplots, show
+from matplotlib.pyplot import subplots, show,figure
 from dateutil.parser import parse
 #
-from GeoData.plotting import rangevstime
+from GeoData.plotting import rangevstime,plotbeamposGD
 #
 from load_isropt import load_pfisr_neo
 
@@ -34,6 +34,8 @@ def makeplot(isrName,tbounds,isrparams):
             rangevstime(isr,ae,b,p[:2],tbounds=tbounds,title=tt,cmap=c,
                         ax=ax,fig=fg,ic=i==0,ir=j==len(axs)-1,it=j==0)
 
+    plotbeamposGD(isr,minel=75.,elstep=5.)
+
 if __name__ == "__main__":
 #%%
     isrparams = ['nel','ti','te','vo']
@@ -41,12 +43,12 @@ if __name__ == "__main__":
     tbounds=(parse('2011-03-02T07:30Z'),
              parse('2011-03-02T09:00Z'))
 
-
     makeplot('~/data/2011-03-02/pfa110302.002.hdf5',tbounds,isrparams)
 #%%
-    tbounds=(parse('2011-03-01T10:13Z'),
-             parse('2011-03-01T11:13Z'))
+    if False:
+        tbounds=(parse('2011-03-01T10:13Z'),
+                 parse('2011-03-01T11:13Z'))
 
-    makeplot('~/data/2011-03-01/pfa110301.003.hdf5',tbounds,isrparams)
+        makeplot('~/data/2011-03-01/pfa110301.003.hdf5',tbounds,isrparams)
 
     show()
