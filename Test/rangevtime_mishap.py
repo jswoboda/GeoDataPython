@@ -8,10 +8,13 @@ from matplotlib.pyplot import subplots, show,figure,draw,pause
 from dateutil.parser import parse
 from pytz import UTC
 from datetime import datetime
+from scipy.spatial import cKDTree
+import numpy as np
 #
 from GeoData.plotting import rangevstime,plotbeamposGD
 #
 from load_isropt import load_pfisr_neo
+
 
 epoch = datetime(1970,1,1,tzinfo=UTC)
 
@@ -47,12 +50,22 @@ def makeplot(isrName,optName,azelfn,tbounds,isrparams):
     plotbeamposGD(isr,minel=75.,elstep=5.)
 #%%
     try:
+        #setup figure
         fg = figure()
         ax = fg.gca()
         hi=ax.imshow(opt.data['optical'][0,...],vmin=50,vmax=250,
                      interpolation='none',origin='lower')
         fg.colorbar(hi,ax=ax)
         ht = ax.set_title('')
+        #plot beams
+        # find indices of closest az,el
+        print('building K-D tree for beam scatter plot')
+        kdtree = cKDTree(opt.dataloc[:,1:]) #az,el
+        for b in beamazel:
+            i = kdtree.query([b[0]%360,b[1]],k=1, distance_upper_bound=0.1)[1]
+            y,x = np.unravel_index(i,opt.data['optical'].shape[1:])
+            ax.scatter(y,x,s=80,facecolor='none',edgecolor='b')
+        #play video
         for t,im in zip(opt.times[:,0],opt.data['optical']):
             hi.set_data(im)
             ht.set_text(datetime.fromtimestamp(t,tz=UTC))
