@@ -17,32 +17,35 @@ from load_isropt import load_pfisr_neo
 
 epoch = datetime(1970,1,1,tzinfo=UTC)
 
-vbnd = ((1e9,5e11),(500,2500),(500,2500),(-200,200))
-beamazel = [[-154.3, 77.5],
-            [-149.69,78.56],
-            [-159.5, 78.],
-            [-154.3, 79.5],
-            [-154.3, 78.5]]
+vbnd = ((1e9,5e11),
+        (500,2500),(500,2500),(-200,200))
+#beamazel = [[-154.3, 77.5],
+#            [-149.69,78.56],
+#            [-159.5, 78.],
+#            [-154.3, 79.5],
+#            [-154.3, 78.5]]
+beamazel = np.asarray([[-154.3,77.5]])
 cmap = (None,None,None,'bwr')
 #titles=('$N_e$','$T_i$','$T_e$','$V_i$')
 titles=(None,)*4
 
 def makeplot(isrName,optName,azelfn,tbounds,isrparams,showbeam):
 
-    treq = (datetime(2011,3,2,8,20,20,tzinfo=UTC),
-              datetime(2011,3,2,8,20,21,tzinfo=UTC))
+    #treq = (datetime(2011,3,2,8,20,20,tzinfo=UTC),
+    #          datetime(2011,3,2,8,20,21,tzinfo=UTC))
 
-    treq = [(t-epoch).total_seconds() for t in treq]
+    #treq = [(t-epoch).total_seconds() for t in treq]
+    treq=None
 
     #load radar data into class
     isr,opt = load_pfisr_neo(isrName,optName,azelfn,isrparams=isrparams,treq=treq)
 
 #%% plot data
     #setup subplot to pass axes handles in to be filled with individual plots
-    fg,axs = subplots(5,4,sharex=True,sharey=True,figsize=(16,10))
+    fg,axs = subplots(beamazel.shape[0],4,sharex=True,sharey=True,figsize=(16,10))
 
-    for j,(ae,axc) in enumerate(zip(beamazel,axs)):
-        for i,(b,p,c,ax,tt) in enumerate(zip(vbnd,isrparams,cmap,axc,titles)):
+    for j,ae in enumerate(beamazel):
+        for i,(b,p,c,tt,ax) in enumerate(zip(vbnd,isrparams,cmap,titles,axs.ravel())):
             rangevstime(isr,ae,b,p[:2],tbounds=tbounds,title=tt,cmap=c,
                         ax=ax,fig=fg,ic=i==0,ir=j==len(axs)-1,it=j==0)
 #%%
@@ -82,12 +85,17 @@ if __name__ == "__main__":
 #%%
     isrparams = ['nel','ti','te','vo']
 #%%
-    tbounds=(parse('2011-03-02T07:30Z'),
-             parse('2011-03-02T09:00Z'))
+    #tbounds=(parse('2011-03-02T07:30Z'),
+    #         parse('2011-03-02T09:00Z'))
 
-    makeplot('~/data/2011-03-02/pfa110302.002.hdf5',
-             '~/data/2011-03-02/110302_0819.h5',
-             '~/data/2011-03/calMishap2011Mar.h5',tbounds,isrparams,p.showbeams)
+    #flist=['~/data/2011-03-02/pfa110302.002.hdf5',
+   #          '~/data/2011-03-02/110302_0819.h5',
+   #          '~/data/2011-03/calMishap2011Mar.h5']
+
+    flist = ['~/data/2013-04-11/pfa130411.002.hdf5',None,None]
+    tbounds=(None,None)
+
+    makeplot(flist[0],flist[1],flist[2],tbounds,isrparams,p.showbeams)
 #%%
     if False:
         tbounds=(parse('2011-03-01T10:13Z'),
