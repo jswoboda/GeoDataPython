@@ -25,18 +25,18 @@ except Exception as e:
     pass
 #
 from .CoordTransforms import angles2xy
-#
-try:
-    plt.rc('text', usetex=True)
-    plt.rc('font', family='serif')
-except Exception as e:
-    logging.info('Latex install not complete, falling back to basic fonts.  sudo apt-get install dvipng')
+# NOTE: using usetex can make complicated plots unstable and crash
+#try:
+#    plt.rc('text', usetex=True)
+#    plt.rc('font', family='serif')
+#except Exception as e:
+#    logging.info('Latex install not complete, falling back to basic fonts.  sudo apt-get install dvipng')
 #
 try:
     import seaborn as sns
     sns.color_palette(sns.color_palette("cubehelix"))
-    sns.set(context='poster', style='whitegrid')
-    sns.set(rc={'image.cmap': 'cubehelix_r'}) #for contour
+    sns.set(context='notebook', style='whitegrid',font_scale=2,
+            rc={'image.cmap': 'cubehelix_r'}) #for contour
 except Exception as e:
     logging.info('could not import seaborn  {}'.format(e))
 #
@@ -507,10 +507,9 @@ def rangevstime(geod,beam,vbounds=(None,None),gkey = None,cmap=None,fig=None,ax=
         ax.set_ylabel('az,el = {} \n slant range [km]'.format(beam))
     if ir:
         ax.set_xlabel('UTC')
-    if tbounds[0]:
-        fig.suptitle(tbounds[0].strftime('%Y-%m-%d'))
-    else:
-        fig.suptitle(t[0].strftime('%Y-%m-%d'))
+
+    ttxt = tbounds[0].strftime('%Y-%m-%d') if tbounds[0] else t[0].strftime('%Y-%m-%d')
+    fig.suptitle(ttxt,fontsize='xx-large')
 
     ax.autoscale(axis='y',tight=True) #fills axis
     ax.xaxis.set_major_formatter(DateFormatter('%H:%M'))
