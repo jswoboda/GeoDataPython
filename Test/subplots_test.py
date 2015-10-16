@@ -6,8 +6,8 @@ Takes two h5 files--a RISR file and an OMTI file-- and creates 2 objects. This i
 The output is a 2D colorplot with the OMTI data on the bottom in grayscale and the RISR parameter on top with an alpha of 0.4
 @author: Anna Stuhlmacher, Michael Hirsch
 
-
-first you need to install GeoDataPython by python setup.py develop
+first you need to install GeoDataPython by::
+    python setup.py develop
 """
 from __future__ import division, absolute_import
 from matplotlib.pyplot import subplots,show
@@ -15,7 +15,9 @@ import numpy as np
 #
 import GeoData.plotting as GP
 #
-from load_risromti import load_risromti
+from load_isropt import load_risromti
+#
+picktimeind = [1,2] #arbitrary user time index choice
 
 def plotisropt(risrName,omtiName):
 
@@ -26,11 +28,11 @@ def plotisropt(risrName,omtiName):
     vbounds = [[200,800],[5e10,5e11]]
     title='OMTI data and NE linear interpolation'
 
-    fig3, (ax1, ax2) = subplots(1,2,figsize=(10,5), facecolor='white')
-    ax1 = fig3.add_subplot(121)
-    ax1 = GP.alt_slice_overlay((omti, risr), altlist, xyvecs, vbounds, title, axis=ax1)
-    ax2 = fig3.add_subplot(122)
-    ax2 = GP.alt_contour_overlay((omti, risr), altlist, xyvecs, vbounds, title, axis=ax2)
+    fig3, (ax1, ax2) = subplots(1,2,figsize=(10,5))
+    ax1 = GP.alt_slice_overlay((omti, risr), altlist, xyvecs, vbounds, title, axis=ax1,
+                               picktimeind=picktimeind)
+    ax2 = GP.alt_contour_overlay((omti, risr), altlist, xyvecs, vbounds, title, axis=ax2,
+                               picktimeind=picktimeind)
 
     ax1.set_ylabel('y')
     ax1.set_xlabel('x')
@@ -38,5 +40,6 @@ def plotisropt(risrName,omtiName):
     ax2.set_xlabel('x')
 
 if __name__ == '__main__':
-    plotisropt(risrName='ran120219.004.hdf5',omtiName='OMTIdata.h5')
+    plotisropt(risrName='~/data/ran120219.004.hdf5',
+               omtiName='~/data/OMTIdata.h5')
     show()

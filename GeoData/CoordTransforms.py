@@ -121,7 +121,7 @@ def wgs2ecef(WGS_COORDS):
     f = 1/298.257223563 # the flattening factor
     b = a*(1-f)# semiminor axis in meters
 
-    e = np.sqrt(a**2-b**2)/a;# first eccentricity
+    e = np.sqrt(a**2-b**2)/a# first eccentricity
 
     M_e = (a*(1-e**2))/(1-e**2*np.sin(phi))**(3.0/2.0)# Meridian radius of curvature
     n =  a/np.sqrt(1-e**2*np.sin(phi)**2) # prime verticl radius of curvature
@@ -416,7 +416,6 @@ def enu2ecef4vec(ENU,LatLong):
     Reference:
         Wikipedia article: http://en.wikipedia.org/wiki/Geodetic_system"""
     #%% Check Input
-    d2r = np.pi/180.0
     (dir1,dir2) = ENU.shape
     transcoords = False
     if dir2==3:
@@ -436,11 +435,11 @@ def enu2ecef4vec(ENU,LatLong):
     if LatLong.size==2:
         lat0 = LatLong[0]
         long0 = LatLong[1]
-        lat0 = lat0*np.ones((1,U.size))*d2r
-        long0 = long0*np.ones((1,U.size))*d2r
+        lat0 = np.radians(lat0*np.ones((1,U.size)))
+        long0 = np.radians(long0*np.ones((1,U.size)))
     else:
-        lat0 = LatLong[0,:]*d2r
-        long0 = LatLong[1,:]*d2r
+        lat0 = np.radians(LatLong[0,:])
+        long0 = np.radians(LatLong[1,:])
     #%% Set up calculation
     a11 = -np.sin(long0)
     a12 = -np.sin(lat0)*np.cos(long0)
@@ -493,7 +492,7 @@ def nthroot(X,N):
 def angles2xy(az,el,zenith=False):
     """ This will take az and el angles and move them to a Cartisian space for plotting"""
 
-    azt = (az)*np.pi/180.0
+    azt = np.radians(az)
     if not zenith:
         el = 90-el
     xout = el*np.sin(azt)
@@ -501,17 +500,17 @@ def angles2xy(az,el,zenith=False):
     return (xout,yout)
 
 def xy2angles(x,y):
-    elout = 90-np.sqrt(x**2+y**2)
-    azout = (180.0/np.pi)*np.arctan2(x,y)
+    elout = 90-np.hypot(x,y)
+    azout = np.degrees(np.arctan2(x,y))
     return (azout,elout)
 def angles2xyz(az,el):
-    elrad = el*np.pi/180.0
-    azrad = az*np.pi/180.0
+    elrad = np.radians(el)
+    azrad = np.radians(az)
     x = np.cos(elrad)*np.cos(azrad)
     y = np.cos(elrad)*np.sin(azrad)
     z = np.sin(elrad)
     return (x,y,z)
 def xyz2angles(x,y,z):
-    el = np.arcsin(z)*180.0/np.pi
-    az = np.arctan2(y,x)*180/np.pi
+    el = np.degrees(np.arcsin(z))
+    az = np.degrees(np.arctan2(y,x))
     return(az,el)

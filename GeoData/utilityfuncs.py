@@ -5,7 +5,7 @@ Created on Thu Sep 11 15:29:27 2014
 @author: John Swoboda
 """
 from __future__ import division,absolute_import
-import pdb
+import logging
 import numpy as np
 import tables as tb
 import h5py
@@ -16,13 +16,11 @@ from astropy.io import fits
 from pandas import DataFrame
 from datetime import datetime
 from warnings import warn
-try:
-    from . import CoordTransforms as CT
-except Exception:
-    import CoordTransforms as CT
+from os.path import expanduser
+#
+from . import CoordTransforms as CT
 
-usepandas = True #20x speedup vs CPython
-
+USEPANDAS = True #20x speedup vs CPython
 VARNAMES = ['data','coordnames','dataloc','sensorloc','times']
 
 def readMad_hdf5 (filename, paramstr): #timelims=None
@@ -39,10 +37,11 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     Here we use Pandas DataFrames internally to speed the reading process by 20+ times,
     while still passing out Numpy arrays
     """
+    filename = expanduser(filename)
     #open hdf5 file
-    with tb.openFile(filename, mode = "r", title = 'Sondrestrom1') as files:
-        all_data = files.getNode('/Data/Table Layout').read()
-        sensor_data = files.getNode('/Metadata/Experiment Parameters').read()
+    with h5py.File(filename, "r", libver='latest') as f:
+        all_data = f['/Data/Table Layout'].value
+        sensor_data = f['/Metadata/Experiment Parameters'].value
 
 
     instrument = str(sensor_data[0][1]) #instrument type string, comes out as bytes so cast to str
@@ -91,7 +90,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
 
     #initialize and fill data dictionary with parameter arrays
     #notnan = filt_data.index
-    if not usepandas:
+    if not USEPANDAS:
         all_loc=filt_data[['range','az','el']].values.tolist()
         all_times = filt_data['ut1'].values.tolist()
         dataloclist = dataloc.values.tolist()
@@ -104,11 +103,11 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
             warn('{} is not a valid parameter name.'.format(p))
             continue
 
-        if usepandas:
+        if USEPANDAS:
         # example of doing via numpy
         # filt_data has already been filtered for time and location with the isr parameter(s) riding along.
          #Just reshape it!
-            #TODO take off the .values to pass the DataFrame
+            #NOTE: take off the .values to pass the DataFrame
             data[p] = DataFrame(data=filt_data[p].reshape((dataloc.shape[0],uniq_times.shape[0]),order='F'),
                                                columns=uniq_times).values
         else:
@@ -136,59 +135,65 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     lat,lon,sensor_alt = sensor_data[7][1],sensor_data[8][1],sensor_data[9][1]
     sensorloc = np.array([lat,lon,sensor_alt], dtype=float) #they are bytes so we NEED float!
     coordnames = 'Spherical'
-    #TODO temporarily passing dataloc as Numpy array till rest of program is updated to Pandas
+    #NOTE temporarily passing dataloc as Numpy array till rest of program is updated to Pandas
     return (data,coordnames,dataloc.values,sensorloc,uniq_times)
 
 def readSRI_h5(filename,paramstr,timelims = None):
     '''This will read the SRI formated h5 files for RISR and PFISR.'''
     coordnames = 'Spherical'
-    h5file=tables.openFile(filename)
-    # Set up the dictionary to find the data
-    pathdict = {'Ne':('/FittedParams/Ne',None),'dNe':('/FittedParams/Ne',None),
-                'Vi':('/FittedParams/Fits',(0,3)),'dVi':('/FittedParams/Errors',(0,3)),
-                'Ti':('/FittedParams/Fits',(0,1)),'dTi':('/FittedParams/Errors',(0,1)),
-                'Te':('/FittedParams/Fits',(-1,1)),'Ti':('/FittedParams/Errors',(-1,1))}
 
-    # Get the times and time lims
-    times = h5file.getNode('/Time/UnixTime').read()
+        # Set up the dictionary to find the data
+    pathdict = {'Ne':('/FittedParams/Ne', None),
+                'dNe':('/FittedParams/Ne',None),
+                'Vi':('/FittedParams/Fits',   (0,3)),
+                'dVi':('/FittedParams/Errors',(0,3)),
+                'Ti':('/FittedParams/Fits',   (0,1)),
+                'dTi':('/FittedParams/Errors',(0,1)),
+                'Te':('/FittedParams/Fits',  (-1,1)),
+                'Ti':('/FittedParams/Errors',(-1,1))}
+
+    with h5py.File(filename,'r',libver='latest') as f:
+        # Get the times and time lims
+        times = f['/Time/UnixTime'].value
+        # get the sensor location
+        sensorloc = np.array([f['/Site/Latitude'],
+                              f['/Site/Longitude'],
+                              f['/Site/Altitude']])
+        # Get the locations of the data points
+        rng = f['/FittedParams/Range'].value / 1e3
+        angles = f['/BeamCodes'][:,1:2].value
+
     nt = times.shape[0]
     if timelims is not None:
         timelog = times[:,0]>= timelims[0] and times[:,1]<timelims[1]
         times = times[timelog,:]
         nt = times.shape[0]
-    # get the sensor location
-    lat = h5file.getNode('/Site/Latitude').read()
-    lon = h5file.getNode('/Site/Longitude').read()
-    alt = h5file.getNode('/Site/Altitude').read()
-    sensorloc = np.array([lat,lon,alt])
-    # Get the locations of the data points
-    rng = h5file.getNode('/FittedParams/Range').read()/1e3
-    angles = h5file.getNode('/BeamCodes').read()[:,1:2]
+#
     nrng = rng.shape[1]
     repangles = np.tile(angles,(1,2.0*nrng))
     allaz = repangles[:,::2]
     allel = repangles[:,1::2]
-#   TODO dataloc = DataFrame(index=times,
+#   NOTE dataloc = DataFrame(index=times,
 #                              {'rng':rng.ravel(),
 #                               'allaz':allaz.ravel(),'allel':allel.ravel()})
     dataloc =np.vstack((rng.ravel(),allaz.ravel(),allel.ravel())).transpose()
     # Read in the data
     data = {}
-    for istr in paramstr:
-        if not istr in list(pathdict.keys()):
-            warn(istr + ' is not a valid parameter name.')
+    with h5py.File(filename,'r',libver='latest') as f:
+        for istr in paramstr:
+            if not istr in list(pathdict.keys()):
+                warn(istr + ' is not a valid parameter name.')
 
-            continue
-        curpath = pathdict[istr][0]
-        curint = pathdict[istr][-1]
+                continue
+            curpath = pathdict[istr][0]
+            curint = pathdict[istr][-1]
 
-        if curint is None:
+            if curint is None:
+                tempdata = f[curpath].value
+            else:
+                tempdata = f[curpath][:,:,:,curint[0],curint[1]].value
+            data[istr] = np.array([tempdata[iT,:,:].ravel() for iT in range(nt)]).transpose()
 
-            tempdata = h5file.getNode(curpath).read()
-        else:
-            tempdata = h5file.getNode(curpath).read()[:,:,:,curint[0],curint[1]]
-        data[istr] = np.array([tempdata[iT,:,:].flatten() for iT in range(nt)]).transpose()
-    h5file.close()
     return (data,coordnames,dataloc,sensorloc,times)
 
 def read_h5_main(filename):
@@ -205,8 +210,7 @@ def read_h5_main(filename):
             for array in h5file.listNodes(group, classname = 'Array'):
                 output[group._v_pathname][array.name]=array.read()
 
-    #pdb.set_trace()
-    # find the base paths which could be dictionaries or the base directory
+    # find the base paOMTIdata.h5ths which could be dictionaries or the base directory
 #    outarr = [pathparts(ipath) for ipath in output.keys() if len(pathparts(ipath))>0]
     outlist = {}
     basekeys  = output[posixpath.sep].keys()
@@ -218,7 +222,7 @@ def read_h5_main(filename):
         if ipath[1:] in VARNAMES:
             outlist[ipath[1:]] = output[ipath]
             continue
-    # for non-dicitonary
+    # for non-dictionary
     for k in basekeys:
         if k in VARNAMES:
             # Have to check for MATLAB type strings, for some reason python does not like to register them as strings
@@ -244,6 +248,7 @@ def readOMTI(filename, paramstr):
     """
     The data paths are known a priori, so read directly ~10% faster than pytables
     """
+    filename = expanduser(filename)
     with h5py.File(filename,'r') as f:
         optical = {'optical':f['data/optical'].value} #for legacy API compatibility
         dataloc = CT.enu2cartisian(f['dataloc'].value)
@@ -297,7 +302,7 @@ def readIono(iono):
 #data, coordnames, dataloc, sensorloc, times = readMad_hdf5('/Users/anna/Research/Ionosphere/2008WorldDaysPDB/son081001g.001.hdf5', ['ti', 'dti', 'nel'])
 
 def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc):
-    """ @author: Greg Star
+    """ @author: Greg Starr
     This function will read a Fits file into the proper GeoData variables.
     inputs
     flist - A list of Fits files that will be read in.
@@ -313,7 +318,7 @@ def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc):
     header = fits.open(flist[0])
     img = header[0].data
     data = np.zeros((img.size,len(flist)))
-    dataloc = np.zeros((img.size,3))
+    dataloc = np.empty((img.size,3))
     times = np.zeros((len(flist),2))
     for i in range(len(flist)):
         try:
@@ -341,3 +346,117 @@ def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc):
     sensorloc=sensorloc
 
     return (data,coordnames,dataloc,sensorloc,times)
+
+def readNeoCMOS(imgfn, azelfn, heightkm,treq=None):
+    """
+    treq is pair or vector of UT1 unix epoch times to load--often file is so large we can't load all frames into RAM.
+    assumes that /rawimg is a 3-D array
+    """
+    imgfn = expanduser(imgfn)
+    azelfn = expanduser(azelfn)
+
+    with h5py.File(imgfn,'r',libver='latest') as f:
+        times = f['/ut1_unix'].value
+        sensorloc = f['/sensorloc'].value
+
+        npix = f['/rawimg'].shape[1] * f['/rawimg'].shape[2] #number of pixels in one image
+        dataloc = np.empty((npix,3))
+
+        if treq is not None:
+            mask = (times>treq[0]) & (times<treq[-1])
+        else:
+            mask = np.ones(f['/rawimg'].shape[0]).astype(bool)
+
+        if mask.sum()*npix*2 > 1e9:
+            logging.warning('trying to load very large amount of image data, your program may crash')
+        try:
+            optical = {'optical':f['/rawimg'][mask,...]}
+        except Exception as e:
+            logging.error('could not load optical data  {}'.format(e))
+
+    coordnames = 'Spherical'
+    dataloc[:,0] = heightkm
+    with h5py.File(azelfn,'r',libver='latest') as f:
+        dataloc[:,1] = f['/az'].value.ravel()
+        dataloc[:,2] = f['/el'].value.ravel()
+
+    return optical, coordnames, dataloc, sensorloc, times
+
+
+def readAVI(fn,fwaem):
+    """
+    caution: this was for a one-off test. Needs a bit of touch-up to be generalized to all files.
+    """
+    import cv2
+    vid = cv2.VideoCapture(fn)
+    width = vid.get(3)
+    height = vid.get(4)
+    fps = vid.get(5)
+    fcount = vid.get(7)
+    #data
+    data=np.zeros((width*height,fcount))
+    while 1:
+        op,frame = vid.read()
+        if not op:
+            break
+        data[:,vid.get(1)]=frame.flatten()
+    data={'image':data}
+
+    #coordnames
+    coordnames="spherical"
+
+    #dataloc
+    dataloc=np.zeros((width*height,3))
+    mapping = sio.loadmat(fwaem)
+    dataloc[:,2]=mapping['el'].flatten()
+    dataloc[:,1]=mapping['az'].flatten()
+    dataloc[:,0]=120/np.cos(90-mapping['el'].flatten())
+
+    #sensorloc
+    sensorloc=np.array([65,-148,0])
+
+    #times
+    times=np.zeros((fcount+1,2))
+    begin = (datetime(2007,3,23,11,20,5)-datetime(1970,1,1,0,0,0)).total_seconds()
+    end = begin+fcount/fps
+    times[:,0]=np.arange(begin,end,1/fps)
+    times[:,1]=np.arange(begin+(1/fps),end+(1/fps),1/fps)
+
+    return data,coordnames,dataloc,sensorloc,times
+
+    vid = cv2.VideoCapture(fn)
+    width = vid.get(3)
+    height = vid.get(4)
+    fps = vid.get(5)
+    fcount = vid.get(7)
+    #data
+    data=np.zeros((width*height,fcount))
+    while 1:
+        op,frame = vid.read()
+        if not op:
+            break
+        data[:,vid.get(1)]=frame.flatten()
+    data={'image':data}
+
+    #coordnames
+    coordnames="spherical"
+
+    #dataloc
+    dataloc=np.zeros((width*height,3))
+    mapping = sp.io.loadmat(fwaem)
+    dataloc[:,2]=mapping['el'].flatten()
+    dataloc[:,1]=mapping['az'].flatten()
+    dataloc[:,0]=120/np.cos(90-mapping['el'].flatten())
+
+    #sensorloc
+    sensorloc=np.array([65,-148,0])
+
+    #times
+    times=np.zeros((fcount+1,2))
+    begin = (datetime(2007,3,23,11,20,5)-datetime(1970,1,1,0,0,0)).total_seconds()
+    end = begin+fcount/fps
+    times[:,0]=np.arange(begin,end,1/fps)
+    times[:,1]=np.arange(begin+(1/fps),end+(1/fps),1/fps)
+
+    return data,coordnames,dataloc,sensorloc,times
+

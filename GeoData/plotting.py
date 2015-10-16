@@ -7,135 +7,170 @@ Created on Fri Jan 02 09:38:14 2015
 plotting
 """
 from __future__ import division, absolute_import
-import matplotlib.pyplot as plt
+import logging
 import numpy as np
 import scipy as sp
 import scipy.interpolate as spinterp
 import time
 import datetime as dt
-from six import integer_types
-from warnings import warn
+import matplotlib.pyplot as plt
+from matplotlib.dates import DateFormatter
+from matplotlib.ticker import ScalarFormatter
 #from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import cm
-import matplotlib.dates as mdates
-#import matplotlib as mpl
+#from matplotlib import cm
 #from matplotlib import ticker
 try:
     from mayavi import mlab
 except Exception as e:
-    warn('could not import Mayavi. Some 3-D plots will be disabled.  {}'.format(e))
-
-try:
-    from CoordTransforms import angles2xy
-except:
-    from .CoordTransforms import angles2xy
-
+    pass
+#
+from .CoordTransforms import angles2xy
+#
 try:
     plt.rc('text', usetex=True)
     plt.rc('font', family='serif')
-except Except as e:
-    print('Latex install not complete, falling back to basic fonts.  sudo apt-get install dvipng')
+except Exception as e:
+    logging.info('Latex install not complete, falling back to basic fonts.  sudo apt-get install dvipng')
+#
+try:
+    import seaborn as sns
+    sns.color_palette(sns.color_palette("cubehelix"))
+    sns.set(context='poster', style='whitegrid')
+    sns.set(rc={'image.cmap': 'cubehelix_r'}) #for contour
+except Exception as e:
+    logging.info('could not import seaborn  {}'.format(e))
+#
+sfmt = ScalarFormatter(useMathText=True)
+#%%
+def _dointerp(geodatalist,altlist,xyvecs,picktimeind):
+    opt=None; isr=None #in case of failure
+    xvec = xyvecs[0]
+    yvec = xyvecs[1]
+    x,y = np.meshgrid(xvec, yvec)
+    z = np.ones(x.shape)*altlist
+    new_coords = np.column_stack((x.ravel(),y.ravel(),z.ravel()))
+    extent=[xvec.min(),xvec.max(),yvec.min(),yvec.max()]
 
-def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None):
+    key={}
+#%% iterative demo, not used yet
+#    inst = []
+#    for g in geodatalist:
+#        if g is None:
+#            continue
+#        for k in g.data.keys():
+#            try:
+#                G = g.timeslice(picktimeind)
+#                G.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
+#                interpData = G.data[k]
+#                inst.append(interpData[:,0].reshape(x.shape))
+#            except Exception as e:
+#                logging.warning('skipping instrument   {}'.format(e))
+#%% optical
+    g = geodatalist[0]
+    try:
+        key['opt'] = list(g.data.keys()) #list necessary for Python3
+        G = g.timeslice(picktimeind)
+        G.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
+        interpData = G.data[key['opt'][0]]
+        opt = interpData[:,0].reshape(x.shape)
+    except Exception as e:
+        logging.warning('skipping instrument   {}'.format(e))
+#%% isr
+    g = geodatalist[1]
+    try:
+        key['isr'] = list(g.data.keys()) #list necessary for Python3
+        G = g.timeslice(picktimeind)
+        G.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
+        interpData = G.data[key['isr'][0]]
+        isr = interpData[:,0].reshape(x.shape)
+    except Exception as e:
+        logging.warning('skipping instrument   {}'.format(e))
+
+    return opt,isr,extent,key,x,y
+#%%
+def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,picktimeind=[1,2]):
     """
     geodatalist - A list of geodata objects that will be overlayed, first object is on the bottom and in gray scale
     altlist - A list of the altitudes that we can overlay.
     xyvecs- A list of x and y numpy arrays that have the x and y coordinates that the data will be interpolated over. ie, xyvecs=[np.linspace(-100.0,500.0),np.linspace(0.0,600.0)]
     vbounds = a list of bounds for each geodata object. ie, vbounds=[[500,2000], [5e10,5e11]]
     title - A string that holds for the overall image
+    picktimeind - indices in time to extract and plot (arbitrary choice)
     Returns an image of an overlayed plot at a specific altitude.
     """
-    xvec = xyvecs[0]
-    yvec = xyvecs[1]
-    x,y = np.meshgrid(xvec, yvec)
-    z = np.ones(x.shape)*altlist
-    new_coords = np.column_stack((x.ravel(),y.ravel(),z.ravel()))
-    extent=[xvec.min(),xvec.max(),yvec.min(),yvec.max()]
-
-    key0 = list(geodatalist[0].data.keys()) #list necessary for Python3
-    key1 = list(geodatalist[1].data.keys())
-
-    gd2 = geodatalist[1].timeslice([1,2]) #second and third times in array
-    gd2.interpolate(new_coords, newcoordname='Cartesian', method='linear', fill_value=np.nan)
-    interpData = gd2.data[key1[0]]
-    risr = interpData[:,0].reshape(x.shape)
-
-    gd3 = geodatalist[0].timeslice([1,2])
-    gd3.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
-    interpData = gd3.data[key0[0]]
-    omti = interpData[:,0].reshape(x.shape)
-
-    if axis is None:
-        fg = plt.figure(facecolor='white'); ax=fg.gca()
-        bottom = ax.imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
-        cbar1 = fg.colorbar(bottom)
-        cbar1.set_label(key0[0])
-        ax.hold(True)
-
-        top = ax.imshow(risr, cmap=cm.jet, alpha=0.4, extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
-        cbar2 = fg.colorbar(top)
-        cbar2.set_label(key1[0])
+    ax = axis #less typing
+    opt,isr,extent,key,x,y = _dointerp(geodatalist,altlist,xyvecs,picktimeind)
+#%% plots
+    if ax is None:
+        fg = plt.figure()
+        ax=fg.gca()
         ax.set_title(title)
         ax.set_xlabel('x')
         ax.set_ylabel('y')
-
     else:
-        axis.imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
-        axis.hold(True)
-        axis.imshow(risr, cmap=cm.jet, alpha=0.4, extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
-        return axis
+        fg = ax.get_figure()
+#%%
+    try:
+        bottom = ax.imshow(opt, cmap='gray', extent=extent, origin='lower', interpolation='none',
+                           vmin=vbounds[0][0],vmax=vbounds[0][1])
+        c = fg.colorbar(bottom,ax=ax)
+        c.set_label(key['opt'][0])
+    except Exception as e:
+        logging.info('problem plotting instrument  {}'.format(e))
+#%%
+    try:
+        top = ax.imshow(isr, alpha=0.4, extent=extent, origin='lower',interpolation='none',
+                        vmin=vbounds[1][0],vmax=vbounds[1][1])
+        c = fg.colorbar(top,ax=ax)
+        c.set_label(key['isr'][0])
+    except Exception as e:
+        logging.info('problem plotting instrument  {}'.format(e))
 
-def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None):
+    return ax
+#%%
+def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,picktimeind=[1,2]):
     """
     geodatalist - A list of geodata objects that will be overlayed, first object is on the bottom and in gray scale
     altlist - A list of the altitudes that we can overlay.
     xyvecs- A list of x and y numpy arrays that have the x and y coordinates that the data will be interpolated over.
     vbounds = a list of bounds for each geodata object. ie, vbounds=[[500,2000], [5e10,5e11]]
     title - A string that holds for the overall image
+    picktimeind - indices in time to extract and plot (arbitrary choice)
     Returns an image of an overlayed plot at a specific altitude.
     """
-    xvec = xyvecs[0]
-    yvec = xyvecs[1]
-    x,y = np.meshgrid(xvec, yvec)
-    z = np.ones(x.shape)*altlist
-    new_coords = np.column_stack((x.ravel(),y.ravel(),z.ravel()))
-    extent=[xvec.min(),xvec.max(),yvec.min(),yvec.max()]
-
-    key0 = list(geodatalist[0].data.keys()) #list needed for Python3
-    key1 = list(geodatalist[1].data.keys())
-
-    gd2 = geodatalist[1].timeslice([1,2])
-    gd2.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
-    interpData = gd2.data[key1[0]]
-    risr = interpData[:,0].reshape(x.shape)
-
-    gd3 = geodatalist[0].timeslice([1,2])
-    gd3.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
-    interpData = gd3.data[key0[0]]
-    omti = interpData[:,0].reshape(x.shape)
-
-    if axis == None:
-        fg= plt.figure(facecolor='white'); ax=fg.gca()
-        bottom = ax.imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
-        cbar1 = plt.colorbar(bottom, orientation='horizontal')
-        cbar1.set_label(key0[0])
-        ax.hold(True)
-
-        top = ax.contour(x,y, risr, cmap=cm.jet,extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
-        #clabel(top,inline=1,fontsize=10, fmt='%1.0e')
-        cbar2 = fg.colorbar(top, format='%.0e')
-        cbar2.set_label(key1[0])
+    ax = axis #less typing
+    opt,isr,extent,key,x,y = _dointerp(geodatalist,altlist,xyvecs,picktimeind)
+#%% plots
+    if axis is None:
+        fg= plt.figure()
+        ax=fg.gca()
         ax.set_title(title)
         ax.set_xlabel('x')
         ax.set_ylabel('y')
     else:
-        axis.imshow(omti, cmap=cm.gray, extent=extent, origin='lower', vmin=vbounds[0][0],vmax=vbounds[0][1])
-        axis.hold(True)
-        axis.contour(x,y, risr, cmap=cm.jet,extent=extent, origin='lower', vmin=vbounds[1][0],vmax=vbounds[1][1])
-        return axis
+        fg = ax.get_figure()
+#%%
+    try:
+        bottom = ax.imshow(opt, cmap='gray', extent=extent, origin='lower', interpolation='none',
+                           vmin=vbounds[0][0],vmax=vbounds[0][1])
+        cbar1 = plt.colorbar(bottom, orientation='horizontal',ax=ax)
+        cbar1.set_label(key['opt'][0])
+    except Exception as e:
+        logging.info('problem plotting instrument  {}'.format(e))
+
+    try:
+        top = ax.contour(x,y, isr,extent=extent, origin='lower', interpolation='none',
+                         vmin=vbounds[1][0],vmax=vbounds[1][1])
+        #clabel(top,inline=1,fontsize=10, fmt='%1.0e')
+        cbar2 = fg.colorbar(top, format='%.0e',ax=ax)
+        cbar2.set_label(key['isr'][0])
+    except Exception as e:
+        logging.info('problem plotting instrument  {}'.format(e))
+
+    return ax
 
 
-
+#%%
 def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='jet', ax=None,fig=None,method='linear',fill_value=np.nan,view = None,units='',colorbar=False,outimage=False):
     """ This function create 3-D slice image given either a surface or list of coordinates to slice through
     Inputs:
@@ -183,8 +218,8 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='j
     mlab.figure(fig)
     #determine if list of slices or surfaces are given
 
-    islists = type(surfs[0])==list
-    if type(surfs[0])==np.ndarray:
+    islists = isinstance(surfs[0],list)
+    if isinstance(surfs[0],np.ndarray):
         onedim = surfs[0].ndim==1
     #get slices for each dimension out
     surflist = []
@@ -434,79 +469,70 @@ def plotbeamposfig(geod,height,coordnames,fig=None,ax=None,title=''):
     ploth = ax.scatter(x,y)
     return(ploth)
 
-def rangevstime(geod,beam,vbounds=None,gkey = None,cmap='jet',fig=None,ax=None,title='',cbar = True):
+def rangevstime(geod,beam,vbounds=(None,None),gkey = None,cmap=None,fig=None,ax=None,
+                title='',cbar=True,tbounds=(None,None),ic=True,ir=True,it=True):
     """ This method will create a color graph of range vs time for data in spherical coordinates"""
     assert geod.coordnames.lower() =='spherical'
 
     if (ax is None) and (fig is None):
-        fig = plt.figure(facecolor='white')
+        fig = plt.figure(figsize=(12,8))
         ax = fig.gca()
     elif ax is None:
         ax = fig.gca()
 
     if gkey is None:
         gkey = geod.data.keys[0]
+#%% get unique ranges for plot limits, note beamid is not part of class.
+    match = np.isclose(geod.dataloc[:,1:],beam,atol=1e-2).all(axis=1) #FIXME what should tolerance be for Sondrestrom mechanical dish
+    if (~match).all(): #couldn't find this beam
+        logging.error('beam az,el {} not found'.format(beam))
+        return
 
+    if not title:
+        title = gkey
 
-#    a = geod.dataloc[:,1:]
-#    b=np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))
-#    (beaminds,beamnums) = np.unique(b,return_index=True, return_inverse=True)[1:]
-#    beams = a[beaminds]
-    (beams,beaminds,beamnums) = uniquerows(geod.dataloc[:,1:])
-    if isinstance(beam, (integer_types, float, complex)):
-        beamind = beam
-    else:
-        atol = np.abs(beams).sum(axis=1)
-        btol = np.abs(beam).sum(axis=-1)
-        beamdiff= np.abs(beams-np.repeat(beam[np.newaxis,:],beams.shape[0],axis=0)).sum(axis=1)
-        beamind = sp.argmin(beamdiff)
-        if beamdiff[beamind]>(atol[beamind]+btol)*1e-5:
-            raise('beam given not close enough to other beams')
-    title = insertinfo(title,gkey)
-    beamlocs = np.argwhere(beamnums==beamind).flatten()
-    rngind = beamlocs[np.argsort(geod.dataloc[beamlocs,0])]
-    dataout = geod.data[gkey][rngind]
-    rngval = geod.dataloc[rngind,0]
-    timelims = [geod.times[0,0],geod.times[-1,0]]
-    x_lims = list(map(dt.datetime.fromtimestamp, timelims))
-    x_lims = mdates.date2num(x_lims)
-    y_lims = [rngval[0],rngval[-1]]
+    dataout = geod.data[gkey][match]
+    rngval =  geod.dataloc[match,0]
+    t = np.asarray(list(map(dt.datetime.utcfromtimestamp, geod.times[:,0])))
+#%% time limits of display
+    ploth = ax.pcolormesh(t,rngval,dataout,
+                          vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
 
-    ploth = ax.imshow(dataout, extent = [x_lims[0],x_lims[1],y_lims[0],y_lims[1]], aspect='auto',vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
-    ax.xaxis_date()
     if cbar:
-        cbar2 = plt.colorbar(ploth, ax=ax, format='%.0e')
-    else:
-        cbar2 = None
-    ax.set_title(title)
-    ax.set_xlabel('Time in UT')
-    ax.set_ylabel('range in km')
+        fig.colorbar(ploth, ax=ax, format=sfmt)
 
-    return (ploth,cbar2)
+    if it:
+        ax.set_title(title)
+    if ic:
+        ax.set_ylabel('az,el = {} \n slant range [km]'.format(beam))
+    if ir:
+        ax.set_xlabel('UTC')
+    if tbounds[0]:
+        fig.suptitle(tbounds[0].strftime('%Y-%m-%d'))
+    else:
+        fig.suptitle(t[0].strftime('%Y-%m-%d'))
+
+    ax.autoscale(axis='y',tight=True) #fills axis
+    ax.xaxis.set_major_formatter(DateFormatter('%H:%M'))
+    ax.set_xlim(tbounds)
+    fig.autofmt_xdate()
+
 def uniquerows(a):
     b=np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))
     (rowsinds,rownums) = np.unique(b,return_index=True, return_inverse=True)[1:]
     rows = a[rowsinds]
     return (rows,rowsinds,rownums)
-def plotbeamposGD(geod,fig=None,ax=None,title='Beam Positions'):
+
+def plotbeamposGD(geod,title='Beam Positions',minel=30,elstep=10):
     assert geod.coordnames.lower() =='spherical'
 
-    if (ax is None) and (fig is None):
-        fig = plt.figure(facecolor='white')
-        ax = fig.gca()
-    elif ax is None:
-        ax = fig.gca()
-
-    make_polax(fig,ax,False)
-    plt.hold(True)
     (azvec,elvec) = (geod.dataloc[:,1],geod.dataloc[:,2])
 
-    (xx2,yy2) = angles2xy(azvec,elvec,False)
-    plotsout = plt.plot(xx2,yy2,'o',c='b', markersize=10)
-    plt.title(title)
-    return plotsout
-def make_polax(fig,ax,zenith):
-    """ This makes the polar axes for the beams"""
+    polarplot(azvec,elvec,markerarea=70,title=title,minel=minel,elstep=elstep)
+
+def make_polax(zenith):
+    """ OBSOLETE
+    This makes the polar axes for the beams"""
     if zenith:
         minel = 0.0
         maxel = 70.0
@@ -542,9 +568,34 @@ def make_polax(fig,ax,zenith):
     frame1 = plt.gca()
     frame1.axes.get_xaxis().set_visible(False)
     frame1.axes.get_yaxis().set_visible(False)
+
+def polarplot(az,el,markerarea=500,title=None,minel=30,elstep=10):
+    """
+    plots hollow circles at az,el coordinates, with area quantitatively defined
+    Michael Hirsch from satkml
+    """
+    az = np.radians(np.asarray(az).astype(float))
+    el = 90-np.asarray(el).astype(float)
+
+    ax=plt.figure().gca(polar=True)
+
+    ax.set_theta_zero_location('N')
+#    ax.set_rmax(90-minel)
+    ax.set_theta_direction(-1)
+
+    ax.scatter(x=az, y=el, marker='o',facecolors='none',edgecolor='red',s=markerarea)
+
+    yt = np.arange(0., 90.-minel+elstep, elstep)
+    ax.set_yticks(yt)
+    ylabel = (yt[::-1]+minel).astype(int).astype(str)
+    ax.set_yticklabels(ylabel,fontsize='x-small')
+
+    ax.set_title(title)
+
+
 def insertinfo(strin,key='',posix=None,posixend = None):
 
-    listin = type(strin)==list
+    listin = isinstance(strin,list)
     if listin:
         stroutall = []
     else:
