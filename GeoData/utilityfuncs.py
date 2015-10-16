@@ -11,7 +11,6 @@ import tables as tb
 import h5py
 import posixpath
 import scipy as sp
-import tables
 from astropy.io import fits
 from pandas import DataFrame
 from datetime import datetime
@@ -47,15 +46,15 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     instrument = str(sensor_data[0][1]) #instrument type string, comes out as bytes so cast to str
     if "Sondrestrom" in instrument:
         radar = 1
-        print("Sondrestrom data")
+        logging.info("Sondrestrom data")
     elif "Poker Flat" in instrument:
         radar = 2
-        print("PFISR data")
+        logging.info("PFISR data")
     elif "Resolute Bay" in instrument:
         radar = 3
-        print ("RISR data")
+        logging.info("RISR data")
     else:
-        exit("Error: Radar type "+str(instrument) +" not supported by program in this version.")
+        raise ValueError("Error: Radar type " + str(instrument) +" not supported by program in this version.")
 
     # get the data location (range, el1, azm)
     if radar == 1:
@@ -136,7 +135,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     sensorloc = np.array([lat,lon,sensor_alt], dtype=float) #they are bytes so we NEED float!
     coordnames = 'Spherical'
     #NOTE temporarily passing dataloc as Numpy array till rest of program is updated to Pandas
-    return (data,coordnames,dataloc.values,sensorloc,uniq_times)
+    return (data,coordnames,dataloc.values,sensorloc,uniq_times,sensor_data[5][1].decode('utf8'))
 
 def readSRI_h5(filename,paramstr,timelims = None):
     '''This will read the SRI formated h5 files for RISR and PFISR.'''
@@ -194,7 +193,7 @@ def readSRI_h5(filename,paramstr,timelims = None):
                 tempdata = f[curpath][:,:,:,curint[0],curint[1]].value
             data[istr] = np.array([tempdata[iT,:,:].ravel() for iT in range(nt)]).transpose()
 
-    return (data,coordnames,dataloc,sensorloc,times)
+    return (data,coordnames,dataloc,sensorloc,times,None)
 
 def read_h5_main(filename):
     '''
@@ -256,7 +255,7 @@ def readOMTI(filename, paramstr):
         sensorloc = f['sensorloc'].value.squeeze()
         times = f['times'].value
 
-    return optical, coordnames, dataloc, sensorloc, times
+    return optical, coordnames, dataloc, sensorloc, times,None
 
 def readIono(iono):
     """ @author:John Swoboda
@@ -297,7 +296,7 @@ def readIono(iono):
         coordnames = 'Cartesian'
         coords = iono.Cart_Coords
 
-    return (paramdict,coordnames,coords,sp.array(iono.Sensor_loc),iono.Time_Vector)
+    return (paramdict,coordnames,coords,np.array(iono.Sensor_loc),iono.Time_Vector,None)
 
 #data, coordnames, dataloc, sensorloc, times = readMad_hdf5('/Users/anna/Research/Ionosphere/2008WorldDaysPDB/son081001g.001.hdf5', ['ti', 'dti', 'nel'])
 
@@ -345,7 +344,7 @@ def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc):
 
     sensorloc=sensorloc
 
-    return (data,coordnames,dataloc,sensorloc,times)
+    return (data,coordnames,dataloc,sensorloc,times,None)
 
 def readNeoCMOS(imgfn, azelfn, heightkm,treq=None):
     """
@@ -380,7 +379,7 @@ def readNeoCMOS(imgfn, azelfn, heightkm,treq=None):
         dataloc[:,1] = f['/az'].value.ravel()
         dataloc[:,2] = f['/el'].value.ravel()
 
-    return optical, coordnames, dataloc, sensorloc, times
+    return optical, coordnames, dataloc, sensorloc, times,None
 
 
 def readAVI(fn,fwaem):
@@ -458,5 +457,5 @@ def readAVI(fn,fwaem):
     times[:,0]=np.arange(begin,end,1/fps)
     times[:,1]=np.arange(begin+(1/fps),end+(1/fps),1/fps)
 
-    return data,coordnames,dataloc,sensorloc,times
+    return data,coordnames,dataloc,sensorloc,times,None
 
