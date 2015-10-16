@@ -509,6 +509,7 @@ def rangevstime(geod,beam,vbounds=(None,None),gkey = None,cmap=None,fig=None,ax=
         ax.set_xlabel('UTC')
 
     ttxt = tbounds[0].strftime('%Y-%m-%d') if tbounds[0] else t[0].strftime('%Y-%m-%d')
+    ttxt += ' ' +str(geod.expdesc)
     fig.suptitle(ttxt,fontsize='xx-large')
 
     ax.autoscale(axis='y',tight=True) #fills axis
@@ -587,7 +588,7 @@ def polarplot(az,el,markerarea=500,title=None,minel=30,elstep=10):
     yt = np.arange(0., 90.-minel+elstep, elstep)
     ax.set_yticks(yt)
     ylabel = (yt[::-1]+minel).astype(int).astype(str)
-    ax.set_yticklabels(ylabel,fontsize='x-small')
+    ax.set_yticklabels(ylabel,fontsize='small')
 
     ax.set_title(title)
 

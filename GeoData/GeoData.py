@@ -7,13 +7,9 @@ Created on Thu Jul 17 12:46:46 2014
 """
 from __future__ import division,absolute_import
 from six import integer_types,string_types
-#import os
-#import time
-
 import posixpath
 from copy import deepcopy
 import numpy as np
-import scipy as sp
 import scipy.interpolate as spinterp
 import tables
 from pandas import DataFrame
@@ -24,8 +20,7 @@ from . import CoordTransforms as CT
 from .utilityfuncs import read_h5_main
 
 
-
-VARNAMES = ['data','coordnames','dataloc','sensorloc','times']
+VARNAMES = ['data','coordnames','dataloc','sensorloc','times','expdesc']
 
 class GeoData(object):
     '''This class will hold the information for geophysical data.
@@ -35,17 +30,18 @@ class GeoData(object):
     coordnames - A string that holds the type of coordinate system.
     dataloc - A numpy array that holds the locations of the samples
     sensorloc - A numpy array with the WGS coordinates of the sensor.
-    times - A numpy array that is holding the times associated with the measurements.'''
+    times - A numpy array that is holding the times associated with the measurements.
+    expdesc - Freeform user string(s) holding experiment description'''
     def __init__(self,readmethod,inputs):
         if isinstance(readmethod,string_types):
-            (self.data,self.coordnames,self.dataloc,self.sensorloc,self.times) = inputs
+            (self.data,self.coordnames,self.dataloc,self.sensorloc,self.times,self.expdesc) = inputs
         else:
             '''This will create an instance of the GeoData class by giving it a read method and the inputs in a tuple'''
-            (self.data,self.coordnames,self.dataloc,self.sensorloc,self.times) = readmethod(*inputs)
+            (self.data,self.coordnames,self.dataloc,self.sensorloc,self.times,self.expdesc) = readmethod(*inputs)
         # Assert that the data types are correct
         numerics = (np.ndarray,integer_types,float)
         assert isinstance(self.data,dict),"data needs to be a dictionary"
-        assert isinstance(self.coordnames,str), "coordnames needs to be a string"
+        assert isinstance(self.coordnames,string_types), "coordnames needs to be a string"
         assert isinstance(self.dataloc,numerics),"dataloc needs to be a numpy array"
         assert isinstance(self.sensorloc,numerics),"sensorloc needs to be a numpy array"
         assert isinstance(self.times,numerics),"times needs to be a numpy array"
@@ -92,16 +88,16 @@ class GeoData(object):
         times1 = timerepair(self.times)
         times2 = timerepair(self2.times)
         outcell = [[] for i in range(times1.shape[0])]
-        for k in  range(times1.shape[0]):
+        for k in range(times1.shape[0]):
             l = times1[k,:]
 
-            list1 = sp.argwhere(l[0]>times2[:,0])
-            list2 = sp.argwhere(l[1]<times2[:,1])
+            list1 = np.argwhere(l[0]>times2[:,0])
+            list2 = np.argwhere(l[1]<times2[:,1])
             if (list1.size==0) or (list2.size==0):
                continue
             ind1 = list1[-1][0]
             ind2 = list2[0][0]
-            outcell[k]=sp.arange(ind1,ind2+1).astype('int64')
+            outcell[k]=np.arange(ind1,ind2+1).astype('int64')
         return outcell
 
 
@@ -123,14 +119,14 @@ class GeoData(object):
         blah = np.ma.array(self2.sensorloc,mask=np.isnan(self2.sensorloc))
         assert np.ma.allequal(a,blah),'Sensor Locations must be the same'
 
-        alltimes = sp.vstack((timerepair(self.times),timerepair(self2.times)))
+        alltimes = np.vstack((timerepair(self.times),timerepair(self2.times)))
 
         #sort based off of start times
-        s_ind = sp.argsort(alltimes[:,0])
+        s_ind = np.argsort(alltimes[:,0])
         self.times = alltimes[s_ind]
 
         for ikey in self.datanames():
-            outarr = sp.hstack((self.data[ikey],self2.data[ikey]))
+            outarr = np.hstack((self.data[ikey],self2.data[ikey]))
             self.data[ikey] = outarr[:,s_ind]
 
     def timeslice(self,timelist,listtype=None):
@@ -170,7 +166,7 @@ class GeoData(object):
 #%% Satellite Data
     def issatellite(self):
         """Checks if the instance is satellite data. It will give true if the sensorloc array is all nans"""
-        if sp.all(sp.isnan(self.sensorloc)):
+        if np.all(np.isnan(self.sensorloc)):
             return True
         else:
             return False
@@ -290,7 +286,7 @@ class GeoData(object):
             return False
         for irow in newcoords:
             pdb.set_trace()
-            if not sp.any(sp.all(origcoords==irow,axis=1)):
+            if not np.any(np.all(origcoords==irow,axis=1)):
                 return False
         return True
 
@@ -302,9 +298,9 @@ class GeoData(object):
         key - The name of the data that the user wants extracted"""
         assert(self.coordnames.lower()==coordname.lower())
 
-        reorderlist = sp.zeros(len(newcoords)).astype('int64')
+        reorderlist = np.zeros(len(newcoords)).astype('int64')
         for irown,irow in enumerate(newcoords):
-            reorderlist[irown]=sp.where(sp.all(self.dataloc==irow,axis=1))[0][0]
+            reorderlist[irown]=np.where(np.all(self.dataloc==irow,axis=1))[0][0]
         if key is None:
             for ikey in self.datanames():
                 self.data[ikey]= self.data[ikey][reorderlist]
@@ -409,7 +405,7 @@ def timerepair(timear):
     if timear.size==1:
         # XXX Using this for my simulator program because old data does not have end times.
         warn('Timear is only of size 1. Making second element that is 60 seconds ahead of the original')
-        return  sp.array([[timear[0],timear[0]+60]])
+        return  np.array([[timear[0],timear[0]+60]])
 
     avdiff = np.diff(timear).mean()
     timear2 = np.roll(timear,-1)

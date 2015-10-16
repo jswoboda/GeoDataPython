@@ -43,13 +43,14 @@ def makeplot(isrName,optName,azelfn,tbounds,isrparams,showbeam):
 #%% plot data
     #setup subplot to pass axes handles in to be filled with individual plots
     fg,axs = subplots(beamazel.shape[0],4,sharex=True,sharey=True,figsize=(16,10))
+    axs = np.atleast_2d(axs) #needed for proper sharex in one row case
 
     for j,ae in enumerate(beamazel):
         for i,(b,p,c,tt,ax) in enumerate(zip(vbnd,isrparams,cmap,titles,axs.ravel())):
             rangevstime(isr,ae,b,p[:2],tbounds=tbounds,title=tt,cmap=c,
-                        ax=ax,fig=fg,ic=i==0,ir=j==len(axs)-1,it=j==0)
-#%%
-    plotbeamposGD(isr,minel=75.,elstep=5.)
+                        ax=ax,fig=fg,ic=i==0,ir=j==axs.shape[0]-1,it=j==0)
+#%% plot beams on their own plot
+    plotbeamposGD(isr)
 #%%
     if opt is not None:
         try:
@@ -60,16 +61,15 @@ def makeplot(isrName,optName,azelfn,tbounds,isrparams,showbeam):
                          interpolation='none',origin='lower')
             fg.colorbar(hi,ax=ax)
             ht = ax.set_title('')
-            #plot beams
-            # find indices of closest az,el
-            if showbeam:
+#%% plot beams over top of video
+            if showbeam: # find indices of closest az,el
                 print('building K-D tree for beam scatter plot, takes several seconds')
                 kdtree = cKDTree(opt.dataloc[:,1:]) #az,el
                 for b in beamazel:
                     i = kdtree.query([b[0]%360,b[1]],k=1, distance_upper_bound=0.1)[1]
                     y,x = np.unravel_index(i,opt.data['optical'].shape[1:])
                     ax.scatter(y,x,s=80,facecolor='none',edgecolor='b')
-            #play video
+#%% play video
             for t,im in zip(opt.times[:,0],opt.data['optical']):
                 hi.set_data(im)
                 ht.set_text(datetime.fromtimestamp(t,tz=UTC))
@@ -93,7 +93,7 @@ if __name__ == "__main__":
    #          '~/data/2011-03-02/110302_0819.h5',
    #          '~/data/2011-03/calMishap2011Mar.h5']
 
-    flist = ['~/data/2013-04-11/pfa130411.002.hdf5',None,None]
+    flist = ['~/data/2013-04-11/pfa130411.004.hdf5',None,None]
     tbounds=(datetime(2013,4,11,9,tzinfo=UTC),
              datetime(2013,4,11,12,tzinfo=UTC))
 
