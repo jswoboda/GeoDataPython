@@ -15,6 +15,7 @@ import numpy as np
 import h5py
 from glob import glob
 import matplotlib.pyplot as plt
+from tempfile import gettempdir
 #
 from GeoData import ioclass
 from GeoData.IQTools import CenteredLagProduct, FormatIQ
@@ -50,7 +51,7 @@ def spcorrbeam(rootdir,h5ext,beamids,outdir):
                'Data_Power' :   ('/S/Data/Power',''),
                }
 #%% set up the output directory structure
-    mkoutdir(outdir,npats)
+    outpaths = mkoutdir(outdir,npats)
 #%% Open and read file
     # NOTE: This will be changed into a loop at some point
     with h5py.File(h5fn,'r',libver='latest') as f:
@@ -125,16 +126,17 @@ def spcorrbeam(rootdir,h5ext,beamids,outdir):
         raise Exception('FAILED: Beams for noise are not consistant')
 #%% first loop goes through patterns
     for x in range(npats):
-
         # set up the outputfiles
         curoutpath =outpaths[x]
-        bname = os.path.basename(fname)
+        bname = os.path.basename(h5fn)
         spl = bname.split('.')
         oname = os.path.join(curoutpath, spl[0]+'.' + spl[1] + '.proc.' + spl[2])
 
         # check the output files
-        if os.path.exists(oname):
+        try:
             os.remove(oname)
+        except:
+            pass
         # output file
         ofile = ioclass.outputFileClass()
         ofile.fname = oname
@@ -151,13 +153,10 @@ def spcorrbeam(rootdir,h5ext,beamids,outdir):
 
         #set up location arrays
         curbeams = patternsdict[x]
-        cal_beam_loc = np.zeros(curbeams.shape)
-        noise_beam_loc = np.zeros(curbeams.shape)
+        cal_beam_loc = np.zeros(curbeams.shape,dtype=int)
+        noise_beam_loc = np.zeros(curbeams.shape,dtype=int)
         cal_beam_loc = np.array([np.where(beamcodes_cal[0,:]==ib)[0][0] for ib in curbeams])
         noise_beam_loc = np.array([np.where(beamcodes_noise[0,:]==ib)[0][0] for ib in curbeams])
-        #pdb.set_trace()
-
-
 
         cal_pint = fullfiledict['/S/Cal']['PulsesIntegrated']
         caldata = fullfiledict['/S/Cal/Power']['Data']
@@ -235,14 +234,14 @@ def spcorrbeam(rootdir,h5ext,beamids,outdir):
 
 
 def mkoutdir(outdir,npats):
-    if outdir:
-        outdir = expanduser(outdir)
-        outpaths = {x:os.path.join(outdir,'Pattern{:02}'.format(x)) for x in np.arange(npats)}
-        for x in np.arange(npats):
-            try:
-                os.makedirs(outpaths[x])
-            except:
-                pass
+    outdir = expanduser(outdir)
+    outpaths = {x:os.path.join(outdir,'Pattern{:02}'.format(x)) for x in range(npats)}
+    for x in np.arange(npats):
+        try:
+            os.makedirs(outpaths[x])
+        except:
+            pass
+    return outpaths
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
@@ -250,7 +249,7 @@ if __name__ == "__main__":
     p.add_argument('rootdir',help='directory containing ISR lag products *.dt2.h5')
     p.add_argument('--ext',help='file extension of data files [.dt2.h5]',default='.dt2.h5')
     p.add_argument('-b','--beamid',help='beamid(s) to use [64157]',nargs='+',default=[64157],type=int)
-    p.add_argument('-o','--outdir',help='directory in which to write the output')
+    p.add_argument('-o','--outdir',help='directory in which to write the output',default=gettempdir())
     p = p.parse_args()
 
     spcorrbeam(p.rootdir,p.ext,p.beamid,p.outdir)
