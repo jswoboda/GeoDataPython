@@ -4,7 +4,7 @@
 
 """
 from __future__ import division,absolute_import
-import tables, os, scipy
+import tables, os, scipy,h5py
 
 class h5file():
 
@@ -38,7 +38,6 @@ class outputFileClass:
         self.fname = ''
         self.title = ''
         self.fhandle = None
-        return
 
     def createFile(self, fname):
         """ create file fname, set self.fname and self.fhandle """
@@ -48,12 +47,10 @@ class outputFileClass:
         except:
             raise IOError('Unable to create output path %s' % os.path.dirname(self.fname))
         self.fhandle=tables.openFile(self.fname, mode = "w", title = self.title)
-        return
 
     def openFile(self):
         """ open file self.fname """
-        self.fhandle = tables.openFile(self.fname, mode = "a")
-        return
+        self.fhandle = h5py.File(self.fname, mode = "a",libver='latest')
 
     def closeFile(self):
         """ close self.fhandle """
@@ -63,9 +60,7 @@ class outputFileClass:
         """ creates groups """
         tvals = sorted(self.h5Paths.values())
         for v0,v1 in tvals:
-            gp,gn = os.path.split(v0)
-            self.fhandle.createGroup(gp,gn,v1)
-        return
+            self.fhandle.create_group(v0+'/'+v1)
 
     def createStaticArray(self,path,data,keys2do=[]):
         """ creates a static array """
@@ -75,7 +70,6 @@ class outputFileClass:
         else:
             for key in keys2do:
                 self.fhandle.createArray(path,key,data[key],'Static array')
-        return
 
     def createDynamicArray(self,path,rec,keys2do=[]):
         """ creates a dynamic array """
@@ -143,11 +137,9 @@ class outputFileClass:
                         tshape=list(data.shape); tshape[2]=arr.shape[2]-data.shape[2]
                         data=scipy.append(data,scipy.zeros(tshape)*scipy.nan,axis=2)
                 arr.append(data)
-        return
 
     def setAtrributes(self):
         for key in self.h5Attribs.keys():
             for attr in self.h5Attribs[key]:
                 try:  self.fhandle.setNodeAttr(key,attr[0],attr[1])
                 except: ''
-        return
