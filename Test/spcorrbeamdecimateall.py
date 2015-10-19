@@ -6,14 +6,13 @@ John Swoboda
 Michael Hirsch
 
 original example:
-python spcorrbeamdecimateall /Volumes/ISRDrive/ISRData/20121207.002/ -b 65228 65288 65225 65291 -o ~/Documents/Python/data_experiments/OutData2
+python spcorrbeamdecimateall ~/U/eng_research_irs/ISRdata/20121207/20121207.002 -b 65228 65288 65225 65291 -o ~/Documents/Python/data_experiments/OutData2
 """
 from __future__ import division,absolute_import
 import os
 from os.path import join,expanduser
 import numpy as np
 import h5py
-import tables
 from glob import glob
 import matplotlib.pyplot as plt
 #
@@ -23,12 +22,17 @@ from GeoData.IQTools import CenteredLagProduct, FormatIQ
 ptlen = 121 #TODO: adapt to file contents
 npats = 10 #TODO: adapt to file contents
 nLags = 12 #TODO: adapt to file contents
-Nranges = 228 #TODO: adapt to file contents
+
 nrec_orig = 30
 
 def spcorrbeam(rootdir,h5ext,beamids,outdir):
+    Nranges = 228 #TODO: adapt to file contents
 #%% find the hdf5 files
-    flist = glob(join(expanduser(rootdir),'*'+h5ext))
+    rootdir = expanduser(rootdir)
+    globpat = join(rootdir,'*'+h5ext)
+    flist = glob(globpat)
+    if not flist:
+        raise ValueError('no files found with {}'.format(globpat))
     flist.sort()
     h5fn = flist[0] #NOTE: choosing the first file only
     print('processing {}'.format(h5fn))
@@ -40,96 +44,87 @@ def spcorrbeam(rootdir,h5ext,beamids,outdir):
 #%% Output
     lags = np.arange(0,nLags)*20e-6
     #These are the paths INSIDE each HDF5 file, by SRI convention
-    h5Paths = {'S'    :   ('/S',''),\
-               'Data'           :   ('/S/Data',''),\
-               'Data_Acf'       :   ('/S/Data/Acf',''),\
-               'Data_Power'     :   ('/S/Data/Power',''),\
+    h5Paths = {'S'          :   ('/S',''),
+               'Data'       :   ('/S/Data',''),
+               'Data_Acf'   :   ('/S/Data/Acf',''),
+               'Data_Power' :   ('/S/Data/Power',''),
                }
 #%% set up the output directory structure
     mkoutdir(outdir,npats)
 #%% Open and read file
     # NOTE: This will be changed into a loop at some point
     with h5py.File(h5fn,'r',libver='latest') as f:
-        test_data = f['/Raw11/Raw/RadacHeader/BeamCode'][:2,:].values.ravel()
-
-    with h5py.File(h5fn,'r',libver='latest') as f:
-        txbaud = f['/S/Data']['TxBaud'].values
-        ambfunc = f['/S/Data']['Ambiguity'].values
-        pwidth = f['/S/Data']['Pulsewidth'].values
-    # Determine teh start point
-    keepgoing = True
+        test_data = f['/Raw11/Raw/RadacHeader/BeamCode'][:2,:].ravel()
+        txbaud = f['/S/Data']['TxBaud'].value
+        ambfunc = f['/S/Data']['Ambiguity'].value
+        pwidth = f['/S/Data']['Pulsewidth'].value
+    # Determine the start point
     stpnt = 0
-    while keepgoing:
+    while True:
         subset_dat =test_data[stpnt:stpnt+ptlen]
         test_arr = subset_dat==fullpat
         if test_arr.all():
             break
         stpnt+=1
-# XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX need original data file to test, broken past this point XXXXXXXXXXXXXx
-# XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-    ## Pull out the beam patterns
+#%% Pull out the beam patterns
     # In this script x is used as the pattern iterator and y is used as the record indicator
-    f_patternsdict = {(x):test_data[stpnt+x*2*ptlen:stpnt+(x+1)*2*ptlen] for x in np.arange(npats) }
+    f_patternsdict = {(x):test_data[stpnt+x*2*ptlen:stpnt+(x+1)*2*ptlen] for x in range(npats) }
     # on repeation of the beams
     patternsdict = {x:f_patternsdict[x][:(x+2)**2] for x in f_patternsdict.keys()}
 
-    ## Go through all the beams
-    all_beams_mat = f_cur.root.Raw11.Raw.RadacHeader.BeamCode[:,:]
-    all_beams = all_beams_mat.flatten()
-
+#%% Go through all the beams
+    with h5py.File(h5fn,'r',libver='latest') as f:
+        all_beams_mat = f['/Raw11/Raw/RadacHeader/BeamCode'].value #keep this
+    all_beams = all_beams_mat.ravel() #need raveled and original
     pnts = all_beams.size
 
     # to get the patterns just take themodulo with the file size afterward
-    ## Work on ths when you get back##########################
+    ## TODO Work on this when you get back##########################
     des_recs = 30
-    maxrecs = {x:(pnts-((x+1)*2*ptlen+stpnt))/rclen +1 for x in np.arange(npats)}
+    #TODO should this be //rclen or /rclen
+    maxrecs = {x:(pnts-((x+1)*2*ptlen+stpnt))/rclen +1 for x in range(npats)}
 
     # determine the pattern
-    patternlocdic = {(x):[(np.arange(x*2*ptlen+stpnt+y*rclen,(x+1)*2*ptlen+stpnt+y*rclen)) for y in np.arange(des_recs)] for x in np.arange(10)}
+    patternlocdic = {(x):[(np.arange(x*2*ptlen+stpnt+y*rclen,(x+1)*2*ptlen+stpnt+y*rclen)) for y in range(des_recs)] for x in range(10)}
     ##########################################################
 
+#%% Read the data and do set up
+    with h5py.File(h5fn,'r',libver='latest') as f:
+        all_data = f['/Raw11/Raw/Samples/Data'].value
+        rng = f['/Raw11/Raw/Samples/Range'][0,:]
 
-    ## Read the data and do set up
-    all_data = f_cur.root.Raw11.Raw.Samples.Data[:,:,:,:]
     Nsamples = all_data.shape[2]
-    rng = f_cur.root.Raw11.Raw.Samples.Range[0,:]
+
     # create the output ranges
     rngs = np.zeros((nLags,Nranges))
     for ilag in range(nLags-1,-1,-1):
         i1 = range(0,(Nsamples-ilag))
         i2 = range(ilag,Nsamples)
-        ist = (i1[0]+i2[0])/2
-        ist0 = (nLags-ilag-1)/2
+        ist = (i1[0]+i2[0])//2
+        ist0 = (nLags-ilag-1)//2
 
         irng = range(0+(nLags-ilag-1),Nranges+(nLags-ilag-1))
         trng = (rng[:(Nsamples-ilag)] + rng[ilag:])/2.0
 
         rngs[ilag,:] = trng[ist0:][:Nranges]
 
-    f_cur.close()
     Nranges = Nsamples-nLags
 
 
-# Need to make sure cal and noise data is correct shape
-    beamcodes_cal = fullfiledict['/S/Cal']['Beamcodes']
-    beamcodes_noise = fullfiledict['/S/Noise']['Beamcodes']
-    cal_pint = fullfiledict['/S/Cal']['PulsesIntegrated']
-    caldata = fullfiledict['/S/Cal/Power']['Data']
-    noise_pint = fullfiledict['/S/Noise']['PulsesIntegrated']
-    noise_pwer = fullfiledict['/S/Noise/Power']['Data']
-    noise_data =fullfiledict['/S/Noise/Acf']['Data']
+#%% Need to make sure cal and noise data is correct shape
+    with h5py.File(h5fn,'r',libver='latest') as f:
+        beamcodes_cal =   f['/S/Cal/Beamcodes'].value
+        beamcodes_noise = f['/S/Noise/Beamcodes'].value
     # do the checks
-    cal_check = np.alltrue(np.array([np.alltrue(beamcodes_cal[:,ia]==beamcodes_cal[0,ia]) for ia in np.arange(beamcodes_cal.shape[1])]))
-    noise_check = np.alltrue(np.array([np.alltrue(beamcodes_noise[:,ia]== beamcodes_noise[0,ia]) for ia in np.arange(beamcodes_noise.shape[1])]))
+    #all columns == the first column
+    cal_check = np.alltrue(np.array([np.alltrue(beamcodes_cal[:,ia]==beamcodes_cal[0,ia]) for ia in range(beamcodes_cal.shape[1])]))
+    noise_check = np.alltrue(np.array([np.alltrue(beamcodes_noise[:,ia]== beamcodes_noise[0,ia]) for ia in range(beamcodes_noise.shape[1])]))
     if not cal_check:
         raise Exception('FAILED: Beams for cal are not consistant')
     if not noise_check:
         raise Exception('FAILED: Beams for noise are not consistant')
-
-
-    # first loop goes through patterns
-    for x in np.arange(npats):
+#%% first loop goes through patterns
+    for x in range(npats):
 
         # set up the outputfiles
         curoutpath =outpaths[x]
@@ -162,6 +157,13 @@ def spcorrbeam(rootdir,h5ext,beamids,outdir):
         noise_beam_loc = np.array([np.where(beamcodes_noise[0,:]==ib)[0][0] for ib in curbeams])
         #pdb.set_trace()
 
+
+
+        cal_pint = fullfiledict['/S/Cal']['PulsesIntegrated']
+        caldata = fullfiledict['/S/Cal/Power']['Data']
+        noise_pint = fullfiledict['/S/Noise']['PulsesIntegrated']
+        noise_pwer = fullfiledict['/S/Noise/Power']['Data']
+        noise_data =fullfiledict['/S/Noise/Acf']['Data']
         # do all the call params
         fullfiledict['/S/Cal']['Beamcodes'] = beamcodes_cal[:,cal_beam_loc]
         fullfiledict['/S/Cal']['PulsesIntegrated'] = cal_pint[:,cal_beam_loc]
@@ -245,8 +247,8 @@ def mkoutdir(outdir,npats):
 if __name__ == "__main__":
     from argparse import ArgumentParser
     p = ArgumentParser(description='work with ISR lag products')
-    p.add_argument('rootdir',help='directory containing ISR lag products *.dt3.h5')
-    p.add_argument('--ext',help='file extension of data files [.dt2.h5]',default='.dt3.h5')
+    p.add_argument('rootdir',help='directory containing ISR lag products *.dt2.h5')
+    p.add_argument('--ext',help='file extension of data files [.dt2.h5]',default='.dt2.h5')
     p.add_argument('-b','--beamid',help='beamid(s) to use [64157]',nargs='+',default=[64157],type=int)
     p.add_argument('-o','--outdir',help='directory in which to write the output')
     p = p.parse_args()
