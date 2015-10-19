@@ -20,14 +20,12 @@ class h5file():
         return
 
     def readWholeh5file(self):
-
-        h5file=tables.openFile(self.fname)
-        output={}
-        for group in h5file.walkGroups("/"):
-            output[group._v_pathname]={}
-            for array in h5file.listNodes(group, classname = 'Array'):
-                output[group._v_pathname][array.name]=array.read()
-        h5file.close()
+        with tables.openFile(self.fname) as h5file:
+            output={}
+            for group in h5file.walkGroups("/"):
+                output[group._v_pathname]={}
+                for array in h5file.listNodes(group, classname = 'Array'):
+                    output[group._v_pathname][array.name]=array.read()
 
         return output
 
