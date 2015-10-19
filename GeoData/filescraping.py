@@ -3,10 +3,8 @@
 This module will be used for accessing files from different websites
 @author: John Swoboda
 """
-try:
-    from urllib import urlretrieve, urlopen
-except:
-    from urllib.request import urlretrieve, urlopen
+from __future__ import division,absolute_import
+from six.moves.urllib.request import urlretrieve
 from bs4 import BeautifulSoup
 import re
 import datetime
@@ -80,7 +78,7 @@ def datedwebsite(baseurl,daterange,basedir=''):
     if not os.path.exists(basedir) and basedir!='':
         os.mkdir(basedir)
 
-    print 'Downloading {0:d} files to {1}'.format(len(fileurls),basedir)
+    print('Downloading {:d} files to {}'.format(len(fileurls),basedir))
     for ifile in zip(filelist,fileurls):
         urlretrieve(ifile[1],os.path.join(basedir,ifile[0]))
 
