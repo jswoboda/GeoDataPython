@@ -92,11 +92,15 @@ if __name__ == "__main__":
     #flist=['~/data/2011-03-02/pfa110302.002.hdf5',
    #          '~/data/2011-03-02/110302_0819.h5',
    #          '~/data/2011-03/calMishap2011Mar.h5']
-
-    flist = ['~/data/2013-04-11/pfa130411.004.hdf5',None,None]
-    tbounds=(datetime(2013,4,11,9,tzinfo=UTC),
-             datetime(2013,4,11,12,tzinfo=UTC))
-
+###########################################################################
+    #flist = ['~/data/2013-04-11/pfa130411.004.hdf5',None,None]
+    #flist = ['~/data/2013-04-11/pfa130411.002.hdf5',None,None]
+    #tbounds=(datetime(2013,4,11,9,tzinfo=UTC),
+    #         datetime(2013,4,11,12,tzinfo=UTC))
+###########################################################################
+    flist = ['~/data/2013-04-14/pfa130413.004.hdf5',None,None]
+    tbounds = (datetime(2013,4,14,8,tzinfo=UTC),
+               datetime(2013,4,14,10,tzinfo=UTC))
     makeplot(flist[0],flist[1],flist[2],tbounds,isrparams,p.showbeams)
 #%%
     if False:
