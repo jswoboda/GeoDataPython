@@ -207,13 +207,13 @@ def ecef2wgs(ECEF_COORDS):
 
     #%% Final Form
     # use the atan2 function for more numerical stability
-    long = np.arctan2(Y,X)*r2d
+    lon = np.arctan2(Y,X)*r2d
 
     lat = np.arctan2(Z,D)*r2d
 
     h = ((k+e**2.0-1)/(k))*np.sqrt(D**2.0+Z**2.0)
     # put into the final form
-    WGS_COORDS = np.vstack((lat,long,h));
+    WGS_COORDS = np.vstack((lat,lon,h));
     if transcoords:
         WGS_COORDS = np.transpose(WGS_COORDS)
     return WGS_COORDS

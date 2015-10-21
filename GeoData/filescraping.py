@@ -3,15 +3,14 @@
 This module will be used for accessing files from different websites
 @author: John Swoboda
 """
-try:
-    from urllib import urlretrieve, urlopen
-except:
-    from urllib.request import urlretrieve, urlopen
+from __future__ import division,absolute_import
+from six.moves.urllib.request import urlretrieve,urlopen
 from bs4 import BeautifulSoup
 import re
 import datetime
 from dateutil import parser
 import os
+from pytz import UTC
 
 def datedwebsite(baseurl,daterange,basedir=''):
     """This function will download a set of files from a directory structure based
@@ -23,8 +22,8 @@ def datedwebsite(baseurl,daterange,basedir=''):
     basedir - The directory the files will be places after they're downloaded."""
 
     # Get date info from the ranges
-    datet1 = datetime.datetime.fromtimestamp(daterange[0])
-    datet2 = datetime.datetime.fromtimestamp(daterange[1])
+    datet1 = datetime.datetime.fromtimestamp(daterange[0],tz=UTC)
+    datet2 = datetime.datetime.fromtimestamp(daterange[1],tz=UTC)
     yearset = {datet1.year,datet2.year}
     dateset = {datet1.date(),datet2.date()}
 
@@ -77,10 +76,12 @@ def datedwebsite(baseurl,daterange,basedir=''):
                         filelist.append(pkfile)
 
     # Create directory and download the files
-    if not os.path.exists(basedir) and basedir!='':
+    try:
         os.mkdir(basedir)
+    except:
+        pass
 
-    print 'Downloading {0:d} files to {1}'.format(len(fileurls),basedir)
+    print('Downloading {:d} files to {}'.format(len(fileurls),basedir))
     for ifile in zip(filelist,fileurls):
         urlretrieve(ifile[1],os.path.join(basedir,ifile[0]))
 
