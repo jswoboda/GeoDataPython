@@ -49,7 +49,7 @@ def makeplot(isrName,optName,azelfn,tbounds,isrparams,showbeam):
             rangevstime(isr,ae,b,p[:2],tbounds=tbounds,title=tt,cmap=c,
                         ax=ax,fig=fg,ic=i==0,ir=j==len(axs)-1,it=j==0)
 #%%
-    plotbeamposGD(isr,minel=75.,elstep=5.)
+    plotbeamposGD(isr) #,minel=75.,elstep=5.
 #%%
     if opt is not None:
         try:
@@ -80,29 +80,40 @@ def makeplot(isrName,optName,azelfn,tbounds,isrparams,showbeam):
 if __name__ == "__main__":
     from argparse import ArgumentParser
     p = ArgumentParser(description='range vs. time plots of key ISR and optical video during March 2011 events')
-    p.add_argument('--showbeams',help='superimpose radar beams on video (takes several seconds)',action='store_true')
+    p.add_argument('-b','--showbeams',help='superimpose radar beams on video (takes several seconds)',action='store_true')
+    p.add_argument('-d','--date',help='date of study event (to auto load files)',required=True)
+    p.add_argument('--isr',help='ISR parameters to select',nargs='+',default=['nel','ti','te','vo'])
     p = p.parse_args()
 
-#%%
-    isrparams = ['nel','ti','te','vo']
-#%%
-    #tbounds=(parse('2011-03-02T07:30Z'),
-    #         parse('2011-03-02T09:00Z'))
+#%% date / event select
+    if p.date == '2011-03-02':
+        tbounds=(datetime(2011,3,2,7,30,tzinfo=UTC),
+                 datetime(2011,3,2,9,0,tzinfo=UTC))
 
-    #flist=['~/data/2011-03-02/pfa110302.002.hdf5',
-   #          '~/data/2011-03-02/110302_0819.h5',
-   #          '~/data/2011-03/calMishap2011Mar.h5']
+        flist=('~/data/2011-03-02/ISR/pfa110302.002.hdf5',
+               '~/data/2011-03-02/110302_0819.h5',
+               '~/data/2011-03/calMishap2011Mar.h5')
 
-    flist = ['~/data/2013-04-11/pfa130411.002.hdf5',None,None]
-    tbounds=(datetime(2013,4,11,9,tzinfo=UTC),
-             datetime(2013,4,11,12,tzinfo=UTC))
+    elif p.date == '2013-04-11':
+        tbounds=(datetime(2013,4,11,9,tzinfo=UTC),
+                 datetime(2013,4,11,12,tzinfo=UTC))
 
-    makeplot(flist[0],flist[1],flist[2],tbounds,isrparams,p.showbeams)
-#%%
-    if False:
+        flist = ('~/data/2013-04-11/ISR/pfa130411.002.hdf5',None,None)
+
+    elif p.date == '2013-04-14':
+        tbounds=(datetime(2013,4,14,8,tzinfo=UTC),
+                 datetime(2013,4,14,10,tzinfo=UTC))
+
+        flist = ('~/data/2013-04-14/ISR/pfa130413.004.hdf5',None,None)
+
+    elif p.date=='2013-03-01':
         tbounds=(parse('2011-03-01T10:13Z'),
                  parse('2011-03-01T11:13Z'))
 
-        makeplot('~/data/2011-03-01/pfa110301.003.hdf5',tbounds,isrparams,p.showbeams)
+        flist = ('~/data/2011-03-01/ISR/pfa110301.003.hdf5',None,None)
+
+
+    makeplot(flist[0],flist[1],flist[2],tbounds,p.isr,p.showbeams)
+#%%
 
     show()
