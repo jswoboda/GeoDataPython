@@ -5,17 +5,18 @@ Created on Thu Sep 11 15:29:27 2014
 @author: John Swoboda
 """
 from __future__ import division,absolute_import
+from six import string_types,integer_types
 import logging
 import numpy as np
 import tables as tb
 import h5py
 import posixpath
 import scipy as sp
-import tables
 from astropy.io import fits
 from pandas import DataFrame
 from datetime import datetime
-from warnings import warn
+from dateutil.parser import parse
+from pytz import UTC
 from os.path import expanduser
 #
 from . import CoordTransforms as CT
@@ -47,15 +48,15 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     instrument = str(sensor_data[0][1]) #instrument type string, comes out as bytes so cast to str
     if "Sondrestrom" in instrument:
         radar = 1
-        print("Sondrestrom data")
+        logging.info("Sondrestrom data")
     elif "Poker Flat" in instrument:
         radar = 2
-        print("PFISR data")
+        logging.info("PFISR data")
     elif "Resolute Bay" in instrument:
         radar = 3
-        print ("RISR data")
+        logging.info("RISR data")
     else:
-        exit("Error: Radar type "+str(instrument) +" not supported by program in this version.")
+        raise NotImplementedError("Radar type "+str(instrument) +" not supported.")
 
     # get the data location (range, el1, azm)
     if radar == 1:
@@ -100,7 +101,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     data = {}
     for p in paramstr:
         if not p in all_data.dtype.names:
-            warn('{} is not a valid parameter name.'.format(p))
+            logging.warning('{} is not a valid parameter name.'.format(p))
             continue
 
         if USEPANDAS:
@@ -182,7 +183,7 @@ def readSRI_h5(filename,paramstr,timelims = None):
     with h5py.File(filename,'r',libver='latest') as f:
         for istr in paramstr:
             if not istr in list(pathdict.keys()):
-                warn(istr + ' is not a valid parameter name.')
+                logging.warning(istr + ' is not a valid parameter name.')
 
                 continue
             curpath = pathdict[istr][0]
@@ -302,48 +303,56 @@ def readIono(iono):
 #data, coordnames, dataloc, sensorloc, times = readMad_hdf5('/Users/anna/Research/Ionosphere/2008WorldDaysPDB/son081001g.001.hdf5', ['ti', 'dti', 'nel'])
 
 def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc):
-    """ @author: Greg Starr
+    """ @author: Michael Hirsch, Greg Starr
+    For example, this works with Poker Flat DASC all-sky, FITS data available from:
+    https://amisr.asf.alaska.edu/PKR/DASC/RAW/
+
     This function will read a Fits file into the proper GeoData variables.
     inputs
     flist - A list of Fits files that will be read in.
     azmap - A file name of the az mapping.
     elmap - A file name of the elevation maping
     hightkm - The height the data will be projected on to in km
-    sensorloc - A numpy array of latitude longitude and altitude in wgs coordinates of
+    sensorloc - A 3-element vector of latitude, longitude and altitude in wgs coordinates of
     the location of the sensor.
-
     """
-    if type(flist)==str:
+    if isinstance(flist,string_types):
         flist=[flist]
-    header = fits.open(flist[0])
-    img = header[0].data
-    data = np.zeros((img.size,len(flist)))
+    assert isinstance(flist,(list,tuple)) and len(flist)>0
+    assert isinstance(azmap,string_types)
+    assert isinstance(elmap,string_types)
+    assert isinstance(heightkm,(integer_types,float))
+    assert isinstance(sensorloc,(tuple,list,np.ndarray)) and len(sensorloc)==3
+#%% priming read
+    with fits.open(flist[0],mode='readonly') as h:
+        img = h[0].data
     dataloc = np.empty((img.size,3))
-    times = np.zeros((len(flist),2))
-    for i in range(len(flist)):
+    times =   np.empty((len(flist),2))
+    img =     np.zeros((len(flist),img.shape[0],img.shape[1]),img.dtype)
+    epoch = datetime(1970,1,1,0,0,0,tzinfo=UTC)
+#%% loop over files to read images
+    for i,f in enumerate(flist):
         try:
-            fn = flist[i]
-            fund = fn.find('PKR')
-            date = (datetime(int(fn[fund+14:fund+18]),int(fn[fund+18:fund+20]),
-                int(fn[fund+20:fund+22]),int(fn[fund+23:fund+25]),int(fn[fund+25:fund+27]),
-                int(fn[fund+27:fund+29]))-datetime(1970,1,1,0,0,0)).total_seconds()
-            times[i] = [date,date+1]
-            header = fits.open(fn)
-            img = header[0].data
-            data[:,i] = img.flatten()
-        except:
-            print(fn + ' has error')
-    data = {'image':data}
-
-    coordnames="Spherical"
-
-    az = fits.open(azmap)[0].data
-    el = fits.open(elmap)[0].data
-    dataloc[:,0] = heightkm #
-    dataloc[:,1] = az.flatten()
-    dataloc[:,2] = el.flatten()
-
-    sensorloc=sensorloc
+            with fits.open(f,mode='readonly') as h:
+                expstart_dt = parse(h[0].header['OBSDATE'] + ' ' + h[0].header['OBSSTART'])
+                expstart_unix = (expstart_dt - epoch).total_seconds()
+                times[i,:] = [expstart_unix,expstart_unix + h[0].header['EXPTIME']]
+                img[i,...] = h[0].data
+        except Exception as e:
+            logging.error(f+ 'has error {}'.format(e))
+#%% get az/el calibration data
+    coordnames="spherical"
+    dataloc[:,0] = heightkm
+    try:
+        with fits.open(azmap,mode='readonly') as h:
+            dataloc[:,1] = h[0].data.ravel()
+        with fits.open(elmap,mode='readonly') as h:
+            dataloc[:,2] = h[0].data.ravel()
+    except Exception as e:
+        logging.error('could not read az/el mapping.   {}'.format(e))
+        dataloc=None
+#%% pack into GeoData class
+    data = {'image':img}
 
     return (data,coordnames,dataloc,sensorloc,times)
 
