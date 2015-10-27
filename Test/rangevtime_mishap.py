@@ -11,7 +11,7 @@ from datetime import datetime
 from scipy.spatial import cKDTree
 import numpy as np
 #
-from GeoData.plotting import rangevstime,plotbeamposGD
+from GeoData.plotting import rangevstime,plotbeamposGD,plotazelscale
 #
 from load_isropt import load_pfisr_neo
 
@@ -28,6 +28,7 @@ beamazel = np.asarray([[-154.3,77.5]])
 cmap = (None,None,None,'bwr')
 #titles=('$N_e$','$T_i$','$T_e$','$V_i$')
 titles=(None,)*4
+SLICEALT=110. #[km]
 
 def makeplot(isrName,optName,azelfn,tbounds,vbounds,isrparams,showbeam,scatterarea):
     """
@@ -39,7 +40,7 @@ def makeplot(isrName,optName,azelfn,tbounds,vbounds,isrparams,showbeam,scatterar
     treq = [(t-epoch).total_seconds() for t in tbounds]
 
     #load radar data into class
-    isr,opt = load_pfisr_neo(isrName,optName,azelfn,isrparams=isrparams,treq=treq)
+    isr,opt = load_pfisr_neo(isrName,optName,azelfn,heightkm=SLICEALT,isrparams=isrparams,treq=treq)
 
 #%% plot data
     #setup subplot to pass axes handles in to be filled with individual plots
@@ -51,6 +52,8 @@ def makeplot(isrName,optName,azelfn,tbounds,vbounds,isrparams,showbeam,scatterar
                         ax=ax,fig=fg,ic=i==0,ir=j==len(axs)-1,it=j==0)
 #%% show ISR beams all alone in az/el plot
     plotbeamposGD(isr) #,minel=75.,elstep=5.
+#%% show az/el contours on image
+    plotazelscale(opt)
 #%% plots optical
     plotoptical(opt,vbounds,showbeam,scatterarea)
 
@@ -61,7 +64,7 @@ def plotoptical(opt,vbounds=(None,None),showbeam=True,scatterarea=80):
     fg = figure()
     ax = fg.gca()
     hi=ax.imshow(opt.data['optical'][0,...],vmin=vbounds[0],vmax=vbounds[1],
-                 interpolation='none',origin='lower',cmap='gray')
+                 interpolation='none',origin='bottom',cmap='gray')
     fg.colorbar(hi,ax=ax)
     ht = ax.set_title('')
     ax.set_axis_off() #no ticks
@@ -112,8 +115,8 @@ if __name__ == "__main__":
 
         flist = ('~/data/2013-04-11/ISR/pfa130411.002.hdf5',None,None)
 
-    elif p.date == '2013-04-14':
-        vlim = p.vlim if p.vlim else (250,30000) #it's bright 8:54:25-30 !
+    elif p.date == '2013-04-14_cam0':
+        vlim = p.vlim if p.vlim else (250,40000) #it's bright 8:54:25-30 !
         scatterarea = 880
 
         tbounds=(datetime(2013,4,14,8,54,25,tzinfo=UTC),
@@ -123,7 +126,18 @@ if __name__ == "__main__":
                  '~/data/2013-04-14/HST/2013-04-14T8-54_hst0.h5',
                  '~/data/2013-04/hst0cal.h5')
 
-    elif p.date == '2013-04-14dasc':
+    elif p.date == '2013-04-14_cam1':
+        vlim = p.vlim if p.vlim else (1050,3500) #it's bright 8:54:25-30 !
+        scatterarea = 880
+
+        tbounds=(datetime(2013,4,14,8,54,25,tzinfo=UTC),
+                 datetime(2013,4,14,8,54,30,tzinfo=UTC))
+
+        flist = ('~/data/2013-04-14/ISR/pfa130413.004.hdf5',
+                 '~/data/2013-04-14/HST/2013-04-14T8-54_hst1.h5',
+                 '~/data/2013-04/hst1cal.h5')
+
+    elif p.date == '2013-04-14_dasc':
         vlim = p.vlim if p.vlim else (10,500)
 
         tbounds=(datetime(2013,4,14,8,0,0,tzinfo=UTC),

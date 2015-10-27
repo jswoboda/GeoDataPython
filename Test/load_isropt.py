@@ -18,13 +18,17 @@ def load_risromti(risrName,omtiName=None,isrparams=['nel']):
     return risr,omti
 
 def load_pfisr_neo(isrName,optName=None,azelfn=None,heightkm=None,isrparams=['nel'],treq=None):
+    """
+    Loads Mishap, DMC and HST data stored in HDF5 format.
+    Michael Hirsch
+    """
     if optName and azelfn and treq:
-        neo = GeoData.GeoData(utilityfuncs.readNeoCMOS,(optName,azelfn,heightkm,treq))
+        cam = GeoData.GeoData(utilityfuncs.readNeoCMOS,(optName,azelfn,heightkm,treq))
     else:
-        neo = None
+        cam = None
 
     pfisr = GeoData.GeoData(utilityfuncs.readMad_hdf5,(isrName,isrparams))
 
     pfisr.changedata('nel','ne',revpower,[10.])
 
-    return pfisr,neo
+    return pfisr,cam

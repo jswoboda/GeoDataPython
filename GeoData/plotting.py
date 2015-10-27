@@ -159,7 +159,7 @@ def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,
         logging.info('problem plotting instrument  {}'.format(e))
 
     try:
-        top = ax.contour(x,y, isr,extent=extent, origin='lower', interpolation='none',
+        top = ax.contour(x,y, isr,extent=extent, origin='lower',
                          vmin=vbounds[1][0],vmax=vbounds[1][1])
         #clabel(top,inline=1,fontsize=10, fmt='%1.0e')
         cbar2 = fg.colorbar(top, format='%.0e',ax=ax)
@@ -638,3 +638,21 @@ def insertinfo(strin,key='',posix=None,posixend = None):
         else:
             stroutall = strout
     return stroutall
+
+def plotazelscale(opt):
+    """
+    diagnostic: plots az/el map over test image
+    Michael Hirsch
+    """
+    img = opt.data['optical'][0,...]
+    assert img.ndim==2
+    az = opt.dataloc[:,1].reshape(img.shape)
+    el = opt.dataloc[:,2].reshape(img.shape)
+    assert img.shape==az.shape==el.shape
+
+    fg,ax = plt.subplots(1,2,figsize=(12,6))
+    for a,q,t in zip(ax,(az,el),('azimuth','elevation')):
+        a.imshow(img,origin='bottom',interpolation='none',cmap='gray')
+        c=a.contour(q)
+        a.clabel(c, inline=1,fmt='%0.1f')
+        a.set_title(t)
