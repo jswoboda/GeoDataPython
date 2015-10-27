@@ -195,7 +195,7 @@ def readSRI_h5(filename,paramstr,timelims = None):
                 tempdata = f[curpath][:,:,:,curint[0],curint[1]].value
             data[istr] = np.array([tempdata[iT,:,:].ravel() for iT in range(nt)]).transpose()
 
-    return (data,coordnames,dataloc,sensorloc,times,None)
+    return (data,coordnames,dataloc,sensorloc,times)
 
 def read_h5_main(filename):
     '''
@@ -315,7 +315,6 @@ def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc):
     hightkm - The height the data will be projected on to in km
     sensorloc - A 3-element vector of latitude, longitude and altitude in wgs coordinates of
     the location of the sensor.
-
     """
     if isinstance(flist,string_types):
         flist=[flist]
@@ -362,33 +361,56 @@ def readNeoCMOS(imgfn, azelfn, heightkm,treq=None):
     treq is pair or vector of UT1 unix epoch times to load--often file is so large we can't load all frames into RAM.
     assumes that /rawimg is a 3-D array
     """
+    assert isinstance(imgfn,string_types)
+    assert isinstance(azelfn,string_types)
+    assert isinstance(heightkm,(integer_types,float))
     imgfn = expanduser(imgfn)
     azelfn = expanduser(azelfn)
+#%% load data
+    with h5py.File(azelfn,'r',libver='latest') as f:
+        az = f['/az'].value
+        el = f['/el'].value
 
     with h5py.File(imgfn,'r',libver='latest') as f:
         times = f['/ut1_unix'].value
         sensorloc = f['/sensorloc'].value
 
-        npix = f['/rawimg'].shape[1] * f['/rawimg'].shape[2] #number of pixels in one image
-        dataloc = np.empty((npix,3))
+        npix = np.prod(f['/rawimg'].shape[1:]) #number of pixels in one image
+        dataloc = np.empty((npix,3),dtype=float)
 
         if treq is not None:
-            mask = (times>treq[0]) & (times<treq[-1])
+            mask = (treq[0]<times) & (times<treq[-1])
         else:
             mask = np.ones(f['/rawimg'].shape[0]).astype(bool)
 
-        if mask.sum()*npix*2 > 1e9:
+        if mask.sum()*npix*2 > 1e9: #loading more than 1GByte into RAM
             logging.warning('trying to load very large amount of image data, your program may crash')
-        try:
-            optical = {'optical':f['/rawimg'][mask,...]}
-        except Exception as e:
-            logging.error('could not load optical data  {}'.format(e))
+
+        imgs = f['/rawimg'][mask,...]
+#%% plate scale
+        if f['/params']['transpose']:
+            imgs = imgs.transpose(0,2,1)
+            az   = az.T
+            el   = el.T
+        if f['/params']['rotccw']: #NOT isinstance integer_types!
+            imgs = np.rot90(imgs.transpose(1,2,0),k=f['/params']['rotccw']).transpose(2,0,1)
+            az   = np.rot90(az,k=f['/params']['rotccw'])
+            el   = np.rot90(el,k=f['/params']['rotccw'])
+        if f['/params']['fliplr']:
+            imgs = np.fliplr(imgs)
+            az   = np.fliplr(az)
+            el   = np.fliplr(el)
+        if f['/params']['flipud']:
+            imgs = np.flipud(imgs.transpose(1,2,0)).transpose(2,0,1)
+            az   = np.flipud(az)
+            el   = np.flipud(el)
+
+    optical = {'optical':imgs}
 
     coordnames = 'Spherical'
     dataloc[:,0] = heightkm
-    with h5py.File(azelfn,'r',libver='latest') as f:
-        dataloc[:,1] = f['/az'].value.ravel()
-        dataloc[:,2] = f['/el'].value.ravel()
+    dataloc[:,1] = az.ravel()
+    dataloc[:,2] = el.ravel()
 
     return optical, coordnames, dataloc, sensorloc, times,None
 
