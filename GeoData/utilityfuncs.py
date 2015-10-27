@@ -5,6 +5,7 @@ Created on Thu Sep 11 15:29:27 2014
 @author: John Swoboda
 """
 from __future__ import division,absolute_import
+from six import string_types,integer_types
 import logging
 import numpy as np
 import tables as tb
@@ -14,7 +15,8 @@ import scipy as sp
 from astropy.io import fits
 from pandas import DataFrame
 from datetime import datetime
-from warnings import warn
+from dateutil.parser import parse
+from pytz import UTC
 from os.path import expanduser
 #
 from . import CoordTransforms as CT
@@ -54,7 +56,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
         radar = 3
         logging.info("RISR data")
     else:
-        raise ValueError("Error: Radar type " + str(instrument) +" not supported by program in this version.")
+        raise NotImplementedError("Radar type "+str(instrument) +" not supported.")
 
     # get the data location (range, el1, azm)
     if radar == 1:
@@ -99,7 +101,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     data = {}
     for p in paramstr:
         if not p in all_data.dtype.names:
-            warn('{} is not a valid parameter name.'.format(p))
+            logging.warning('{} is not a valid parameter name.'.format(p))
             continue
 
         if USEPANDAS:
@@ -181,7 +183,7 @@ def readSRI_h5(filename,paramstr,timelims = None):
     with h5py.File(filename,'r',libver='latest') as f:
         for istr in paramstr:
             if not istr in list(pathdict.keys()):
-                warn(istr + ' is not a valid parameter name.')
+                logging.warning(istr + ' is not a valid parameter name.')
 
                 continue
             curpath = pathdict[istr][0]
@@ -300,86 +302,110 @@ def readIono(iono):
 
 #data, coordnames, dataloc, sensorloc, times = readMad_hdf5('/Users/anna/Research/Ionosphere/2008WorldDaysPDB/son081001g.001.hdf5', ['ti', 'dti', 'nel'])
 
-def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc):
-    """ @author: Greg Starr
-    This function will read a Fits file into the proper GeoData variables.
+def readAllskyFITS(flist,azelfn,heightkm,treq):
+    """ @author: Michael Hirsch, Greg Starr
+    For example, this works with Poker Flat DASC all-sky, FITS data available from:
+    https://amisr.asf.alaska.edu/PKR/DASC/RAW/
+
+    This function will read a FITS file into the proper GeoData variables.
     inputs
     flist - A list of Fits files that will be read in.
     azmap - A file name of the az mapping.
     elmap - A file name of the elevation maping
     hightkm - The height the data will be projected on to in km
-    sensorloc - A numpy array of latitude longitude and altitude in wgs coordinates of
-    the location of the sensor.
-
+    treq: pair or vector of ut1_unix times to load
     """
-    if type(flist)==str:
+    if isinstance(flist,string_types):
         flist=[flist]
-    header = fits.open(flist[0])
-    img = header[0].data
-    data = np.zeros((img.size,len(flist)))
+    assert isinstance(flist,(list,tuple)) and len(flist)>0
+    assert isinstance(azelfn,(tuple,list))
+    assert isinstance(heightkm,(integer_types,float))
+#%% priming read
+    with fits.open(flist[0],mode='readonly') as h:
+        img = h[0].data
+        sensorloc = np.array([h[0].header['GLAT'], h[0].header['GLON'], 0.]) #TODO real sensor altitude in km
     dataloc = np.empty((img.size,3))
-    times = np.zeros((len(flist),2))
-    for i in range(len(flist)):
-        try:
-            fn = flist[i]
-            fund = fn.find('PKR')
-            date = (datetime(int(fn[fund+14:fund+18]),int(fn[fund+18:fund+20]),
-                int(fn[fund+20:fund+22]),int(fn[fund+23:fund+25]),int(fn[fund+25:fund+27]),
-                int(fn[fund+27:fund+29]))-datetime(1970,1,1,0,0,0)).total_seconds()
-            times[i] = [date,date+1]
-            header = fits.open(fn)
-            img = header[0].data
-            data[:,i] = img.flatten()
-        except:
-            print(fn + ' has error')
-    data = {'image':data}
+    times =   np.empty((len(flist),2))
+    img =     np.zeros((len(flist),img.shape[0],img.shape[1]),img.dtype)
+    epoch = datetime(1970,1,1,0,0,0,tzinfo=UTC)
+#%% loop over files to read images
+    #NOTE: assumes one frame per file
+    for i,f in enumerate(flist):
+        with fits.open(f,mode='readonly') as h:
+            expstart_dt = parse(h[0].header['OBSDATE'] + ' ' + h[0].header['OBSSTART']+'Z') #implied UTC
+            expstart_unix = (expstart_dt - epoch).total_seconds()
+            times[i,:] = [expstart_unix,expstart_unix + h[0].header['EXPTIME']]
+            img[i,...] = h[0].data
+#%% get az/el calibration data
+    coordnames="spherical"
+    dataloc[:,0] = heightkm
+    #NOTE: 0's are used instead of NaN for unused regions
+    with fits.open(expanduser(azelfn[0]),mode='readonly') as h:
+        dataloc[:,1] = h[0].data.ravel()
+    with fits.open(expanduser(azelfn[1]),mode='readonly') as h:
+        dataloc[:,2] = h[0].data.ravel()
+#%% pack into GeoData class
+    optical= {'optical':img}
 
-    coordnames="Spherical"
+    return (optical,coordnames,dataloc,sensorloc,times,None)
 
-    az = fits.open(azmap)[0].data
-    el = fits.open(elmap)[0].data
-    dataloc[:,0] = heightkm #
-    dataloc[:,1] = az.flatten()
-    dataloc[:,2] = el.flatten()
-
-    sensorloc=sensorloc
-
-    return (data,coordnames,dataloc,sensorloc,times,None)
-
-def readNeoCMOS(imgfn, azelfn, heightkm,treq=None):
+def readNeoCMOS(imgfn, azelfn, heightkm=110.,treq=None):
     """
     treq is pair or vector of UT1 unix epoch times to load--often file is so large we can't load all frames into RAM.
     assumes that /rawimg is a 3-D array
     """
+    assert isinstance(imgfn,string_types)
+    assert isinstance(azelfn,string_types)
+    assert isinstance(heightkm,(integer_types,float))
     imgfn = expanduser(imgfn)
     azelfn = expanduser(azelfn)
+#%% load data
+    with h5py.File(azelfn,'r',libver='latest') as f:
+        az = f['/az'].value
+        el = f['/el'].value
 
     with h5py.File(imgfn,'r',libver='latest') as f:
         times = f['/ut1_unix'].value
         sensorloc = f['/sensorloc'].value
 
-        npix = f['/rawimg'].shape[1] * f['/rawimg'].shape[2] #number of pixels in one image
-        dataloc = np.empty((npix,3))
+        npix = np.prod(f['/rawimg'].shape[1:]) #number of pixels in one image
+        dataloc = np.empty((npix,3),dtype=float)
 
         if treq is not None:
-            mask = (times>treq[0]) & (times<treq[-1])
+            mask = (treq[0]<times) & (times<treq[-1])
         else:
             mask = np.ones(f['/rawimg'].shape[0]).astype(bool)
 
-        if mask.sum()*npix*2 > 1e9:
+        if mask.sum()*npix*2 > 1e9: #loading more than 1GByte into RAM
             logging.warning('trying to load very large amount of image data, your program may crash')
-        try:
-            optical = {'optical':f['/rawimg'][mask,...]}
-        except Exception as e:
-            logging.error('could not load optical data  {}'.format(e))
+
+        imgs = f['/rawimg'][mask,...]
+#%% plate scale
+        if f['/params']['transpose']:
+            imgs = imgs.transpose(0,2,1)
+            az   = az.T
+            el   = el.T
+        if f['/params']['rotccw']: #NOT isinstance integer_types!
+            imgs = np.rot90(imgs.transpose(1,2,0),k=f['/params']['rotccw']).transpose(2,0,1)
+            az   = np.rot90(az,k=f['/params']['rotccw'])
+            el   = np.rot90(el,k=f['/params']['rotccw'])
+        if f['/params']['fliplr']:
+            imgs = np.fliplr(imgs)
+            az   = np.fliplr(az)
+            el   = np.fliplr(el)
+        if f['/params']['flipud']:
+            imgs = np.flipud(imgs.transpose(1,2,0)).transpose(2,0,1)
+            az   = np.flipud(az)
+            el   = np.flipud(el)
+
+    optical = {'optical':imgs}
 
     coordnames = 'Spherical'
     dataloc[:,0] = heightkm
-    with h5py.File(azelfn,'r',libver='latest') as f:
-        dataloc[:,1] = f['/az'].value.ravel()
-        dataloc[:,2] = f['/el'].value.ravel()
+    dataloc[:,1] = az.ravel()
+    dataloc[:,2] = el.ravel()
 
-    return optical, coordnames, dataloc, sensorloc, times,None
+    return optical, coordnames, dataloc, sensorloc, times[mask],None
 
 
 def readAVI(fn,fwaem):
