@@ -1,8 +1,10 @@
 dateutil
 six
 matplotlib
+astropy
 numpy
 scipy
+pandas
 h5py
 pytables
 beautifulsoup4
