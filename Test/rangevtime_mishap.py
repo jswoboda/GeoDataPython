@@ -13,7 +13,7 @@ import numpy as np
 #
 from GeoData.plotting import rangevstime,plotbeamposGD,plotazelscale
 #
-from load_isropt import load_pfisr_neo
+from load_isropt import load_pfisr_hst,load_pfisr_dasc
 
 epoch = datetime(1970,1,1,tzinfo=UTC)
 
@@ -40,7 +40,10 @@ def makeplot(isrName,optName,azelfn,tbounds,vbounds,isrparams,showbeam,scatterar
     treq = [(t-epoch).total_seconds() for t in tbounds]
 
     #load radar data into class
-    isr,opt = load_pfisr_neo(isrName,optName,azelfn,heightkm=SLICEALT,isrparams=isrparams,treq=treq)
+    if isinstance(azelfn,(tuple,list)) and len(azelfn) == 2: #az then el
+        isr,opt = load_pfisr_dasc(isrName,optName,azelfn,SLICEALT,isrparams,treq)
+    else:
+        isr,opt = load_pfisr_hst(isrName,optName,azelfn,SLICEALT,isrparams,treq)
 
 #%% plot data
     #setup subplot to pass axes handles in to be filled with individual plots
@@ -69,8 +72,8 @@ def plotoptical(opt,vbounds=(None,None),showbeam=True,scatterarea=80):
     fg.colorbar(hi,ax=ax)
     ht = ax.set_title('')
     ax.set_axis_off() #no ticks
-#%% plot beams over top of video
-    if showbeam:  # find indices of closest az,el
+#%% plot beams
+    if showbeam: # find indices of closest az,el
         print('building K-D tree for beam scatter plot, takes several seconds')
         kdtree = cKDTree(opt.dataloc[:,1:]) #az,el
         for b in beamazel:
@@ -79,12 +82,13 @@ def plotoptical(opt,vbounds=(None,None),showbeam=True,scatterarea=80):
             # http://matplotlib.org/examples/color/named_colors.html
             ax.scatter(y,x,s=scatterarea,
                        facecolor='cyan',edgecolor='cyan',
-                       alpha=0.4)           #play video
+                       alpha=0.4)
 #%% play video
     for t,im in zip(opt.times[:,0],opt.data['optical']):
         hi.set_data(im)
         ht.set_text(datetime.fromtimestamp(t,tz=UTC))
         draw(); pause(0.1)
+
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
@@ -138,14 +142,14 @@ if __name__ == "__main__":
                  '~/data/2013-04/hst1cal.h5')
 
     elif p.date == '2013-04-14_dasc':
-        vlim = p.vlim if p.vlim else (10,500)
+        vlim = p.vlim if p.vlim else (10,2500)
 
-        tbounds=(datetime(2013,4,14,8,0,0,tzinfo=UTC),
-                 datetime(2013,4,14,9,0,0,tzinfo=UTC))
+        tbounds=(datetime(2013,4,14,8,54,0,tzinfo=UTC),
+                 datetime(2013,4,14,8,55,0,tzinfo=UTC))
 
         flist = ('~/data/2013-04-14/ISR/pfa130413.004.hdf5',
-                 '~/data/2013-04-14/HST/2013-04-14T8-54_hst0.h5',
-                 '~/data/2013-04/hst0cal.h5')
+                 '~/data/2013-04-14/DASC/PKR_DASC_0428_',
+                 ('~/data/2013-04/PKR_DASC_20110112_AZ_10deg.fits','~/data/2013-04/PKR_DASC_20110112_EL_10deg.fits'))
 
     elif p.date=='2013-03-01':
         vlim = p.vlim if p.vlim else (10,500)

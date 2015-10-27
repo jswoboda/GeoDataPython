@@ -257,7 +257,7 @@ def readOMTI(filename, paramstr):
         sensorloc = f['sensorloc'].value.squeeze()
         times = f['times'].value
 
-    return optical, coordnames, dataloc, sensorloc, times,None
+    return optical, coordnames, dataloc, sensorloc, times
 
 def readIono(iono):
     """ @author:John Swoboda
@@ -302,7 +302,7 @@ def readIono(iono):
 
 #data, coordnames, dataloc, sensorloc, times = readMad_hdf5('/Users/anna/Research/Ionosphere/2008WorldDaysPDB/son081001g.001.hdf5', ['ti', 'dti', 'nel'])
 
-def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc):
+def readAllskyFITS(flist,azelfn,heightkm,treq):
     """ @author: Michael Hirsch, Greg Starr
     For example, this works with Poker Flat DASC all-sky, FITS data available from:
     https://amisr.asf.alaska.edu/PKR/DASC/RAW/
@@ -313,46 +313,39 @@ def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc):
     azmap - A file name of the az mapping.
     elmap - A file name of the elevation maping
     hightkm - The height the data will be projected on to in km
-    sensorloc - A 3-element vector of latitude, longitude and altitude in wgs coordinates of
-    the location of the sensor.
+    treq: pair or vector of ut1_unix times to load
     """
     if isinstance(flist,string_types):
         flist=[flist]
     assert isinstance(flist,(list,tuple)) and len(flist)>0
-    assert isinstance(azmap,string_types)
-    assert isinstance(elmap,string_types)
+    assert isinstance(azelfn,(tuple,list))
     assert isinstance(heightkm,(integer_types,float))
-    assert isinstance(sensorloc,(tuple,list,np.ndarray)) and len(sensorloc)==3
 #%% priming read
     with fits.open(flist[0],mode='readonly') as h:
         img = h[0].data
+        sensorloc = np.array([h[0].header['GLAT'], h[0].header['GLON'], 0.]) #TODO real sensor altitude in km
     dataloc = np.empty((img.size,3))
     times =   np.empty((len(flist),2))
     img =     np.zeros((len(flist),img.shape[0],img.shape[1]),img.dtype)
     epoch = datetime(1970,1,1,0,0,0,tzinfo=UTC)
 #%% loop over files to read images
+    #NOTE: assumes one frame per file
     for i,f in enumerate(flist):
-        try:
-            with fits.open(f,mode='readonly') as h:
-                expstart_dt = parse(h[0].header['OBSDATE'] + ' ' + h[0].header['OBSSTART'])
-                expstart_unix = (expstart_dt - epoch).total_seconds()
-                times[i,:] = [expstart_unix,expstart_unix + h[0].header['EXPTIME']]
-                img[i,...] = h[0].data
-        except Exception as e:
-            logging.error(f+ 'has error {}'.format(e))
+        with fits.open(f,mode='readonly') as h:
+            expstart_dt = parse(h[0].header['OBSDATE'] + ' ' + h[0].header['OBSSTART']+'Z') #implied UTC
+            expstart_unix = (expstart_dt - epoch).total_seconds()
+            times[i,:] = [expstart_unix,expstart_unix + h[0].header['EXPTIME']]
+            img[i,...] = h[0].data
 #%% get az/el calibration data
     coordnames="spherical"
     dataloc[:,0] = heightkm
-    try:
-        with fits.open(azmap,mode='readonly') as h:
-            dataloc[:,1] = h[0].data.ravel()
-        with fits.open(elmap,mode='readonly') as h:
-            dataloc[:,2] = h[0].data.ravel()
-    except Exception as e:
-        logging.error('could not read az/el mapping.   {}'.format(e))
-        dataloc=None
+    #NOTE: 0's are used instead of NaN for unused regions
+    with fits.open(expanduser(azelfn[0]),mode='readonly') as h:
+        dataloc[:,1] = h[0].data.ravel()
+    with fits.open(expanduser(azelfn[1]),mode='readonly') as h:
+        dataloc[:,2] = h[0].data.ravel()
 #%% pack into GeoData class
-    data = {'image':img}
+    optical= {'optical':img}
 
     return (data,coordnames,dataloc,sensorloc,times,None)
 
