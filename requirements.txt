@@ -8,3 +8,4 @@ pandas
 h5py
 pytables
 beautifulsoup4
+seaborn

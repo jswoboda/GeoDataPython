@@ -13,7 +13,7 @@ taking an hdf5
 -plot altitude slice (of NEL)
 """
 from __future__ import division,absolute_import
-#from GeoData import plotting
+import logging
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
@@ -21,7 +21,9 @@ import h5py
 #
 from GeoData import GeoData
 from GeoData import utilityfuncs
-
+#
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 #function used for change data
 def revpower(x1,x2):
@@ -91,7 +93,7 @@ def plotlbl(fg,ax,im,txt,lbl):
     cbar1.ax.set_ylabel(lbl, rotation=270)
 
 if __name__ == '__main__':
-    demo('ran120219.004.hdf5','altitudeSliceTestOutput.h5')
+    demo('data/ran120219.004.hdf5')
     plt.show()
 
 

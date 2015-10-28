@@ -183,6 +183,8 @@ class GeoData(object):
             'nearest' and 'cubic'
             fill_value - The fill value for the interpolation.
         """
+        assert new_coords.ndim==2 and new_coords.shape[1]==3
+
         curavalmethods = ('linear', 'nearest', 'cubic')
         interpmethods = ('linear', 'nearest', 'cubic')
         assert method in interpmethods,'method needs to be linear, nearest, cubic'
@@ -265,11 +267,11 @@ class GeoData(object):
         outputs
         outcoords: A new coordinate system where each row is a coordinate in the new system.
         """
-        if self.coordnames=='Spherical' and newcoordname=='Cartesian':
+        if self.coordnames.lower()=='spherical' and newcoordname.lower()=='cartesian':
             return CT.sphereical2Cartisian(self.dataloc)
-        if self.coordnames== 'Cartesian'and newcoordname=='Spherical':
+        if self.coordnames.lower()=='cartesian'and newcoordname.lower()=='spherical':
             return CT.cartisian2Sphereical(self.dataloc)
-        if self.coordnames==newcoordname:
+        if self.coordnames.lower()==newcoordname.lower():
             return self.dataloc
         raise ValueError('Wrong inputs for coordnate names was given.')
 
@@ -372,7 +374,12 @@ class GeoData(object):
         return not self.__eq__(self2)
 #%%
 def copyinst(obj1):
-    return(obj1.data.copy(),(obj1.coordnames+'.')[:-1],obj1.dataloc.copy(),obj1.sensorloc.copy(),obj1.times.copy())
+    return(obj1.data.copy(),
+           (obj1.coordnames+'.')[:-1],
+           obj1.dataloc.copy(),
+           obj1.sensorloc.copy(),
+           obj1.times.copy(),
+           obj1.expdesc)
 
 def is_numeric(obj):
     return isinstance(obj,(integer_types,float))

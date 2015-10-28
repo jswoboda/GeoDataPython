@@ -96,7 +96,12 @@ def plotlbl(fg,ax,im,txt,lbl):
     cbar1.ax.set_ylabel(lbl, rotation=270)
 
 if __name__ == '__main__':
-    demo('.hdf5',140.)
+    from argparse import ArgumentParser
+    p = ArgumentParser(description='range vs. time plots of key ISR and optical video during March 2011 events')
+    p.add_argument('infn',help='hdf5 file to read')
+    p=p.parse_args()
+
+    demo(p.infn,140.)
     show()
 
 

@@ -13,26 +13,27 @@ import numpy as np
 #
 import GeoData.plotting as GP
 #
-from load_isropt import load_pfisr_neo
-#
-picktimeind = [3,4] #arbitrary user time index choice
+from load_isropt import load_pfisr_hst
 
-def plotisropt(isrName,optName,azelfn,heightkm):
 
-    isr,opt = load_pfisr_neo(isrName,optName,azelfn,heightkm)
-    #first object in geodatalist is being overlayed over by the second object
-    altlist = [300]
+def plotisropt(isr,opt,slicealt,tind):
+
+    """ first object in geodatalist is being overlayed over by the second object
+    """
+    if not isinstance(slicealt,(tuple,list)):
+        slicealt=[slicealt]
+
     xyvecs = [np.linspace(-100.0,500.0),np.linspace(0.0,600.0)]
     vbounds = [(None,None),(None,None)]
     title='Neo data and Ne linear interpolation'
 
     fig3, (ax1, ax2) = subplots(1,2,figsize=(10,5))
 
-    ax1 = GP.alt_slice_overlay((opt, isr), altlist, xyvecs, vbounds, title, axis=ax1,
-                               picktimeind=picktimeind)
+    ax1 = GP.alt_slice_overlay((opt, isr), slicealt, xyvecs, vbounds, title, axis=ax1,
+                              tind=tind)
 
-    ax2 = GP.alt_contour_overlay((opt, isr), altlist, xyvecs, vbounds, title, axis=ax2,
-                                 picktimeind=picktimeind)
+    ax2 = GP.alt_contour_overlay((opt, isr), slicealt, xyvecs, vbounds, title, axis=ax2,
+                                 tind=tind)
 
     ax1.set_ylabel('y')
     ax1.set_xlabel('x')
@@ -43,6 +44,8 @@ if __name__ == '__main__':
     from argparse import ArgumentParser
     p = ArgumentParser(description='March 2011 example at PFISR with Neo sCMOS camera')
     p.add_argument('--radaronly',help='load only radar data',action='store_true')
+    p.add_argument('-a','--slicealt',help='altitude to take slice',type=float,default=140.)
+    p.add_argument('-t','--tind',help='time index(es) to pick',type=int,nargs='+',default=[0])
     p = p.parse_args()
 
     if p.radaronly:
@@ -52,8 +55,7 @@ if __name__ == '__main__':
         optName = '~/data/2011-03-02/110302_0819.h5'
         azelfn = '~/data/2011-03/calMishap2011Mar.h5'
 
-    plotisropt(isrName='~/data/2011-03-02/pfa110302.002.hdf5',
-               optName=optName,
-               azelfn=azelfn,
-               heightkm=140.)
+    isr,opt = load_pfisr_hst('~/data/2011-03-02/pfa110302.002.hdf5',optName,azelfn,p.slicealt)
+
+    plotisropt(isr,opt)
     show()

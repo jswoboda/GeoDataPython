@@ -42,7 +42,7 @@ except Exception as e:
 #
 sfmt = ScalarFormatter(useMathText=True)
 #%%
-def _dointerp(geodatalist,altlist,xyvecs,picktimeind):
+def _dointerp(geodatalist,altlist,xyvecs,tind):
     opt=None; isr=None #in case of failure
     xvec = xyvecs[0]
     yvec = xyvecs[1]
@@ -69,17 +69,19 @@ def _dointerp(geodatalist,altlist,xyvecs,picktimeind):
     g = geodatalist[0]
     try:
         key['opt'] = list(g.data.keys()) #list necessary for Python3
-        G = g.timeslice(picktimeind)
+        G = g.timeslice(tind)
         G.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
         interpData = G.data[key['opt'][0]]
         opt = interpData[:,0].reshape(x.shape)
+    except IndexError as e:
+        logging.warning('did you pick a time index outside camera observation?  {}'.format(e))
     except Exception as e:
         logging.warning('skipping instrument   {}'.format(e))
 #%% isr
     g = geodatalist[1]
     try:
         key['isr'] = list(g.data.keys()) #list necessary for Python3
-        G = g.timeslice(picktimeind)
+        G = g.timeslice(tind)
         G.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
         interpData = G.data[key['isr'][0]]
         isr = interpData[:,0].reshape(x.shape)
@@ -88,18 +90,18 @@ def _dointerp(geodatalist,altlist,xyvecs,picktimeind):
 
     return opt,isr,extent,key,x,y
 #%%
-def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,picktimeind=[1,2]):
+def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,tind=[0]):
     """
     geodatalist - A list of geodata objects that will be overlayed, first object is on the bottom and in gray scale
     altlist - A list of the altitudes that we can overlay.
     xyvecs- A list of x and y numpy arrays that have the x and y coordinates that the data will be interpolated over. ie, xyvecs=[np.linspace(-100.0,500.0),np.linspace(0.0,600.0)]
     vbounds = a list of bounds for each geodata object. ie, vbounds=[[500,2000], [5e10,5e11]]
     title - A string that holds for the overall image
-    picktimeind - indices in time to extract and plot (arbitrary choice)
+    tind - indices in time to extract and plot (arbitrary choice)
     Returns an image of an overlayed plot at a specific altitude.
     """
     ax = axis #less typing
-    opt,isr,extent,key,x,y = _dointerp(geodatalist,altlist,xyvecs,picktimeind)
+    opt,isr,extent,key,x,y = _dointerp(geodatalist,altlist,xyvecs,tind)
 #%% plots
     if ax is None:
         fg = plt.figure()
