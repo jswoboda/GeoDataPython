@@ -239,7 +239,9 @@ class GeoData(object):
                         coordkeep = curcoords
 
                     if len(coordkeep)>0: # at least one finite value
+#%% this line can take an eternity
                         intparam = spinterp.griddata(coordkeep,curparam,new_coords,method,fill_value)
+#%%
                     else: # no finite values
                         intparam = np.nan
                     New_param[:,itime] = intparam
