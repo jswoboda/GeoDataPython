@@ -12,6 +12,7 @@ from scipy.spatial import cKDTree
 import numpy as np
 #
 from GeoData.plotting import rangevstime,plotbeamposGD,plotazelscale
+from subplots_mishap import plotisropt
 #
 from load_isropt import load_pfisr_hst,load_pfisr_dasc
 
@@ -28,9 +29,9 @@ beamazel = np.asarray([[-154.3,77.5]])
 cmap = (None,None,None,'bwr')
 #titles=('$N_e$','$T_i$','$T_e$','$V_i$')
 titles=(None,)*4
-SLICEALT=110. #[km]
 
-def makeplot(isrName,optName,azelfn,tbounds,vbounds,isrparams,showbeam,scatterarea):
+
+def makeplot(isrName,optName,azelfn,tbounds,vbounds,isrparams,showbeam,scatterarea,slicealtkm,tind):
     """
     inputs:
     -------
@@ -41,9 +42,9 @@ def makeplot(isrName,optName,azelfn,tbounds,vbounds,isrparams,showbeam,scatterar
 
     #load radar data into class
     if isinstance(azelfn,(tuple,list)) and len(azelfn) == 2: #az then el
-        isr,opt = load_pfisr_dasc(isrName,optName,azelfn,SLICEALT,isrparams,treq)
+        isr,opt = load_pfisr_dasc(isrName,optName,azelfn,slicealtkm,isrparams,treq)
     else:
-        isr,opt = load_pfisr_hst(isrName,optName,azelfn,SLICEALT,isrparams,treq)
+        isr,opt = load_pfisr_hst(isrName,optName,azelfn,slicealtkm,isrparams,treq)
 
 #%% plot data
     #setup subplot to pass axes handles in to be filled with individual plots
@@ -60,6 +61,8 @@ def makeplot(isrName,optName,azelfn,tbounds,vbounds,isrparams,showbeam,scatterar
     plotazelscale(opt)
 #%% plots optical
     plotoptical(opt,vbounds,showbeam,scatterarea)
+#%% plot overlaid image and ISR contour
+    plotisropt(isr,opt,slicealtkm,tind)
 
 def plotoptical(opt,vbounds=(None,None),showbeam=True,scatterarea=80):
     if opt is None:
@@ -98,6 +101,8 @@ if __name__ == "__main__":
     p.add_argument('-d','--date',help='date of study event (to auto load files)',required=True)
     p.add_argument('--isr',help='ISR parameters to select',nargs='+',default=['nel','ti','te','vo'])
     p.add_argument('--vlim',help='limits for camera image brightness (contrast adjust)',nargs=2)
+    p.add_argument('-a','--slicealt',help='slice altitude km',type=float,default=110.)
+    p.add_argument('--tind',help='debug: pick specific indices from time range to plot',type=int,nargs='+',default=[0])
     p = p.parse_args()
 #%% date / event select
     scatterarea=100 #in case not more accurately specfied vs. fov
@@ -161,7 +166,7 @@ if __name__ == "__main__":
         flist = ('~/data/2011-03-01/ISR/pfa110301.003.hdf5',None,None)
 
 
-    makeplot(flist[0],flist[1],flist[2],tbounds,vlim,p.isr,p.showbeams,scatterarea)
+    makeplot(flist[0],flist[1],flist[2],tbounds,vlim,p.isr,p.showbeams,scatterarea,p.slicealt,p.tind)
 #%%
 
     show()

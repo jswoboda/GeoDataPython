@@ -40,6 +40,6 @@ def plotisropt(risrName,omtiName):
     ax2.set_xlabel('x')
 
 if __name__ == '__main__':
-    plotisropt(risrName='~/data/ran120219.004.hdf5',
-               omtiName='~/data/OMTIdata.h5')
+    plotisropt(risrName='data/ran120219.004.hdf5',
+               omtiName='data/OMTIdata.h5')
     show()
