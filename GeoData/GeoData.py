@@ -6,6 +6,7 @@ Created on Thu Jul 17 12:46:46 2014
 @author: John Swoboda
 """
 from __future__ import division,absolute_import
+import logging
 from six import integer_types,string_types
 import posixpath
 from copy import deepcopy
@@ -13,8 +14,6 @@ import numpy as np
 import scipy.interpolate as spinterp
 import tables
 from pandas import DataFrame
-import pdb
-from warnings import warn
 #
 from . import CoordTransforms as CT
 from .utilityfuncs import read_h5_main
@@ -195,7 +194,6 @@ class GeoData(object):
 #        print NNlocs
         new_coordsorig = deepcopy(new_coords)
         curcoords = self.__changecoords__(newcoordname)
-#        pdb.set_trace()
         # XXX Pulling axes where all of the elements are the same.
         # Probably not the best way to fix issue with two dimensional interpolation
         if twodinterp:
@@ -289,7 +287,6 @@ class GeoData(object):
         if coordname!=origcoordname:
             return False
         for irow in newcoords:
-            pdb.set_trace()
             if not np.any(np.all(origcoords==irow,axis=1)):
                 return False
         return True
@@ -413,7 +410,7 @@ def timerepair(timear):
         timear = timear.ravel()
     if timear.size==1:
         # XXX Using this for my simulator program because old data does not have end times.
-        warn('Timear is only of size 1. Making second element that is 60 seconds ahead of the original')
+        logging.warning('Timear is only of size 1. Making second element that is 60 seconds ahead of the original')
         return  np.array([[timear[0],timear[0]+60]])
 
     avdiff = np.diff(timear).mean()
