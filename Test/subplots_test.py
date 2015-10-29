@@ -30,9 +30,9 @@ def plotisropt(risrName,omtiName):
 
     fig3, (ax1, ax2) = subplots(1,2,figsize=(10,5))
     ax1 = GP.alt_slice_overlay((omti, risr), altlist, xyvecs, vbounds, title, axis=ax1,
-                               picktimeind=picktimeind)
+                               tind=picktimeind)
     ax2 = GP.alt_contour_overlay((omti, risr), altlist, xyvecs, vbounds, title, axis=ax2,
-                               picktimeind=picktimeind)
+                               tind=picktimeind)
 
     ax1.set_ylabel('y')
     ax1.set_xlabel('x')
