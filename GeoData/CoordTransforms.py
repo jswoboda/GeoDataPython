@@ -11,24 +11,28 @@ import numpy as np
 
 def sphereical2Cartisian(spherecoords):
     """This function will convert Spherical coordinates to Cartisian coordinates.
-    Input
-    spherecoords - A 3xN numpy array with rows of range (in km) azimuth (in degrees)
-    and elevation (in degrees).
-    Output
+    Input:
+    ------
+    spherecoords - A 3xN numpy array with ROWS:
+    range (km)
+    azimuth (degrees)
+    elevation (degrees).
+
+    Output:
+    ------
     cartcoords - A 3xN numpy array with X, Y and Z in a cartisian coordinate space.
     The coordinates are in units of kilometers."""
-    d2r = np.pi/180
-    (dir1,dir2) = spherecoords.shape
+    assert 3 in spherecoords.shape, 'Neither of the dimensions are of length 3'
+
     transcoords = False
-    if dir2==3:
+    if spherecoords.shape[1]==3: # N x 3
         spherecoords = np.transpose(spherecoords)
         transcoords  = True
-    if 3 not in spherecoords.shape:
-        raise ValueError('Neither of the dimensions are of length 3')
+
     (R,Az,El) = spherecoords[:]
 
-    Azr = Az*d2r
-    Elr = El*d2r
+    Azr = np.radians(Az)
+    Elr = np.radians(El)
 
     kx = np.sin(Azr) * np.cos(Elr)
     ky = np.cos(Azr) * np.cos(Elr)
@@ -52,7 +56,7 @@ def cartisian2Sphereical(cartcoords):
     Output
     spherecoords - A 3xN numpy array with rows of range (in km) azimuth (in degrees)
     and elevation (in degrees)."""
-    r2d = 180/np.pi
+
     (dir1,dir2) = cartcoords.shape
     transcoords = False
     if dir2==3:
@@ -63,8 +67,8 @@ def cartisian2Sphereical(cartcoords):
     (x,y,z) = cartcoords[:]
 
     R = np.sqrt(x**2+y**2+z**2)
-    Az = np.arctan2(y,x)*r2d
-    El = np.arcsin(z/R)*r2d
+    Az = np.degrees(np.arctan2(y,x))
+    El = np.degrees(np.arcsin(z/R))
 
     spherecoords = np.array([R,Az,El])
 
@@ -102,7 +106,6 @@ def wgs2ecef(WGS_COORDS):
         Nov 2002, http://link.springer.com/article/10.1007%2Fs00190-002-0273-6
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
     #%% Check Input
-    d2r = np.pi/180.0
     (dir1,dir2) = WGS_COORDS.shape
     transcoords = False
     if dir2==3:
@@ -112,8 +115,8 @@ def wgs2ecef(WGS_COORDS):
         raise ValueError('Neither of the dimensions are of length 3')
 
     #%% Get Lat, Long and Height
-    phi = WGS_COORDS[0,:]*d2r
-    lamb = WGS_COORDS[1,:]*d2r
+    phi = np.radians(WGS_COORDS[0,:])
+    lamb = np.radians(WGS_COORDS[1,:])
     h = WGS_COORDS[2,:]
 
     #%% Set the constants
@@ -165,7 +168,6 @@ def ecef2wgs(ECEF_COORDS):
         Nov 2002, http://link.springer.com/article/10.1007%2Fs00190-002-0273-6
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
     #%% Check Input
-    r2d = 180/np.pi
     (dir1,dir2) = ECEF_COORDS.shape
     transcoords = False
     if dir2==3:
@@ -207,9 +209,9 @@ def ecef2wgs(ECEF_COORDS):
 
     #%% Final Form
     # use the atan2 function for more numerical stability
-    lon = np.arctan2(Y,X)*r2d
+    lon = np.degrees(np.arctan2(Y,X))
 
-    lat = np.arctan2(Z,D)*r2d
+    lat = np.degrees(np.arctan2(Z,D))
 
     h = ((k+e**2.0-1)/(k))*np.sqrt(D**2.0+Z**2.0)
     # put into the final form
@@ -294,7 +296,6 @@ def ecef2enu4vec(ECEF,LatLong):
     Reference:
     Wikipedia article: http://en.wikipedia.org/wiki/Geodetic_system"""
     #%% Check Input
-    d2r = np.pi/180.0
     (dir1,dir2) = ECEF.shape
     transcoords = False
     if dir2==3:
@@ -314,11 +315,11 @@ def ecef2enu4vec(ECEF,LatLong):
     if LatLong.size==2:
         lat0 = LatLong[0]
         long0 = LatLong[1]
-        lat0 = lat0*np.ones((1,U.size))*d2r
-        long0 = long0*np.ones((1,U.size))*d2r
+        lat0 =  np.radians(lat0*np.ones((1,U.size)))
+        long0 = np.radians(long0*np.ones((1,U.size)))
     else:
-        lat0 = LatLong[0,:]*d2r
-        long0 = LatLong[1,:]*d2r
+        lat0 =  np.radians(LatLong[0,:])
+        long0 = np.radians(LatLong[1,:])
 
     #%% Set up calculation
     a11 = -np.sin(long0)
@@ -503,6 +504,7 @@ def xy2angles(x,y):
     elout = 90-np.hypot(x,y)
     azout = np.degrees(np.arctan2(x,y))
     return (azout,elout)
+
 def angles2xyz(az,el):
     elrad = np.radians(el)
     azrad = np.radians(az)
@@ -510,6 +512,7 @@ def angles2xyz(az,el):
     y = np.cos(elrad)*np.sin(azrad)
     z = np.sin(elrad)
     return (x,y,z)
+
 def xyz2angles(x,y,z):
     el = np.degrees(np.arcsin(z))
     az = np.degrees(np.arctan2(y,x))
