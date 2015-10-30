@@ -62,7 +62,7 @@ def makeplot(isrName,optName,azelfn,tbounds,vbounds,isrparams,showbeam,scatterar
 #%% plots optical
     plotoptical(opt,vbounds,showbeam,scatterarea)
 #%% plot overlaid image and ISR contour
-    plotisropt(isr,opt,slicealtkm,tind)
+    plotisropt(isr,opt,slicealtkm,vbounds,tind,beamloconly=True)
 
 def plotoptical(opt,vbounds=(None,None),showbeam=True,scatterarea=80):
     if opt is None:
@@ -76,16 +76,17 @@ def plotoptical(opt,vbounds=(None,None),showbeam=True,scatterarea=80):
     ht = ax.set_title('')
     ax.set_axis_off() #no ticks
 #%% plot beams
-    if showbeam: # find indices of closest az,el
-        print('building K-D tree for beam scatter plot, takes several seconds')
-        kdtree = cKDTree(opt.dataloc[:,1:]) #az,el
-        for b in beamazel:
-            i = kdtree.query([b[0]%360,b[1]],k=1, distance_upper_bound=0.1)[1]
-            y,x = np.unravel_index(i,opt.data['optical'].shape[1:])
-            # http://matplotlib.org/examples/color/named_colors.html
-            ax.scatter(y,x,s=scatterarea,
-                       facecolor='cyan',edgecolor='cyan',
-                       alpha=0.4)
+#    if False:  #TODO: instead of this, use pol2cart and pcolor
+#        # find indices of closest az,el
+#        print('building K-D tree for beam scatter plot, takes several seconds')
+#        kdtree = cKDTree(opt.dataloc[:,1:]) #az,el
+#        for b in beamazel:
+#            i = kdtree.query([b[0]%360,b[1]],k=1, distance_upper_bound=0.1)[1]
+#            y,x = np.unravel_index(i,opt.data['optical'].shape[1:])
+#            # http://matplotlib.org/examples/color/named_colors.html
+#            ax.scatter(y,x,s=scatterarea,
+#                       facecolor='cyan',edgecolor='cyan',
+#                       alpha=0.4)
 #%% play video
     for t,im in zip(opt.times[:,0],opt.data['optical']):
         hi.set_data(im)
@@ -147,7 +148,8 @@ if __name__ == "__main__":
                  '~/data/2013-04/hst1cal.h5')
 
     elif p.date == '2013-04-14_dasc':
-        vlim = p.vlim if p.vlim else (10,2500)
+        tind = p.tind if p.tind else [2]       #arbitrary
+        vlim = p.vlim if p.vlim else (10,2500) #arbitrary
 
         tbounds=(datetime(2013,4,14,8,54,0,tzinfo=UTC),
                  datetime(2013,4,14,8,55,0,tzinfo=UTC))
@@ -165,7 +167,7 @@ if __name__ == "__main__":
         flist = ('~/data/2011-03-01/ISR/pfa110301.003.hdf5',None,None)
 
 
-    makeplot(flist[0],flist[1],flist[2],tbounds,vlim,p.isr,p.showbeams,scatterarea,p.slicealt,p.tind)
+    makeplot(flist[0],flist[1],flist[2],tbounds,vlim,p.isr,p.showbeams,scatterarea,p.slicealt,tind)
 #%%
 
     show()

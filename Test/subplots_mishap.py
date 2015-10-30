@@ -16,7 +16,7 @@ import GeoData.plotting as GP
 from load_isropt import load_pfisr_hst
 
 
-def plotisropt(isr,opt,slicealt,tind):
+def plotisropt(isr,opt,slicealt,vbounds,tind,beamloconly=False):
 
     """ first object in geodatalist is being overlayed over by the second object
     """
@@ -30,7 +30,7 @@ def plotisropt(isr,opt,slicealt,tind):
     fig3, (ax1, ax2) = subplots(1,2,figsize=(10,5))
 
     ax1 = GP.alt_slice_overlay((opt, isr), slicealt, xyvecs, vbounds, title, axis=ax1,
-                              tind=tind)
+                              tind=tind,beamloconly=beamloconly)
 
     ax2 = GP.alt_contour_overlay((opt, isr), slicealt, xyvecs, vbounds, title, axis=ax2,
                                  tind=tind)

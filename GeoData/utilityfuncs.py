@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Created on Thu Sep 11 15:29:27 2014
+Note: "cartesian" column order is x,y,z in the Nx3 matrix
 
 @author: John Swoboda
 """
@@ -195,7 +195,7 @@ def readSRI_h5(filename,paramstr,timelims = None):
                 tempdata = f[curpath][:,:,:,curint[0],curint[1]].value
             data[istr] = np.array([tempdata[iT,:,:].ravel() for iT in range(nt)]).transpose()
 
-    return (data,coordnames,dataloc,sensorloc,times)
+    return (data,coordnames,dataloc,sensorloc,times,None)
 
 def read_h5_main(filename):
     '''
@@ -250,14 +250,14 @@ def readOMTI(filename, paramstr):
     The data paths are known a priori, so read directly ~10% faster than pytables
     """
     filename = expanduser(filename)
-    with h5py.File(filename,'r') as f:
+    with h5py.File(filename,'r',libver='latest') as f:
         optical = {'optical':f['data/optical'].value} #for legacy API compatibility
         dataloc = CT.enu2cartisian(f['dataloc'].value)
         coordnames = 'Cartesian'
         sensorloc = f['sensorloc'].value.squeeze()
         times = f['times'].value
 
-    return optical, coordnames, dataloc, sensorloc, times
+    return optical, coordnames, dataloc, sensorloc, times,None
 
 def readIono(iono):
     """ @author:John Swoboda
@@ -307,7 +307,7 @@ def readAllskyFITS(flist,azelfn,heightkm,treq):
     For example, this works with Poker Flat DASC all-sky, FITS data available from:
     https://amisr.asf.alaska.edu/PKR/DASC/RAW/
 
-    This function will read a Fits file into the proper GeoData variables.
+    This function will read a FITS file into the proper GeoData variables.
     inputs
     flist - A list of Fits files that will be read in.
     azmap - A file name of the az mapping.
@@ -317,9 +317,9 @@ def readAllskyFITS(flist,azelfn,heightkm,treq):
     """
     if isinstance(flist,string_types):
         flist=[flist]
-    assert isinstance(flist,(list,tuple)) and len(flist)>0
-    assert isinstance(azelfn,(tuple,list))
-    assert isinstance(heightkm,(integer_types,float))
+    assert isinstance(flist,(list,tuple)) and len(flist)>0, 'I did not find any image files to read'
+    assert isinstance(azelfn,(tuple,list)), 'I did not find the az/el files'
+    assert isinstance(heightkm,(integer_types,float)), 'specify one altitude'
 #%% priming read
     with fits.open(flist[0],mode='readonly') as h:
         img = h[0].data
@@ -331,25 +331,31 @@ def readAllskyFITS(flist,azelfn,heightkm,treq):
 #%% loop over files to read images
     #NOTE: assumes one frame per file
     for i,f in enumerate(flist):
-        with fits.open(f,mode='readonly') as h:
-            expstart_dt = parse(h[0].header['OBSDATE'] + ' ' + h[0].header['OBSSTART']+'Z') #implied UTC
-            expstart_unix = (expstart_dt - epoch).total_seconds()
-            times[i,:] = [expstart_unix,expstart_unix + h[0].header['EXPTIME']]
-            img[i,...] = h[0].data
+        try: #KEEP THIS try
+            with fits.open(f,mode='readonly') as h:
+                expstart_dt = parse(h[0].header['OBSDATE'] + ' ' + h[0].header['OBSSTART']+'Z') #implied UTC
+                expstart_unix = (expstart_dt - epoch).total_seconds()
+                times[i,:] = [expstart_unix,expstart_unix + h[0].header['EXPTIME']]
+                img[i,...] = h[0].data
+        except OSError as e:
+            logging.warning('trouble reading {}   {}'.format(f,e))
 #%% get az/el calibration data
+    #dataloc expected to be column order range,az,el
     coordnames="spherical"
     dataloc[:,0] = heightkm
     #NOTE: 0's are used instead of NaN for unused regions
     with fits.open(expanduser(azelfn[0]),mode='readonly') as h:
-        dataloc[:,1] = h[0].data.ravel()
+        dataloc[:,1] = h[0].data.ravel() # AZIMUTH
     with fits.open(expanduser(azelfn[1]),mode='readonly') as h:
-        dataloc[:,2] = h[0].data.ravel()
+        dataloc[:,2] = h[0].data.ravel() # ELEVATION
+        # do not remove next line!
+        dataloc[dataloc[:,2]==0,2] = np.nan # CRITICAL: cKDtree can't handle large number of repeated values. 0 elevation is irrelevant
 #%% pack into GeoData class
     optical= {'optical':img}
 
-    return (data,coordnames,dataloc,sensorloc,times,None)
+    return (optical,coordnames,dataloc,sensorloc,times,None)
 
-def readNeoCMOS(imgfn, azelfn, heightkm,treq=None):
+def readNeoCMOS(imgfn, azelfn, heightkm=110.,treq=None):
     """
     treq is pair or vector of UT1 unix epoch times to load--often file is so large we can't load all frames into RAM.
     assumes that /rawimg is a 3-D array
@@ -405,7 +411,7 @@ def readNeoCMOS(imgfn, azelfn, heightkm,treq=None):
     dataloc[:,1] = az.ravel()
     dataloc[:,2] = el.ravel()
 
-    return optical, coordnames, dataloc, sensorloc, times,None
+    return optical, coordnames, dataloc, sensorloc, times[mask],None
 
 
 def readAVI(fn,fwaem):

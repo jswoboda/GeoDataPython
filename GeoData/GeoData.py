@@ -7,6 +7,8 @@ Created on Thu Jul 17 12:46:46 2014
 """
 from __future__ import division,absolute_import
 import logging
+from datetime import datetime
+from pytz import UTC
 from six import integer_types,string_types
 import posixpath
 from copy import deepcopy
@@ -170,7 +172,8 @@ class GeoData(object):
         else:
             return False
 #%% Changing data based on location
-    def interpolate(self,new_coords,newcoordname,method='nearest',fill_value=np.nan,twodinterp = False,ikey=None):
+    def interpolate(self,new_coords,newcoordname,method='nearest',fill_value=np.nan,
+                    twodinterp = False,ikey=None,beammask=True):
         """This method will take the data points in the dictionary data and spatially.
         interpolate the points given the new coordinates. The method of interpolation
         will be determined by the input parameter method.
@@ -223,13 +226,13 @@ class GeoData(object):
                     else: #assume Numpy
                         if self.data[iparam].ndim==2: #assuming 2-D numpy array
                             curparam = self.data[iparam][:,itime]
-                        elif self.data[iparam].ndim==3:
+                        elif self.data[iparam].ndim==3: # take the image out of the stack
                             curparam = self.data[iparam][itime,:,:].ravel()
                         else:
                             raise ValueError('incorrect data matrix shape')
-
+#%% filter out bad (nan) data points/location for this time step
                     if iparam != 'optical':
-                        dfmask = np.isfinite(curparam)
+                        dfmask = np.isfinite(curparam) & beammask
                         curparam = curparam[dfmask]
                         npmask=dfmask.values if usepandas else dfmask #have to do this for proper indexing of numpy arrays!
                         coordkeep = curcoords[npmask,:]
@@ -241,6 +244,7 @@ class GeoData(object):
                         intparam = spinterp.griddata(coordkeep,curparam,new_coords,method,fill_value)
 #%%
                     else: # no finite values
+                        logging.warning('No {} data available at {}'.format(iparam,datetime.fromtimestamp(tim[0],tz=UTC)))
                         intparam = np.nan
                     New_param[:,itime] = intparam
                 self.data[iparam] = New_param

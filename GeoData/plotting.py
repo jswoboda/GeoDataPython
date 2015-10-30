@@ -24,7 +24,7 @@ try:
 except Exception as e:
     pass
 #
-from .CoordTransforms import angles2xy
+from .CoordTransforms import angles2xy,sphereical2Cartisian
 # NOTE: using usetex can make complicated plots unstable and crash
 #try:
 #    plt.rc('text', usetex=True)
@@ -42,7 +42,9 @@ except Exception as e:
 #
 sfmt = ScalarFormatter(useMathText=True)
 #%%
-def _dointerp(geodatalist,altlist,xyvecs,tind):
+def _dointerp(geodatalist,altlist,xyvecs,tind,beamloconly=False):
+    assert isinstance(geodatalist,(tuple,list)) and len(geodatalist)==2, 'I assume you will give me ISR and camera data in GeoData classes'
+
     opt=None; isr=None #in case of failure
     xvec = xyvecs[0]
     yvec = xyvecs[1]
@@ -76,21 +78,38 @@ def _dointerp(geodatalist,altlist,xyvecs,tind):
     except IndexError as e:
         logging.warning('did you pick a time index outside camera observation?  {}'.format(e))
     except Exception as e:
-        logging.warning('skipping instrument   {}'.format(e))
+        logging.error('problem in optical interpolation   {}'.format(e))
 #%% isr
     g = geodatalist[1]
+
+    if beamloconly: #TODO under development, need to find closest beams in altitude
+        beammask = np.abs(g.dataloc[:,0]-altlist[0]) < 2. #TODO: need to formalize
+        new_radar_coords = sphereical2Cartisian(g.dataloc[beammask,:])
+    else:
+        beammask=True
+        new_radar_coords = new_coords
+
     try:
         key['isr'] = list(g.data.keys()) #list necessary for Python3
+
         G = g.timeslice(tind)
-        G.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
+
+        G.interpolate(new_radar_coords, newcoordname='Cartesian', method='nearest',
+                      fill_value=np.nan,beammask=beammask)
+
+        isr = np.empty_like(x,dtype=float)
+        isr.fill(np.nan)
+
+        interpDataInd = np.unravel_index(np.where(beammask)[0],x.shape)
+
         interpData = G.data[key['isr'][0]]
-        isr = interpData[:,0].reshape(x.shape)
+        isr[interpDataInd] = interpData[:,0]
     except Exception as e:
-        logging.warning('skipping instrument   {}'.format(e))
+        logging.error('problem in ISR interpolation   {}'.format(e))
 
     return opt,isr,extent,key,x,y
 #%%
-def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,tind=[0]):
+def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,tind=[0],beamloconly=False):
     """
     geodatalist - A list of geodata objects that will be overlayed, first object is on the bottom and in gray scale
     altlist - A list of the altitudes that we can overlay.
@@ -98,10 +117,13 @@ def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,ti
     vbounds = a list of bounds for each geodata object. ie, vbounds=[[500,2000], [5e10,5e11]]
     title - A string that holds for the overall image
     tind - indices in time to extract and plot (arbitrary choice)
+    beamloconly - only plots ISR data at pixel nearest radar beam center
     Returns an image of an overlayed plot at a specific altitude.
     """
     ax = axis #less typing
-    opt,isr,extent,key,x,y = _dointerp(geodatalist,altlist,xyvecs,tind)
+
+    opt,isr,extent,key,x,y = _dointerp(geodatalist,altlist,xyvecs,tind,beamloconly)
+
 #%% plots
     if ax is None:
         fg = plt.figure()
@@ -118,19 +140,22 @@ def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,ti
         c = fg.colorbar(bottom,ax=ax)
         c.set_label(key['opt'][0])
     except Exception as e:
-        logging.info('problem plotting instrument  {}'.format(e))
+        logging.info('problem plotting Optical slice {}'.format(e))
 #%%
+    if isr is None or not np.isfinite(isr).any():
+        logging.warning('Nothing to plot for ISR, all NaN')
+
     try:
         top = ax.imshow(isr, alpha=0.4, extent=extent, origin='lower',interpolation='none',
                         vmin=vbounds[1][0],vmax=vbounds[1][1])
         c = fg.colorbar(top,ax=ax)
         c.set_label(key['isr'][0])
     except Exception as e:
-        logging.info('problem plotting instrument  {}'.format(e))
+        logging.info('problem plotting ISR slice {}'.format(e))
 
     return ax
 #%%
-def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,picktimeind=[1,2]):
+def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None, tind=[1,2]):
     """
     geodatalist - A list of geodata objects that will be overlayed, first object is on the bottom and in gray scale
     altlist - A list of the altitudes that we can overlay.
@@ -141,7 +166,7 @@ def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,
     Returns an image of an overlayed plot at a specific altitude.
     """
     ax = axis #less typing
-    opt,isr,extent,key,x,y = _dointerp(geodatalist,altlist,xyvecs,picktimeind)
+    opt,isr,extent,key,x,y = _dointerp(geodatalist,altlist,xyvecs,tind)
 #%% plots
     if axis is None:
         fg= plt.figure()
@@ -158,7 +183,7 @@ def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,
         cbar1 = plt.colorbar(bottom, orientation='horizontal',ax=ax)
         cbar1.set_label(key['opt'][0])
     except Exception as e:
-        logging.info('problem plotting instrument  {}'.format(e))
+        logging.info('problem plotting optical   {}'.format(e))
 
     try:
         top = ax.contour(x,y, isr,extent=extent, origin='lower',
@@ -167,7 +192,7 @@ def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,
         cbar2 = fg.colorbar(top, format='%.0e',ax=ax)
         cbar2.set_label(key['isr'][0])
     except Exception as e:
-        logging.info('problem plotting instrument  {}'.format(e))
+        logging.info('problem plotting isr contour {}'.format(e))
 
     return ax
 
@@ -474,7 +499,7 @@ def plotbeamposfig(geod,height,coordnames,fig=None,ax=None,title=''):
 def rangevstime(geod,beam,vbounds=(None,None),gkey = None,cmap=None,fig=None,ax=None,
                 title='',cbar=True,tbounds=(None,None),ic=True,ir=True,it=True):
     """ This method will create a color graph of range vs time for data in spherical coordinates"""
-    assert geod.coordnames.lower() =='spherical'
+    assert geod.coordnames.lower() =='spherical', 'I expect speherical coordinate data'
 
     if (ax is None) and (fig is None):
         fig = plt.figure(figsize=(12,8))
