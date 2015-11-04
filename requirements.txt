@@ -1,5 +1,7 @@
-dateutil
+setuptools
+nose
 six
+python-dateutil
 matplotlib
 astropy
 numpy

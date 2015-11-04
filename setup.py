@@ -10,10 +10,8 @@ python setup.py develop --uninstall
 @author: John Swoboda
 """
 import os, inspect
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
+from setuptools import setup
+
 
 with open('README.rst') as f:
 	long_description = f.read()
@@ -25,7 +23,8 @@ config = {
     'download_url': 'https://github.com/jswoboda/GeoDataPython.git',
     'author_email': 'swoboj@bu.edu',
     'version': '0.2',
-    'install_requires': ['numpy', 'scipy', 'tables','h5py'],
+    'install_requires': [],
+    'extras_require': {'mayavi2':'mayavi2'},
     'packages': ['GeoData'],
     'scripts': [],
     'name': 'GeoData',
