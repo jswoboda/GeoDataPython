@@ -6,6 +6,7 @@ Requires Python 2.x due to Mayavi
 """
 from __future__ import division,print_function
 import logging
+import pdb
 import os
 import matplotlib.pyplot as plt
 import numpy as np
@@ -88,7 +89,7 @@ def plotting(risr_classred,risr_class,omti_class,reglistfinal,odir=None):
 
             if odir is not None:
                 figname = os.path.join(odir,'figure{0:0>2}.png'.format(figcount))
-                figmplf.savefig(figname,format='png',dpi = 600)
+                figmplf.savefig(figname,format='png',dpi = 400)
                 plt.close(figmplf)
                 figcount=figcount+1
 

@@ -150,22 +150,31 @@ class GeoData(object):
             loclist = np.where(ix)[0]
 
         gd2 = self.copy()
-        if gd2.times.ndim==1:
+        if gd2.issatellite():
             gd2.times = gd2.times[loclist]
-        elif gd2.times.ndim==2:
-            gd2.times = gd2.times[loclist,:]
-        else:
-            raise TypeError('i only expect 1 or 2 dimensions for time')
+            for idata in gd2.datanames():
+                if isinstance(gd2.data[idata],DataFrame):
+                    gd2.data[idata] = gd2.data[idata][gd2.times] #data is a vector
+                else:
+                    gd2.data[idata] = gd2.data[idata][:loclist]
 
-        for idata in gd2.datanames():
-            if isinstance(gd2.data[idata],DataFrame):
-                gd2.data[idata] = gd2.data[idata][gd2.times] #data is a vector
-            elif gd2.data[idata].ndim==2:
-                gd2.data[idata] = gd2.data[idata][:,loclist]
-            elif gd2.data[idata].ndim==3:
-                gd2.data[idata] = gd2.data[idata][loclist,:,:]
+        else:
+            if gd2.times.ndim==1:
+                gd2.times = gd2.times[loclist]
+            elif gd2.times.ndim==2:
+                gd2.times = gd2.times[loclist,:]
             else:
-                raise TypeError('unknown data shape for gd2 data')
+                raise TypeError('i only expect 1 or 2 dimensions for time')
+
+            for idata in gd2.datanames():
+                if isinstance(gd2.data[idata],DataFrame):
+                    gd2.data[idata] = gd2.data[idata][gd2.times] #data is a vector
+                elif gd2.data[idata].ndim==2:
+                    gd2.data[idata] = gd2.data[idata][:,loclist]
+                elif gd2.data[idata].ndim==3:
+                    gd2.data[idata] = gd2.data[idata][loclist,:,:]
+                else:
+                    raise TypeError('unknown data shape for gd2 data')
         return gd2
 #%% Satellite Data
     def issatellite(self):

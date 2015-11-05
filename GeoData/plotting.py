@@ -362,8 +362,8 @@ def contourGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
         axdict = {'x':0,'y':1,'z':2}
         veckeys = ['x','y','z']
     elif geod.coordnames.lower() == 'wgs84':
-        axdict = {'lat':0,'long':1,'alt':2}
-        veckeys = ['lat','long','alt']
+        axdict = {'lat':1,'long':0,'alt':2}
+        veckeys = ['long','lat','alt']
     if type(axstr)==str:
         axis=axstr
     else:
@@ -402,6 +402,81 @@ def contourGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
         ax = fig.gca()
 
     ploth = ax.contour(M1,M2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
+    ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(), xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
+    if cbar:
+        cbar2 = plt.colorbar(ploth, ax=ax, format='%.0e')
+    else:
+        cbar2 = None
+    ax.set_title(title)
+    ax.set_xlabel(veckeys[0])
+    ax.set_ylabel(veckeys[1])
+
+    return(ploth,cbar2)
+
+def scatterGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',fig=None,ax=None,title='',cbar=True,err=.1):
+    """ """
+    poscoords = ['cartesian','wgs84','enu','ecef']
+    assert geod.coordnames.lower() in poscoords
+
+    if geod.coordnames.lower() in ['cartesian','enu','ecef']:
+        axdict = {'x':0,'y':1,'z':2}
+        veckeys = ['x','y','z']
+    elif geod.coordnames.lower() == 'wgs84':
+        axdict = {'lat':1,'long':0,'alt':2}
+        veckeys = ['long','lat','alt']
+    if type(axstr)==str:
+        axis=axstr
+    else:
+        axis= veckeys[axstr]
+
+    #determine the data name
+    if gkey is None:
+        gkey = geod.data.keys[0]
+
+    geod=geod.timeslice(time)
+    veckeys.remove(axis.lower())
+    datacoords = geod.dataloc
+    xyzvecs = {l:sp.unique(datacoords[:,axdict[l]]) for l in veckeys}
+    xyzvecsall = {l:datacoords[:,axdict[l]] for l in veckeys}
+    veckeys.sort()
+    if geod.issatellite():
+        xdata =xyzvecsall[veckeys[0]]
+        ydata =xyzvecsall[veckeys[1]]
+        zdata = xyzvecsall[veckeys[2]]
+        indxnum = np.abs(zdata-slicenum)<err
+        rec_coords = {axdict[veckeys[0]]:xdata[indxnum],axdict[veckeys[1]]:ydata[indxnum],
+                      axdict[axis]:zdata[indxnum]}
+        new_coords = sp.zeros((indxnum.sum(),3))
+    else:
+        #make matrices
+        xvec = xyzvecs[veckeys[0]]
+        yvec = xyzvecs[veckeys[1]]
+        M1,M2 = sp.meshgrid(xvec,yvec)
+        slicevec = sp.unique(datacoords[:,axdict[axis]])
+        min_idx = sp.argmin(sp.absolute(slicevec-slicenum))
+        slicenum=slicevec[min_idx]
+        rec_coords = {axdict[veckeys[0]]:M1.flatten(),axdict[veckeys[1]]:M2.flatten(),
+                      axdict[axis]:slicenum*sp.ones(M2.size)}
+        new_coords = sp.zeros((M1.size,3))
+        xdata = M1.flatten()
+        ydata= M2.flatten()
+
+    #make coordinates
+    for ckey in rec_coords.keys():
+        new_coords[:,ckey] = rec_coords[ckey]
+
+
+    dataout = geod.datareducelocation(new_coords,geod.coordnames,gkey)
+
+    title = insertinfo(title,gkey,geod.times[time,0],geod.times[time,1])
+
+    if (ax is None) and (fig is None):
+        fig = plt.figure(facecolor='white')
+        ax = fig.gca()
+    elif ax is None:
+        ax = fig.gca()
+
+    ploth = ax.scatter(xdata,ydata,c=dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
     ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(), xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
     if cbar:
         cbar2 = plt.colorbar(ploth, ax=ax, format='%.0e')
