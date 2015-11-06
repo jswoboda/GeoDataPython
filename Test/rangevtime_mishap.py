@@ -62,7 +62,7 @@ def makeplot(isrName,optName,azelfn,tbounds,vbounds,isrparams,showbeam,scatterar
 #%% plots optical
     plotoptical(opt,vbounds,showbeam,scatterarea)
 #%% plot overlaid image and ISR contour
-    plotisropt(isr,opt,slicealtkm,vbounds,tind,beamloconly=True)
+#    plotisropt(isr,opt,slicealtkm,vbounds,tind,beamloconly=True)
 
 def plotoptical(opt,vbounds=(None,None),showbeam=True,scatterarea=80):
     if opt is None:
@@ -125,7 +125,7 @@ if __name__ == "__main__":
 
         flist = ('~/data/2013-04-11/ISR/pfa130411.002.hdf5',None,None)
 
-    elif p.date == '2013-04-14_cam0':
+    elif p.date == '2013-04-14_cam0_3min':
         vlim = p.vlim if p.vlim else (250,40000) #it's bright 8:54:25-30 !
         scatterarea = 880
 
@@ -133,6 +133,17 @@ if __name__ == "__main__":
                  datetime(2013,4,14,8,54,30,tzinfo=UTC))
 
         flist = ('~/data/2013-04-14/ISR/pfa130413.004.hdf5',
+                 '~/data/2013-04-14/HST/2013-04-14T8-54_hst0.h5',
+                 '~/data/2013-04/hst0cal.h5')
+
+    elif p.date == '2013-04-14_cam0_30sec':
+        vlim = p.vlim if p.vlim else (250,40000) #it's bright 8:54:25-30 !
+        scatterarea = 880
+
+        tbounds=(datetime(2013,4,14,8,54,25,tzinfo=UTC),
+                 datetime(2013,4,14,8,54,30,tzinfo=UTC))
+
+        flist = ('~/data/20130413.001_ac_30sec.h5',
                  '~/data/2013-04-14/HST/2013-04-14T8-54_hst0.h5',
                  '~/data/2013-04/hst0cal.h5')
 
