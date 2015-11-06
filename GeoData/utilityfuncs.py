@@ -139,7 +139,9 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     #NOTE temporarily passing dataloc as Numpy array till rest of program is updated to Pandas
     return (data,coordnames,dataloc.values,sensorloc,uniq_times,sensor_data[5][1].decode('utf8'))
 
-def readSRI_h5(filename,paramstr,timelims = None):
+def readSRI_h5(fn,params,timelims = None):
+    assert isinstance(params,(tuple,list))
+    fn = expanduser(fn)
     '''This will read the SRI formated h5 files for RISR and PFISR.'''
     coordnames = 'Spherical'
 
@@ -153,47 +155,41 @@ def readSRI_h5(filename,paramstr,timelims = None):
                 'Te':('/FittedParams/Fits',  (-1,1)),
                 'Ti':('/FittedParams/Errors',(-1,1))}
 
-    with h5py.File(filename,'r',libver='latest') as f:
+    with h5py.File(fn,'r',libver='latest') as f:
         # Get the times and time lims
         times = f['/Time/UnixTime'].value
         # get the sensor location
-        sensorloc = np.array([f['/Site/Latitude'],
-                              f['/Site/Longitude'],
-                              f['/Site/Altitude']])
+        sensorloc = np.array([f['/Site/Latitude'].value,
+                              f['/Site/Longitude'].value,
+                              f['/Site/Altitude'].value])
         # Get the locations of the data points
         rng = f['/FittedParams/Range'].value / 1e3
-        angles = f['/BeamCodes'][:,1:2].value
+        angles = f['/BeamCodes'][:,1:3]
 
     nt = times.shape[0]
     if timelims is not None:
-        timelog = times[:,0]>= timelims[0] and times[:,1]<timelims[1]
-        times = times[timelog,:]
+        times = times[(times[:,0]>= timelims[0]) & (times[:,1]<timelims[1]) ,:]
         nt = times.shape[0]
-#
-    nrng = rng.shape[1]
-    repangles = np.tile(angles,(1,2.0*nrng))
-    allaz = repangles[:,::2]
-    allel = repangles[:,1::2]
-#   NOTE dataloc = DataFrame(index=times,
-#                              {'rng':rng.ravel(),
-#                               'allaz':allaz.ravel(),'allel':allel.ravel()})
-    dataloc =np.vstack((rng.ravel(),allaz.ravel(),allel.ravel())).transpose()
+# allaz, allel corresponds to rng.ravel()
+    allaz = np.tile(angles[:,0],rng.shape[1])
+    allel = np.tile(angles[:,1],rng.shape[1])
+
+    dataloc =np.vstack((rng.ravel(),allaz,allel)).T
     # Read in the data
     data = {}
-    with h5py.File(filename,'r',libver='latest') as f:
-        for istr in paramstr:
-            if not istr in list(pathdict.keys()):
-                logging.warning(istr + ' is not a valid parameter name.')
-
+    with h5py.File(fn,'r',libver='latest') as f:
+        for istr in params:
+            if not istr in pathdict.keys(): #list() NOT needed
+                logging.error('{} is not a valid parameter name.'.format(istr))
                 continue
             curpath = pathdict[istr][0]
             curint = pathdict[istr][-1]
 
-            if curint is None:
-                tempdata = f[curpath].value
-            else:
-                tempdata = f[curpath][:,:,:,curint[0],curint[1]].value
-            data[istr] = np.array([tempdata[iT,:,:].ravel() for iT in range(nt)]).transpose()
+            if curint is None: #3-D data
+                tempdata = f[curpath]
+            else: #5-D data -> 3-D data
+                tempdata = f[curpath][:,:,:,curint[0],curint[1]]
+            data[istr] = np.array([tempdata[iT,:,:].ravel() for iT in range(nt)]).T
 
     return (data,coordnames,dataloc,sensorloc,times,None)
 

@@ -62,7 +62,7 @@ def makeplot(isrName,optName,azelfn,tbounds,vbounds,isrparams,showbeam,scatterar
 #%% plots optical
     plotoptical(opt,vbounds,showbeam,scatterarea)
 #%% plot overlaid image and ISR contour
-#    plotisropt(isr,opt,slicealtkm,vbounds,tind,beamloconly=True)
+    plotisropt(isr,opt,slicealtkm,vbounds,tind,beamloconly=True)
 
 def plotoptical(opt,vbounds=(None,None),showbeam=True,scatterarea=80):
     if opt is None:
@@ -106,6 +106,8 @@ if __name__ == "__main__":
     p = p.parse_args()
 #%% date / event select
     scatterarea=100 #in case not more accurately specfied vs. fov
+    tind = p.tind if p.tind else [2]       #arbitrary
+    isr = p.isr
 
     if p.date == '2011-03-02':
         vlim = p.vlim if p.vlim else (50,250)
@@ -137,6 +139,7 @@ if __name__ == "__main__":
                  '~/data/2013-04/hst0cal.h5')
 
     elif p.date == '2013-04-14_cam0_30sec':
+        isr = ['Ne']
         vlim = p.vlim if p.vlim else (250,40000) #it's bright 8:54:25-30 !
         scatterarea = 880
 
@@ -178,7 +181,7 @@ if __name__ == "__main__":
         flist = ('~/data/2011-03-01/ISR/pfa110301.003.hdf5',None,None)
 
 
-    makeplot(flist[0],flist[1],flist[2],tbounds,vlim,p.isr,p.showbeams,scatterarea,p.slicealt,tind)
+    makeplot(flist[0],flist[1],flist[2],tbounds,vlim,isr,p.showbeams,scatterarea,p.slicealt,tind)
 #%%
 
     show()
