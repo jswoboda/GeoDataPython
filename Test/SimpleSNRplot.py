@@ -6,15 +6,34 @@ from numpy.ma import masked_invalid
 import h5py
 from pandas import DataFrame
 from matplotlib.pyplot import figure,show
+from matplotlib.dates import MinuteLocator
 from mpl_toolkits.mplot3d import Axes3D
-import seaborn as sns
-sns.color_palette(sns.color_palette("cubehelix"))
-sns.set(context='paper', style='whitegrid')
-sns.set(rc={'image.cmap': 'cubehelix_r'}) #for contour
+#import seaborn as sns
+#sns.color_palette(sns.color_palette("cubehelix"))
+#sns.set(context='paper', style='ticks')
+#sns.set(rc={'image.cmap': 'cubehelix_r'}) #for contour
 
 
-def snrvtime(fn,bid):
-    fn = Path(fn).expanduser()
+def snrvtime_raw(fn,bid):
+    assert isinstance(fn,Path)
+    fn = fn.expanduser()
+
+    with h5py.File(str(fn),'r',libver='latest') as f:
+        t     = f[tp].value
+        power = f['/Raw11/Raw/Power/Data'].value
+        bind  = f['/Raw11/Raw/Beamcodes'][0,:] == bid
+        srng  = f['/Raw11/Raw/Power/Range'].value
+
+    dt = array([datetime.utcfromtimestamp(T) for T in t[:,0]])
+#%% return requested beam data only
+    zenpwr = power[:,bind,:].squeeze()
+    zenrng = srng.squeeze()/1e3
+    return DataFrame(index=zenrng,columns=dt,data=zenpwr.T)
+
+def snrvtime_fit(fn,bid):
+    assert isinstance(fn,Path)
+    fn = fn.expanduser()
+
     with h5py.File(str(fn),'r',libver='latest') as f:
         t = f[tp].value
         snr = f[dp].value
@@ -33,7 +52,7 @@ def plotsnr(snr,fn,tlim=None,vlim=(None,None),zlim=(90,None)):
     fn = Path(fn)
 
 
-    fg = figure()
+    fg = figure(figsize=(8,12))
     ax =fg.gca()
     h=ax.pcolormesh(snr.columns.values,snr.index.values,
                      10*log10(masked_invalid(snr.values)),
@@ -45,7 +64,17 @@ def plotsnr(snr,fn,tlim=None,vlim=(None,None),zlim=(90,None)):
 
     ax.set_ylabel('altitude [km]')
     ax.set_title(fn.name)
+
     fg.autofmt_xdate()
+    if snr.shape[1]<20:
+        mint=1
+    elif snr.shape[1]<50:
+        mint=5
+    else:
+        mint=15
+    ax.xaxis.set_major_locator(MinuteLocator(interval=mint))
+    ax.tick_params(axis='both', which='both', direction='out')
+
     c=fg.colorbar(h,ax=ax)
     c.set_label('SNR [dB]')
 
@@ -93,6 +122,7 @@ def plotsnrmesh(snr,fn,vlim):
     ax3.autoscale(True,'y',tight=True)
 
 if __name__ == '__main__':
+    rawfn = Path('~/data/2013-04-14/d0346834.dt3.h5')
     fn = (Path('~/data/20130413.001_ac_30sec.h5'),
           Path('~/data/20130413.001_lp_30sec.h5'))
     dp = '/NeFromPower/SNR'
@@ -102,12 +132,16 @@ if __name__ == '__main__':
     t0 = datetime(2013,4,14,8,54,30)
     zlim=(90,None)
 #%%
+    snrraw = snrvtime_raw(rawfn,beamid)
+    plotsnr(snrraw,rawfn,vlim=(47,None))
+
     for f in fn:
-        snr = snrvtime(f,beamid)
+        snr    = snrvtime_fit(f,beamid)
 #        plotsnr1d(snr,f,t0,zlim)
         for b in ((datetime(2013,4,14,8),   datetime(2013,4,14,10)),
                   (datetime(2013,4,14,8,50),datetime(2013,4,14,9,0))):
-#            plotsnr(snr,f,b,vlim)
-            plotsnrmesh(snr,f,vlim)
+            plotsnr(snr,f,b,vlim)
+#            plotsnrmesh(snr,f,vlim)
+
 
     show()
