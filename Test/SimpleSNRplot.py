@@ -14,10 +14,10 @@ from pandas import DataFrame
 from matplotlib.pyplot import figure,show
 from matplotlib.dates import MinuteLocator,SecondLocator
 from mpl_toolkits.mplot3d import Axes3D
-import seaborn as sns
-sns.color_palette(sns.color_palette("cubehelix"))
-sns.set(context='poster', style='ticks')
-sns.set(rc={'image.cmap': 'cubehelix_r'}) #for contour
+#import seaborn as sns
+#sns.color_palette(sns.color_palette("cubehelix"))
+#sns.set(context='poster', style='ticks')
+#sns.set(rc={'image.cmap': 'cubehelix_r'}) #for contour
 
 
 def ut2dt(ut):
@@ -106,14 +106,14 @@ def plotsnr(snr,fn,tlim=None,vlim=(None,None),zlim=(90,None),ctxt=''):
     ax =fg.gca()
     h=ax.pcolormesh(snr.columns.values,snr.index.values,
                      10*log10(masked_invalid(snr.values)),
-                     vmin=vlim[0], vmax=vlim[1])
+                     vmin=vlim[0], vmax=vlim[1],cmap='cubehelix_r')
     ax.autoscale(True,tight=True)
 
     ax.set_xlim(tlim)
     ax.set_ylim(zlim)
 
     ax.set_ylabel('altitude [km]')
-    ax.set_title('{}  {}'.format(fn.name, snr.columns[0].strftime('%Y-%m-%d')))
+    ax.set_xlabel('Time [UTC]')
 #%% date ticks
     fg.autofmt_xdate()
     if tlim:
@@ -134,6 +134,10 @@ def plotsnr(snr,fn,tlim=None,vlim=(None,None),zlim=(90,None),ctxt=''):
 
     c=fg.colorbar(h,ax=ax,fraction=0.075,shrink=0.5)
     c.set_label(ctxt)
+
+    ts = snr.columns[1] - snr.columns[0]
+    ax.set_title('{}  {}  $T_{{sample}}$={:.3f} sec.'.format(fn.name, snr.columns[0].strftime('%Y-%m-%d'),ts.microseconds/1e6))
+
 
     #last command
     fg.tight_layout()
