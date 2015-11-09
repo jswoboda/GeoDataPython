@@ -1,58 +1,107 @@
 #!/usr/bin/env python3
+"""
+reading PFISR data down to IQ samples
+"""
+from __future__ import division
 from pathlib2 import Path
 from datetime import datetime
-from numpy import array,log10,absolute, meshgrid
+from pytz import UTC
+from numpy import array,log10,absolute, meshgrid,empty,nonzero
 from numpy.ma import masked_invalid
 import h5py
 from pandas import DataFrame
 from matplotlib.pyplot import figure,show
 from matplotlib.dates import MinuteLocator
 from mpl_toolkits.mplot3d import Axes3D
-#import seaborn as sns
-#sns.color_palette(sns.color_palette("cubehelix"))
-#sns.set(context='paper', style='ticks')
-#sns.set(rc={'image.cmap': 'cubehelix_r'}) #for contour
+import seaborn as sns
+sns.color_palette(sns.color_palette("cubehelix"))
+sns.set(context='paper', style='ticks')
+sns.set(rc={'image.cmap': 'cubehelix_r'}) #for contour
 
 
-def snrvtime_raw(fn,bid):
+def ut2dt(ut):
+    if ut.ndim==1:
+        T=ut
+    elif ut.ndim==2:
+        T=ut[:,0]
+    return array([datetime.fromtimestamp(t,tz=UTC) for t in T])
+
+def sampletime(T,Np):
+    dtime = empty(Np*T.shape[0])
+    i=0
+    for t in T: #each row
+        dt=(t[1]-t[0]) / Np
+        for j in range(Np):
+            dtime[i]=t[0]+j*dt
+            i+=1
+    return dtime
+
+def findstride(beammat,bid):
+    #FIXME is using just first row OK? other rows were identical for me.
+#    Nt = beammat.shape[0]
+#    index = empty((Nt,Np),dtype=int)
+#    for i,b in enumerate(beammat):
+#        index[i,:] = nonzero(b==bid)[0] #NOTE: candidate for np.s_ ?
+    return nonzero(beammat[0,:]==bid)[0]
+
+def samplepower(sampiq,bstride,Np,Nr,Nt):
+    power = empty((Nr,Np*Nt))
+    i=0
+    for it in range(Nt):
+        for ip in range(Np):
+            power[:,i] = (sampiq[it,bstride[ip],:,0]**2 +
+                          sampiq[it,bstride[ip],:,1]**2)
+
+            i+=1
+
+    return power
+
+
+def snrvtime_samples(fn,bid):
     assert isinstance(fn,Path)
     fn = fn.expanduser()
 
     with h5py.File(str(fn),'r',libver='latest') as f:
-        t     = f[tp].value
-        power = f['/Raw11/Raw/Power/Data'].value
-        bind  = f['/Raw11/Raw/Beamcodes'][0,:] == bid
-        srng  = f['/Raw11/Raw/Power/Range'].value
+        Nt = f['/Time/UnixTime'].shape[0]
+        Np = f['/Raw11/Raw/PulsesIntegrated'][0,0] #FIXME is this correct in general?
+        ut = sampletime(f['/Time/UnixTime'],Np)
+        srng  = f['/Raw11/Raw/Power/Range'].value.squeeze()/1e3
+        bstride = findstride(f['/Raw11/Raw/RadacHeader/BeamCode'],bid)
+        power = samplepower(f['/Raw11/Raw/Samples/Data'],bstride,Np,srng.size,Nt) #I + jQ   # Ntimes x striped x alt x real/comp
 
-    dt = array([datetime.utcfromtimestamp(T) for T in t[:,0]])
+    t = ut2dt(ut)
+    return DataFrame(index=srng, columns=t, data=power)
+
+
+
+def snrvtime_raw12sec(fn,bid):
+    assert isinstance(fn,Path)
+    fn = fn.expanduser()
+
+    with h5py.File(str(fn),'r',libver='latest') as f:
+        t = ut2dt(f['/Time/UnixTime'])
+        bind  = f['/Raw11/Raw/Beamcodes'][0,:] == bid
+        power = f['/Raw11/Raw/Power/Data'][:,bind,:].squeeze().T
+        srng  = f['/Raw11/Raw/Power/Range'].value.squeeze()/1e3
 #%% return requested beam data only
-    zenpwr = power[:,bind,:].squeeze()
-    zenrng = srng.squeeze()/1e3
-    return DataFrame(index=zenrng,columns=dt,data=zenpwr.T)
+    return DataFrame(index=srng,columns=t,data=power)
 
 def snrvtime_fit(fn,bid):
     assert isinstance(fn,Path)
     fn = fn.expanduser()
 
     with h5py.File(str(fn),'r',libver='latest') as f:
-        t = f[tp].value
-        snr = f[dp].value
+        t = ut2dt(f['/Time/UnixTime'])
         bind = f['/BeamCodes'][:,0] == bid
-        z = f['/NeFromPower/Altitude'].value
-
-    dt = array([datetime.utcfromtimestamp(T) for T in t[:,0]])
+        snr = f['/NeFromPower/SNR'][:,bind,:].squeeze().T
+        z = f['/NeFromPower/Altitude'][bind,:].squeeze()/1e3
 #%% return requested beam data only
-    zensnr = snr[:,bind,:].squeeze()
-    zenz = z[bind,:].squeeze()/1e3
-    return DataFrame(index=zenz,columns=dt,data=zensnr.T)
-    #%%
+    return DataFrame(index=z,columns=t,data=snr)
 
-def plotsnr(snr,fn,tlim=None,vlim=(None,None),zlim=(90,None)):
+def plotsnr(snr,fn,tlim=None,vlim=(None,None),zlim=(90,None),ctxt='',mint=1):
     assert isinstance(snr,DataFrame)
-    fn = Path(fn)
 
-
-    fg = figure(figsize=(8,12))
+    fg = figure(figsize=(10,12))
     ax =fg.gca()
     h=ax.pcolormesh(snr.columns.values,snr.index.values,
                      10*log10(masked_invalid(snr.values)),
@@ -63,22 +112,18 @@ def plotsnr(snr,fn,tlim=None,vlim=(None,None),zlim=(90,None)):
     ax.set_ylim(zlim)
 
     ax.set_ylabel('altitude [km]')
-    ax.set_title(fn.name)
-
+    ax.set_title('{}  {}'.format(fn.name, snr.columns[0].strftime('%Y-%m-%d')))
+#%% date ticks
     fg.autofmt_xdate()
-    if snr.shape[1]<20:
-        mint=1
-    elif snr.shape[1]<50:
-        mint=5
-    else:
-        mint=15
-    ax.xaxis.set_major_locator(MinuteLocator(interval=mint))
+    if tlim and tlim[1]-tlim[0]>3600:
+        ticker = MinuteLocator(interval=mint)
+    ax.xaxis.set_major_locator(ticker)
     ax.tick_params(axis='both', which='both', direction='out')
 
     c=fg.colorbar(h,ax=ax)
-    c.set_label('SNR [dB]')
+    c.set_label(ctxt)
 
-def plotsnr1d(snr,fn,t0,zlim):
+def plotsnr1d(snr,fn,t0,zlim=(90,None)):
     assert isinstance(snr,DataFrame)
     tind=absolute(snr.columns-t0).argmin()
     tind = range(tind-1,tind+2)
@@ -99,8 +144,8 @@ def plotsnr1d(snr,fn,t0,zlim):
     ax.set_xlabel('SNR [dB]')
     ax.set_ylabel('altitude [km]')
 
-def plotsnrmesh(snr,fn,vlim):
-
+def plotsnrmesh(snr,fn,t0,vlim,zlim=(90,None)):
+    assert isinstance(snr,DataFrame)
     tind=absolute(snr.columns-t0).argmin()
     tind=range(tind-5,tind+6)
     t1 = snr.columns[tind]
@@ -122,26 +167,41 @@ def plotsnrmesh(snr,fn,vlim):
     ax3.autoscale(True,'y',tight=True)
 
 if __name__ == '__main__':
-    rawfn = Path('~/data/2013-04-14/d0346834.dt3.h5')
-    fn = (Path('~/data/20130413.001_ac_30sec.h5'),
-          Path('~/data/20130413.001_lp_30sec.h5'))
-    dp = '/NeFromPower/SNR'
-    tp = '/Time/UnixTime'
-    beamid = 64157 #zenith
-    vlim = (-20,None)
-    t0 = datetime(2013,4,14,8,54,30)
-    zlim=(90,None)
+    from argparse import ArgumentParser
+    p = ArgumentParser(description='demo of loading raw ISR data')
+    p.add_argument('fn',help='HDF5 file to read')
+    p.add_argument('--t0',help='time to extract 1-D vertical plot')
+    p.add_argument('--samples',help='use raw samples (lowest level data commnoly available)',action='store_true')
+    p.add_argument('--beamid',help='beam id 64157 zenith beam',type=int,default=64157)
+    p.add_argument('--vlim',help='min,max for SNR plot [dB]',type=float,nargs=2,default=(35,None))
+    p.add_argument('--zlim',help='min,max for altitude [km]',type=float,nargs=2,default=(90,None))
+    p.add_argument('--tlim',help='min,max time range yyyy-mm-ddTHH:MM:SSz',nargs=2)
+    p = p.parse_args()
+
+#    fn = (Path('~/data/20130413.001_ac_30sec.h5'),
+#          Path('~/data/20130413.001_lp_30sec.h5'))
+#    t0 = datetime(2013,4,14,8,54,30)
+#    for b in ((datetime(2013,4,14,8),   datetime(2013,4,14,10)),
+#              (datetime(2013,4,14,8,50),datetime(2013,4,14,9,0))):
 #%%
-    snrraw = snrvtime_raw(rawfn,beamid)
-    plotsnr(snrraw,rawfn,vlim=(47,None))
+    fn = Path(p.fn).expanduser()
+#%% raw (lowest common level)
+    if fn.name.endswith('.dt3.h5') and p.samples:
+        snrsamp = snrvtime_samples(fn,p.beamid)
+        plotsnr(snrsamp,fn,tlim=p.tlim,vlim=p.vlim,ctxt='Power [dB]')
+#%% 12 second (numerous integrated pulses)
+    elif fn.name.endswith('.dt3.h5'):
+        #vlim=(47,None)
+        snr12sec = snrvtime_raw12sec(fn,p.beamid)
+        plotsnr(snr12sec,fn,vlim=p.vlim,ctxt='SNR [dB]')
+#%% 30 second integegration plots
+    else:
+        #vlim=(-20,None)
+        snr = snrvtime_fit(fn,p.beamid)
 
-    for f in fn:
-        snr    = snrvtime_fit(f,beamid)
-#        plotsnr1d(snr,f,t0,zlim)
-        for b in ((datetime(2013,4,14,8),   datetime(2013,4,14,10)),
-                  (datetime(2013,4,14,8,50),datetime(2013,4,14,9,0))):
-            plotsnr(snr,f,b,vlim)
-#            plotsnrmesh(snr,f,vlim)
-
+        if p.t0:
+            plotsnr1d(snr,fn,p.t0,p.zlim)
+        plotsnr(snr,fn,p.tlim,p.vlim)
+        plotsnrmesh(snr,fn,p.t0,p.vlim,p.zlim)
 
     show()

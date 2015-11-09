@@ -19,48 +19,29 @@ from tempfile import gettempdir
 from GeoData import ioclass
 from GeoData.IQTools import CenteredLagProduct, FormatIQ
 #%% temporary hard-set parameters
-ptlen = 121 #TODO: adapt to file contents
 npats = 10 #TODO: adapt to file contents
-nLags = 12 #TODO: adapt to file contents
-
 nrec_orig = 30
 
-def spcorrbeam(rootdir,h5ext,beamids,outdir):
-    Nranges = 228 #TODO: adapt to file contents
-#%% find the hdf5 files
-    rootdir = Path(rootdir).expanduser()
-    if rootdir.is_file():
-        flist=[rootdir]
-    elif rootdir.is_dir():
-        flist = sorted(rootdir.glob('*'+h5ext))
-
-    if not flist:
-        raise ValueError('no files found with {}'.format(h5ext))
-
-    h5fn = flist[0] #NOTE: choosing the first file only
-    print('processing {}'.format(h5fn))
+def spcorrbeam(h5fn,h5ext,beamids,outdir):
+    h5fn = Path(h5fn).expanduser()
 #%% Set up original beam patterns
+    with h5py.File(str(h5fn),'r',libver='latest') as f:
+        nLags = f['/S/Data/Acf/Lags'].size
+        Nranges = f['/S/Data/Acf/Range'].shape[1]
+        test_data = f['/Raw11/Raw/RadacHeader/BeamCode'][:2,:].ravel()
+        ptlen = f['/S/Data/Beamcodes'].shape[1]
+        txbaud = f['/S/Data']['TxBaud'].value
+        ambfunc = f['/S/Data']['Ambiguity'].value
+        pwidth = f['/S/Data']['Pulsewidth'].value
     rclen = 20*ptlen
     pattern1 = np.array(beamids)
 
     fullpat = np.array([pattern1[x%4] for x in range(ptlen)])
 #%% Output
-    lags = np.arange(0,nLags)*20e-6
-    #These are the paths INSIDE each HDF5 file, by SRI convention
-    h5Paths = {'S'          :   ('/S',''),
-               'Data'       :   ('/S/Data',''),
-               'Data_Acf'   :   ('/S/Data/Acf',''),
-               'Data_Power' :   ('/S/Data/Power',''),
-               }
+#    lags = np.arange(0,nLags)*20e-6
 #%% set up the output directory structure
     outpaths = mkoutdir(outdir,npats)
 #%% Open and read file
-    # NOTE: This will be changed into a loop at some point
-    with h5py.File(str(h5fn),'r',libver='latest') as f:
-        test_data = f['/Raw11/Raw/RadacHeader/BeamCode'][:2,:].ravel()
-        txbaud = f['/S/Data']['TxBaud'].value
-        ambfunc = f['/S/Data']['Ambiguity'].value
-        pwidth = f['/S/Data']['Pulsewidth'].value
     # Determine the start point
     stpnt = 0
     while True:
@@ -78,14 +59,14 @@ def spcorrbeam(rootdir,h5ext,beamids,outdir):
 #%% Go through all the beams
     with h5py.File(str(h5fn),'r',libver='latest') as f:
         all_beams_mat = f['/Raw11/Raw/RadacHeader/BeamCode'].value #keep this
-    all_beams = all_beams_mat.ravel() #need raveled and original
-    pnts = all_beams.size
+#    all_beams = all_beams_mat.ravel() #need raveled and original
+#    pnts = all_beams.size
 
     # to get the patterns just take themodulo with the file size afterward
     ## TODO Work on this when you get back##########################
     des_recs = 30
     #TODO should this be //rclen or /rclen
-    maxrecs = {x:(pnts-((x+1)*2*ptlen+stpnt))/rclen +1 for x in range(npats)}
+#    maxrecs = {x:(pnts-((x+1)*2*ptlen+stpnt))/rclen +1 for x in range(npats)}
 
     # determine the pattern
     patternlocdic = {(x):[(np.arange(x*2*ptlen+stpnt+y*rclen,(x+1)*2*ptlen+stpnt+y*rclen)) for y in range(des_recs)] for x in range(10)}
