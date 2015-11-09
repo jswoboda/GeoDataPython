@@ -4,18 +4,19 @@ reading PFISR data down to IQ samples
 """
 from __future__ import division
 from pathlib2 import Path
-from datetime import datetime
+from datetime import datetime,timedelta
 from pytz import UTC
+from dateutil.parser import parse
 from numpy import array,log10,absolute, meshgrid,empty,nonzero
 from numpy.ma import masked_invalid
 import h5py
 from pandas import DataFrame
 from matplotlib.pyplot import figure,show
-from matplotlib.dates import MinuteLocator
+from matplotlib.dates import MinuteLocator,SecondLocator
 from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns
 sns.color_palette(sns.color_palette("cubehelix"))
-sns.set(context='paper', style='ticks')
+sns.set(context='poster', style='ticks')
 sns.set(rc={'image.cmap': 'cubehelix_r'}) #for contour
 
 
@@ -98,7 +99,7 @@ def snrvtime_fit(fn,bid):
 #%% return requested beam data only
     return DataFrame(index=z,columns=t,data=snr)
 
-def plotsnr(snr,fn,tlim=None,vlim=(None,None),zlim=(90,None),ctxt='',mint=1):
+def plotsnr(snr,fn,tlim=None,vlim=(None,None),zlim=(90,None),ctxt=''):
     assert isinstance(snr,DataFrame)
 
     fg = figure(figsize=(10,12))
@@ -115,13 +116,27 @@ def plotsnr(snr,fn,tlim=None,vlim=(None,None),zlim=(90,None),ctxt='',mint=1):
     ax.set_title('{}  {}'.format(fn.name, snr.columns[0].strftime('%Y-%m-%d')))
 #%% date ticks
     fg.autofmt_xdate()
-    if tlim and tlim[1]-tlim[0]>3600:
-        ticker = MinuteLocator(interval=mint)
+    if tlim:
+        tlim[0],tlim[1] = parse(tlim[0]), parse(tlim[1])
+        tdiff = tlim[1]-tlim[0]
+    else:
+        tdiff = snr.columns[-1] - snr.columns[0]
+
+    if tdiff>timedelta(minutes=20):
+        ticker = MinuteLocator(interval=5)
+    elif (timedelta(minutes=1)<tdiff) & (tdiff<=timedelta(minutes=20)):
+        ticker = MinuteLocator(interval=1)
+    else:
+        ticker = SecondLocator(interval=5)
+
     ax.xaxis.set_major_locator(ticker)
     ax.tick_params(axis='both', which='both', direction='out')
 
-    c=fg.colorbar(h,ax=ax)
+    c=fg.colorbar(h,ax=ax,fraction=0.075,shrink=0.5)
     c.set_label(ctxt)
+
+    #last command
+    fg.tight_layout()
 
 def plotsnr1d(snr,fn,t0,zlim=(90,None)):
     assert isinstance(snr,DataFrame)
