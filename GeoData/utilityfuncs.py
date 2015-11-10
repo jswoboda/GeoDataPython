@@ -139,7 +139,9 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     #NOTE temporarily passing dataloc as Numpy array till rest of program is updated to Pandas
     return (data,coordnames,dataloc.values,sensorloc,uniq_times,sensor_data[5][1].decode('utf8'))
 
-def readSRI_h5(filename,paramstr,timelims = None):
+def readSRI_h5(fn,params,timelims = None):
+    assert isinstance(params,(tuple,list))
+    fn = expanduser(fn)
     '''This will read the SRI formated h5 files for RISR and PFISR.'''
     coordnames = 'Spherical'
 
@@ -153,6 +155,7 @@ def readSRI_h5(filename,paramstr,timelims = None):
                 'Te':('/FittedParams/Fits',  (-1,1)),
                 'Ti':('/FittedParams/Errors',(-1,1))}
 
+<<<<<<< HEAD
     with h5py.File(filename,'r',libver='latest') as f:
         # Get the times and time lims
         times = f['/Time/UnixTime'].value
@@ -163,12 +166,24 @@ def readSRI_h5(filename,paramstr,timelims = None):
         # Get the locations of the data points
         rng = f['/FittedParams/Range'].value / 1e3
         angles = f['/BeamCodes'][:,1:2].value
+=======
+    with h5py.File(fn,'r',libver='latest') as f:
+        # Get the times and time lims
+        times = f['/Time/UnixTime'].value
+        # get the sensor location
+        sensorloc = np.array([f['/Site/Latitude'].value,
+                              f['/Site/Longitude'].value,
+                              f['/Site/Altitude'].value])
+        # Get the locations of the data points
+        rng = f['/FittedParams/Range'].value / 1e3
+        angles = f['/BeamCodes'][:,1:3]
+>>>>>>> d6d4929ea39dbfca8db4f00ef5ff005ad1fdba85
 
     nt = times.shape[0]
     if timelims is not None:
-        timelog = times[:,0]>= timelims[0] and times[:,1]<timelims[1]
-        times = times[timelog,:]
+        times = times[(times[:,0]>= timelims[0]) & (times[:,1]<timelims[1]) ,:]
         nt = times.shape[0]
+<<<<<<< HEAD
 #
     nrng = rng.shape[1]
     repangles = np.tile(angles,(1,2.0*nrng))
@@ -185,15 +200,36 @@ def readSRI_h5(filename,paramstr,timelims = None):
             if not istr in list(pathdict.keys()):
                 logging.warning(istr + ' is not a valid parameter name.')
 
+=======
+# allaz, allel corresponds to rng.ravel()
+    allaz = np.tile(angles[:,0],rng.shape[1])
+    allel = np.tile(angles[:,1],rng.shape[1])
+
+    dataloc =np.vstack((rng.ravel(),allaz,allel)).T
+    # Read in the data
+    data = {}
+    with h5py.File(fn,'r',libver='latest') as f:
+        for istr in params:
+            if not istr in pathdict.keys(): #list() NOT needed
+                logging.error('{} is not a valid parameter name.'.format(istr))
+>>>>>>> d6d4929ea39dbfca8db4f00ef5ff005ad1fdba85
                 continue
             curpath = pathdict[istr][0]
             curint = pathdict[istr][-1]
 
+<<<<<<< HEAD
             if curint is None:
                 tempdata = f[curpath].value
             else:
                 tempdata = f[curpath][:,:,:,curint[0],curint[1]].value
             data[istr] = np.array([tempdata[iT,:,:].ravel() for iT in range(nt)]).transpose()
+=======
+            if curint is None: #3-D data
+                tempdata = f[curpath]
+            else: #5-D data -> 3-D data
+                tempdata = f[curpath][:,:,:,curint[0],curint[1]]
+            data[istr] = np.array([tempdata[iT,:,:].ravel() for iT in range(nt)]).T
+>>>>>>> d6d4929ea39dbfca8db4f00ef5ff005ad1fdba85
 
     return (data,coordnames,dataloc,sensorloc,times,None)
 
@@ -303,11 +339,16 @@ def readIono(iono):
 #data, coordnames, dataloc, sensorloc, times = readMad_hdf5('/Users/anna/Research/Ionosphere/2008WorldDaysPDB/son081001g.001.hdf5', ['ti', 'dti', 'nel'])
 
 def readAllskyFITS(flist,azelfn,heightkm,treq):
+<<<<<<< HEAD
     """ :author: Michael Hirsch, Greg Starr
+=======
+    """ @author: Michael Hirsch, Greg Starr
+>>>>>>> d6d4929ea39dbfca8db4f00ef5ff005ad1fdba85
     For example, this works with Poker Flat DASC all-sky, FITS data available from:
     https://amisr.asf.alaska.edu/PKR/DASC/RAW/
 
     This function will read a FITS file into the proper GeoData variables.
+<<<<<<< HEAD
 
     inputs:
     ------
@@ -315,6 +356,13 @@ def readAllskyFITS(flist,azelfn,heightkm,treq):
     azmap - A file name of the az mapping.
     elmap - A file name of the elevation maping
     heightkm - The height the data will be projected on to in km
+=======
+    inputs
+    flist - A list of Fits files that will be read in.
+    azmap - A file name of the az mapping.
+    elmap - A file name of the elevation maping
+    hightkm - The height the data will be projected on to in km
+>>>>>>> d6d4929ea39dbfca8db4f00ef5ff005ad1fdba85
     treq: pair or vector of ut1_unix times to load
     """
     if isinstance(flist,string_types):

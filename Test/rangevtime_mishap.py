@@ -54,6 +54,7 @@ def makeplot(isrName,optName,azelfn,tbounds,vbounds,isrparams,showbeam,scatterar
     for j,ae in enumerate(beamazel):
         for i,(b,p,c,tt,ax) in enumerate(zip(vbnd,isrparams,cmap,titles,axs.ravel())):
             rangevstime(isr,ae,b,p[:2],tbounds=tbounds,title=tt,cmap=c,
+<<<<<<< HEAD
                         ax=ax,fig=fg,ic=i==0,ir=j==len(axs)-1,it=j==0)
 #%% show ISR beams all alone in az/el plot
     #plotbeamposGD(isr) #,minel=75.,elstep=5.
@@ -61,6 +62,15 @@ def makeplot(isrName,optName,azelfn,tbounds,vbounds,isrparams,showbeam,scatterar
    # plotazelscale(opt)
 #%% plots optical
     #plotoptical(opt,vbounds,showbeam,scatterarea)
+=======
+                        ax=ax,fig=fg,ic=i==0,ir=j==axs.shape[0]-1,it=j==0)
+#%% show ISR beams all alone in az/el plot
+    plotbeamposGD(isr) #,minel=75.,elstep=5.
+#%% show az/el contours on image
+    plotazelscale(opt)
+#%% plots optical
+    plotoptical(opt,vbounds,showbeam,scatterarea)
+>>>>>>> d6d4929ea39dbfca8db4f00ef5ff005ad1fdba85
 #%% plot overlaid image and ISR contour
     plotisropt(isr,opt,slicealtkm,vbounds,tind,beamloconly=True)
 
@@ -102,10 +112,19 @@ if __name__ == "__main__":
     p.add_argument('--isr',help='ISR parameters to select',nargs='+',default=['nel','ti','te','vo'])
     p.add_argument('--vlim',help='limits for camera image brightness (contrast adjust)',nargs=2)
     p.add_argument('-a','--slicealt',help='slice altitude km',type=float,default=110.)
+<<<<<<< HEAD
     p.add_argument('--tind',help='debug: pick specific indices from time range to plot',type=int,nargs='+')
     p = p.parse_args()
 #%% date / event select
     scatterarea=100 #in case not more accurately specfied vs. fov
+=======
+    p.add_argument('--tind',help='debug: pick specific indices from time range to plot',type=int,nargs='+',default=[0])
+    p = p.parse_args()
+#%% date / event select
+    scatterarea=100 #in case not more accurately specfied vs. fov
+    tind = p.tind if p.tind else [2]       #arbitrary
+    isr = p.isr
+>>>>>>> d6d4929ea39dbfca8db4f00ef5ff005ad1fdba85
 
     if p.date == '2011-03-02':
         vlim = p.vlim if p.vlim else (50,250)
@@ -125,7 +144,11 @@ if __name__ == "__main__":
 
         flist = ('~/data/2013-04-11/ISR/pfa130411.002.hdf5',None,None)
 
+<<<<<<< HEAD
     elif p.date == '2013-04-14_cam0':
+=======
+    elif p.date == '2013-04-14_cam0_3min':
+>>>>>>> d6d4929ea39dbfca8db4f00ef5ff005ad1fdba85
         vlim = p.vlim if p.vlim else (250,40000) #it's bright 8:54:25-30 !
         scatterarea = 880
 
@@ -136,6 +159,21 @@ if __name__ == "__main__":
                  '~/data/2013-04-14/HST/2013-04-14T8-54_hst0.h5',
                  '~/data/2013-04/hst0cal.h5')
 
+<<<<<<< HEAD
+=======
+    elif p.date == '2013-04-14_cam0_30sec':
+        isr = ['Ne']
+        vlim = p.vlim if p.vlim else (250,40000) #it's bright 8:54:25-30 !
+        scatterarea = 880
+
+        tbounds=(datetime(2013,4,14,8,54,25,tzinfo=UTC),
+                 datetime(2013,4,14,8,54,30,tzinfo=UTC))
+
+        flist = ('~/data/20130413.001_ac_30sec.h5',
+                 '~/data/2013-04-14/HST/2013-04-14T8-54_hst0.h5',
+                 '~/data/2013-04/hst0cal.h5')
+
+>>>>>>> d6d4929ea39dbfca8db4f00ef5ff005ad1fdba85
     elif p.date == '2013-04-14_cam1':
         vlim = p.vlim if p.vlim else (1050,3500) #it's bright 8:54:25-30 !
         scatterarea = 880
@@ -167,7 +205,11 @@ if __name__ == "__main__":
         flist = ('~/data/2011-03-01/ISR/pfa110301.003.hdf5',None,None)
 
 
+<<<<<<< HEAD
     makeplot(flist[0],flist[1],flist[2],tbounds,vlim,p.isr,p.showbeams,scatterarea,p.slicealt,tind)
+=======
+    makeplot(flist[0],flist[1],flist[2],tbounds,vlim,isr,p.showbeams,scatterarea,p.slicealt,tind)
+>>>>>>> d6d4929ea39dbfca8db4f00ef5ff005ad1fdba85
 #%%
 
     show()
