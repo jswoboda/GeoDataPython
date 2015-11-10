@@ -2,7 +2,7 @@
 from __future__ import division, absolute_import
 from os.path import expanduser
 from datetime import datetime
-from numpy import array
+from numpy import array,log10
 import h5py
 from matplotlib.pyplot import figure,show
 from matplotlib.colors import LogNorm
@@ -25,14 +25,15 @@ dt = array([datetime.utcfromtimestamp(T) for T in t[:,0]])
 
 fg = figure()
 ax =fg.gca()
-h=ax.pcolormesh(dt,zenz,zensnr.T,
-              norm=LogNorm())
+h=ax.pcolormesh(dt,zenz,10*log10(zensnr.T),)
+             # norm=LogNorm())
 ax.autoscale(True,tight=True)
 ax.set_xlim(datetime(2013,4,14,8),datetime(2013,4,14,10))
 ax.set_ylim(90,None)
 ax.set_ylabel('altitude [km]')
 fg.autofmt_xdate()
-fg.colorbar(h,ax=ax)
+c=fg.colorbar(h,ax=ax)
+c.set_label('SNR [dB]')
 
 
 show()
