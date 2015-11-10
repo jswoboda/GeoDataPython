@@ -299,17 +299,18 @@ def readIono(iono):
 #data, coordnames, dataloc, sensorloc, times = readMad_hdf5('/Users/anna/Research/Ionosphere/2008WorldDaysPDB/son081001g.001.hdf5', ['ti', 'dti', 'nel'])
 
 def readAllskyFITS(flist,azelfn,heightkm,treq):
-    """ @author: Michael Hirsch, Greg Starr
+    """ :author: Michael Hirsch, Greg Starr
     For example, this works with Poker Flat DASC all-sky, FITS data available from:
     https://amisr.asf.alaska.edu/PKR/DASC/RAW/
 
     This function will read a FITS file into the proper GeoData variables.
-    inputs
+
+    inputs:
+    ------
     flist - A list of Fits files that will be read in.
     azmap - A file name of the az mapping.
     elmap - A file name of the elevation maping
-    hightkm - The height the data will be projected on to in km
-    treq: pair or vector of ut1_unix times to load
+    heightkm - The height the data will be projected on to in km
     """
     if isinstance(flist,string_types):
         flist=[flist]

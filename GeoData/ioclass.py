@@ -50,7 +50,7 @@ class outputFileClass:
 
     def openFile(self):
         """ open file self.fname """
-        self.fhandle = h5py.File(self.fname, mode = "a",libver='latest')
+        self.fhandle = h5py.File(str(self.fname), mode = "a",libver='latest')
 
     def closeFile(self):
         """ close self.fhandle """

@@ -54,13 +54,14 @@ def makeplot(isrName,optName,azelfn,tbounds,vbounds,isrparams,showbeam,scatterar
     for j,ae in enumerate(beamazel):
         for i,(b,p,c,tt,ax) in enumerate(zip(vbnd,isrparams,cmap,titles,axs.ravel())):
             rangevstime(isr,ae,b,p[:2],tbounds=tbounds,title=tt,cmap=c,
-                        ax=ax,fig=fg,ic=i==0,ir=j==axs.shape[0]-1,it=j==0)
+                        ax=ax,fig=fg,ic=i==0,ir=j==len(axs)-1,it=j==0)
 #%% show ISR beams all alone in az/el plot
-    plotbeamposGD(isr) #,minel=75.,elstep=5.
+    #plotbeamposGD(isr) #,minel=75.,elstep=5.
 #%% show az/el contours on image
-    plotazelscale(opt)
+   # plotazelscale(opt)
 #%% plots optical
-    plotoptical(opt,vbounds,showbeam,scatterarea)
+    #plotoptical(opt,vbounds,showbeam,scatterarea)
+
 #%% plot overlaid image and ISR contour
     plotisropt(isr,opt,slicealtkm,vbounds,tind,beamloconly=True)
 
@@ -102,7 +103,7 @@ if __name__ == "__main__":
     p.add_argument('--isr',help='ISR parameters to select',nargs='+',default=['nel','ti','te','vo'])
     p.add_argument('--vlim',help='limits for camera image brightness (contrast adjust)',nargs=2)
     p.add_argument('-a','--slicealt',help='slice altitude km',type=float,default=110.)
-    p.add_argument('--tind',help='debug: pick specific indices from time range to plot',type=int,nargs='+',default=[0])
+    p.add_argument('--tind',help='debug: pick specific indices from time range to plot',type=int,nargs='+')
     p = p.parse_args()
 #%% date / event select
     scatterarea=100 #in case not more accurately specfied vs. fov
@@ -128,6 +129,7 @@ if __name__ == "__main__":
         flist = ('~/data/2013-04-11/ISR/pfa130411.002.hdf5',None,None)
 
     elif p.date == '2013-04-14_cam0_3min':
+
         vlim = p.vlim if p.vlim else (250,40000) #it's bright 8:54:25-30 !
         scatterarea = 880
 
@@ -179,7 +181,6 @@ if __name__ == "__main__":
                  parse('2011-03-01T11:13Z'))
 
         flist = ('~/data/2011-03-01/ISR/pfa110301.003.hdf5',None,None)
-
 
     makeplot(flist[0],flist[1],flist[2],tbounds,vlim,isr,p.showbeams,scatterarea,p.slicealt,tind)
 #%%
