@@ -355,11 +355,12 @@ def readAllskyFITS(flist,azelfn,heightkm,treq):
 def readNeoCMOS(imgfn, azelfn, heightkm=110.,treq=None):
     """
     treq is pair or vector of UT1 unix epoch times to load--often file is so large we can't load all frames into RAM.
-    assumes that /rawimg is a 3-D array
+    assumes that /rawimg is a 3-D array Nframe x Ny x Nx
     """
     assert isinstance(imgfn,string_types)
     assert isinstance(azelfn,string_types)
     assert isinstance(heightkm,(integer_types,float))
+
     imgfn = expanduser(imgfn)
     azelfn = expanduser(azelfn)
 #%% load data
@@ -380,7 +381,7 @@ def readNeoCMOS(imgfn, azelfn, heightkm=110.,treq=None):
             mask = np.ones(f['/rawimg'].shape[0]).astype(bool)
 
         if mask.sum()*npix*2 > 1e9: #loading more than 1GByte into RAM
-            logging.warning('trying to load very large amount of image data, your program may crash')
+            logging.warning('trying to load {:.1f} GB of image data, your program may crash'.format(mask.sum()*npix*2/1e9))
 
         imgs = f['/rawimg'][mask,...]
 #%% plate scale
