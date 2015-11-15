@@ -479,7 +479,6 @@ def sliceGDsphere(geod,coordnames ='cartesian' ,vbounds=None,time = 0,gkey = Non
     return(ploth,cbar2)
 
 def plotbeamposfig(geod,height,coordnames,fig=None,ax=None,title=''):
-    d2r = sp.pi/180.
     if (ax is None) and (fig is None):
         fig = plt.figure(facecolor='white')
         ax = fig.gca()
@@ -489,9 +488,9 @@ def plotbeamposfig(geod,height,coordnames,fig=None,ax=None,title=''):
     (beams,beaminds,beamnums) = uniquerows(geod.dataloc[:,1:])
     az = beams[:,0]
     el = beams[:,1]
-    rho = height*sp.tan((90-el)*d2r)
-    y = rho*sp.cos(az*d2r)
-    x = rho*sp.sin(az*d2r)
+    rho = height*np.tan(np.radians((90-el)))
+    y = rho*np.cos(np.radians(az))
+    x = rho*np.sin(np.radians(az))
 
     ploth = ax.scatter(x,y)
     return(ploth)
