@@ -25,6 +25,7 @@ except Exception as e:
     pass
 #
 from .CoordTransforms import angles2xy,sphereical2Cartisian
+from .GeoData import GeoData
 # NOTE: using usetex can make complicated plots unstable and crash
 #try:
 #    plt.rc('text', usetex=True)
@@ -666,20 +667,27 @@ def insertinfo(strin,key='',posix=None,posixend = None):
             stroutall = strout
     return stroutall
 
-def plotazelscale(opt):
+def plotazelscale(opt,az=None,el=None):
     """
     diagnostic: plots az/el map over test image
     Michael Hirsch
     """
-    img = opt.data['optical'][0,...]
-    assert img.ndim==2
-    az = opt.dataloc[:,1].reshape(img.shape)
-    el = opt.dataloc[:,2].reshape(img.shape)
-    assert img.shape==az.shape==el.shape
+    if isinstance(opt,GeoData):
+        img = opt.data['optical'][0,...]
+        az = opt.dataloc[:,1].reshape(img.shape)
+        el = opt.dataloc[:,2].reshape(img.shape)
+    elif isinstance(opt,np.ndarray):
+        img = opt
+    else:
+        raise NotImplementedError('not sure what your opt array {} is'.format(type(opt)))
+
+    assert img.ndim==2, 'just one image please'
+    assert img.shape==az.shape==el.shape,'do you need to reshape your az/el into 2-D like image?'
 
     fg,ax = plt.subplots(1,2,figsize=(12,6))
     for a,q,t in zip(ax,(az,el),('azimuth','elevation')):
-        a.imshow(img,origin='bottom',interpolation='none',cmap='gray')
+        a.imshow(img,origin='lower',interpolation='none',cmap='gray')
         c=a.contour(q)
         a.clabel(c, inline=1,fmt='%0.1f')
         a.set_title(t)
+        a.grid(False)

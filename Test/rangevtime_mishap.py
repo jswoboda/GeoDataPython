@@ -72,7 +72,7 @@ def plotoptical(opt,vbounds=(None,None),showbeam=True,scatterarea=80):
     fg = figure()
     ax = fg.gca()
     hi=ax.imshow(opt.data['optical'][0,...],vmin=vbounds[0],vmax=vbounds[1],
-                 interpolation='none',origin='bottom',cmap='gray')
+                 interpolation='none',origin='lower',cmap='gray')
     fg.colorbar(hi,ax=ax)
     ht = ax.set_title('')
     ax.set_axis_off() #no ticks
