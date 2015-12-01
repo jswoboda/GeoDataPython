@@ -33,14 +33,6 @@ from .GeoData import GeoData
 #except Exception as e:
 #    logging.info('Latex install not complete, falling back to basic fonts.  sudo apt-get install dvipng')
 #
-try:
-    import seaborn as sns
-    sns.color_palette(sns.color_palette("cubehelix"))
-    sns.set(context='notebook', style='whitegrid',font_scale=2,
-            rc={'image.cmap': 'cubehelix_r'}) #for contour
-except Exception as e:
-    logging.info('could not import seaborn  {}'.format(e))
-#
 sfmt = ScalarFormatter(useMathText=True)
 #%%
 def _dointerp(geodatalist,altlist,xyvecs,tind,beamloconly=False):
