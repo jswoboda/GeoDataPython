@@ -460,3 +460,68 @@ def readAVI(fn,fwaem):
 
     return data,coordnames,dataloc,sensorloc,times
 
+#%% Mahali
+def readIonofiles(filename):
+    """iono file format
+           1) time (as float day of year 0.0 - 366.0)
+           2) year
+           3) rec. latitude
+           4) rec. longitude
+           5) line-of-sight tec (TECu)
+           6) error in line-of-sight tec (TECu)
+           7) vertical tec (TECu)
+           8) azimuth to satellite
+           9) elevation to satellite
+           10) mapping function (line of sight / vertical)
+           11) pierce point latitude (350 km)
+           12) pierce point longitude (350 km)
+           13) satellite number (1-32)
+           14) site (4 char)
+           15) recBias (TECu)
+           16) recBiasErr(TECu)
+               #%f %f %f %f %f %f %f %f %f %f %f %f %f %s %s %s'
+    """
+
+#    fd = open(filename,'r')
+
+#    data = np.loadtxt(fd,
+#               dtype={'names': ('ToY', 'year', 'rlat', 'rlong', 'TEC', 'nTEC','vTEC','az','el','mf','plat','plon','sat','site','rbias','nrbias'),
+#               'formats': ('float', 'float','float','float','float','float','float','float','float','float','float','float','float','S4', 'float','float')})
+#    fd.close()
+    data = np.genfromtxt(filename)
+    data = data.transpose()
+    #%% Get in GeoData format
+    doy = data[0]
+    year=data[1]
+    if np.all(year==year[1]):
+        unixyear =datetime(year[0],1,1,0,0,0).total_seconds()
+        uttime = unixyear+24*3600*sp.column_stack((doy,doy+1))
+    else:
+        (y_u,y_iv) = np.unique(year,return_inverse=True)
+        unixyearu = sp.array([datetime(iy,1,1,0,0,0).total_seconds() for iy in y_u])
+        unixyear = unixyearu[y_iv]
+        uttime = unixyear+24*3600*sp.column_stack((doy,doy+1))
+
+    reclat = data[2]
+    reclong = data[3]
+    TEC = data[4]
+
+    nTEC = data[5]
+
+    vTEC = data[6]
+    az2sat = data[7]
+    el2sat = data[8]
+    mapfunc = data[9]
+
+    piercelat = data[10]
+    piercelong = data[11]
+    satnum= data[12]
+    site = data[13]
+    recBias = data[14]
+    nrecBias = data[15]
+
+    data = {'TEC':TEC,'nTEC':nTEC,'vTEC':vTEC,'recBias':recBias,'nrecBias':nrecBias}
+    coordnames = 'WGS84'
+    sensorloc = sp.nan*sp.ones(3)
+    dataloc = sp.column_stack((piercelat,piercelong,350e3*sp.ones_like(piercelat)))
+    return (data,coordnames,dataloc,sensorloc,uttime)
