@@ -293,7 +293,8 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='j
     else:
         return surflist
 
-def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',fig=None,ax=None,title='',cbar=True):
+def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',fig=None,
+              ax=None,title='',cbar=True,m=None):
 
     #xyzvecs is the area that the data covers.
     poscoords = ['cartesian','wgs84','enu','ecef']
@@ -341,20 +342,34 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
         ax = fig.gca()
     elif ax is None:
         ax = fig.gca()
-
-    ploth = ax.pcolor(M1,M2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
-    ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(), xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
-    if cbar:
-        cbar2 = plt.colorbar(ploth, ax=ax, format='%.0e')
+    if m is None:
+        ploth = ax.pcolor(M1,M2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
+        ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(),
+                 xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
+        if cbar:
+            cbar2 = plt.colorbar(ploth, ax=ax, format='%.0e')
+        else:
+            cbar2 = None
+        ax.set_title(title)
+        ax.set_xlabel(veckeys[0])
+        ax.set_ylabel(veckeys[1])
     else:
-        cbar2 = None
-    ax.set_title(title)
-    ax.set_xlabel(veckeys[0])
-    ax.set_ylabel(veckeys[1])
+        N1,N2 = m(M1,M2)
+        ploth = m.pcolor(N1,N2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
+        ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(),
+                 xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
+        if cbar:
+            cbar2 = m.colorbar(ploth, ax=ax, format='%.0e')
+        else:
+            cbar2 = None
+        ax.set_title(title)
+        ax.set_xlabel(veckeys[0])
+        ax.set_ylabel(veckeys[1])
 
     return(ploth,cbar2)
 
-def contourGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',fig=None,ax=None,title='',cbar=True):
+def contourGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',
+              fig=None,ax=None,title='',cbar=True,m=None):
     poscoords = ['cartesian','wgs84','enu','ecef']
     assert geod.coordnames.lower() in poscoords
 
@@ -401,19 +416,34 @@ def contourGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
     elif ax is None:
         ax = fig.gca()
 
-    ploth = ax.contour(M1,M2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
-    ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(), xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
-    if cbar:
-        cbar2 = plt.colorbar(ploth, ax=ax, format='%.0e')
+    if m is None:
+        ploth = ax.contour(M1,M2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
+        ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(),
+                 xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
+        if cbar:
+            cbar2 = plt.colorbar(ploth, ax=ax, format='%.0e')
+        else:
+            cbar2 = None
+        ax.set_title(title)
+        ax.set_xlabel(veckeys[0])
+        ax.set_ylabel(veckeys[1])
     else:
-        cbar2 = None
-    ax.set_title(title)
-    ax.set_xlabel(veckeys[0])
-    ax.set_ylabel(veckeys[1])
+        N1,N2 = m(M1,M2)
+        ploth = ax.contour(N1,N2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
+        ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(),
+                 xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
+        if cbar:
+            cbar2 = m.colorbar(ploth, ax=ax, format='%.0e')
+        else:
+            cbar2 = None
+        ax.set_title(title)
+        ax.set_xlabel(veckeys[0])
+        ax.set_ylabel(veckeys[1])
 
     return(ploth,cbar2)
 
-def scatterGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',fig=None,ax=None,title='',cbar=True,err=.1):
+def scatterGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',fig=None,
+              ax=None,title='',cbar=True,err=.1,m=None):
     """ """
     poscoords = ['cartesian','wgs84','enu','ecef']
     assert geod.coordnames.lower() in poscoords
@@ -475,17 +505,27 @@ def scatterGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
         ax = fig.gca()
     elif ax is None:
         ax = fig.gca()
+    if m is None:
+        ploth = ax.scatter(xdata,ydata,c=dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
+        ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(),
+                 xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
+        if cbar:
+            cbar2 = plt.colorbar(ploth, ax=ax, format='%.0e')
+        else:
+            cbar2 = None
 
-    ploth = ax.scatter(xdata,ydata,c=dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
-    ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(), xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
-    if cbar:
-        cbar2 = plt.colorbar(ploth, ax=ax, format='%.0e')
     else:
-        cbar2 = None
+        Xdata,Ydata = m(xdata,ydata)
+        ploth = m.scatter(Xdata,Ydata,c=dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
+        ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(),
+                 xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
+        if cbar:
+            cbar2 = m.colorbar(ploth, ax=ax, format='%.0e')
+        else:
+            cbar2 = None
     ax.set_title(title)
     ax.set_xlabel(veckeys[0])
     ax.set_ylabel(veckeys[1])
-
     return(ploth,cbar2)
 
 def sliceGDsphere(geod,coordnames ='cartesian' ,vbounds=None,time = 0,gkey = None,cmap='jet',fig=None,ax=None,title='',cbar=True):
