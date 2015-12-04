@@ -227,10 +227,12 @@ class GeoData(object):
         if ikey is None or ikey not in self.data.keys():
             # Loop through parameters and create temp variable
             for iparam in self.data.keys():
+                print("Interpolating {0}".format(iparam))
                 usepandas=True if isinstance(self.data[iparam],DataFrame) else False
                 # won't it virtually always be float?
                 New_param = np.empty((NNlocs,Nt))#,dtype=self.data[iparam].dtype)
                 for itime,tim in enumerate(self.times):
+                    print("\tInterpolating time instance {0} of {1} for parameter {2}".format(itime,len(self.times),iparam))
                     if usepandas:
                         curparam = self.data[iparam][tim] #dataframe: columns are time in this case
                     else: #assume Numpy
@@ -287,7 +289,7 @@ class GeoData(object):
         if self.coordnames=='Spherical' and newcoordname=='WGS84':
             enu = CT.cartisian2enu(self.dataloc)
             ECEF = CT.enu2ecef4vec(enu,np.tile(self.sensorloc[:2][np.newaxis,:],len(enu)))
-            return CT.ecef2wgs(ECEF)
+            return CT.ecef2wgs(ECEF).transpose()
         raise ValueError('Wrong inputs for coordnate names was given.')
 
     def checkcoords(self,newcoords,coordname):

@@ -299,13 +299,14 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
     #xyzvecs is the area that the data covers.
     poscoords = ['cartesian','wgs84','enu','ecef']
     assert geod.coordnames.lower() in poscoords
-
+    
     if geod.coordnames.lower() in ['cartesian','enu','ecef']:
         axdict = {'x':0,'y':1,'z':2}
         veckeys = ['x','y','z']
     elif geod.coordnames.lower() == 'wgs84':
-        axdict = {'lat':0,'long':1,'alt':2}
-        veckeys = ['lat','long','alt']
+        axdict = {'lat':1,'long':0,'alt':2}
+        veckeys = ['long','lat','alt']
+        
     if type(axstr)==str:
         axis=axstr
     else:
