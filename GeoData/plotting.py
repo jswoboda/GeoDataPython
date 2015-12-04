@@ -466,18 +466,17 @@ def scatterGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
 
     geod=geod.timeslice(time)
     veckeys.remove(axis.lower())
+    veckeys.append(axis.lower())
     datacoords = geod.dataloc
     xyzvecs = {l:sp.unique(datacoords[:,axdict[l]]) for l in veckeys}
     xyzvecsall = {l:datacoords[:,axdict[l]] for l in veckeys}
-    veckeys.sort()
     if geod.issatellite():
         xdata =xyzvecsall[veckeys[0]]
         ydata =xyzvecsall[veckeys[1]]
         zdata = xyzvecsall[veckeys[2]]
         indxnum = np.abs(zdata-slicenum)<err
-        rec_coords = {axdict[veckeys[0]]:xdata[indxnum],axdict[veckeys[1]]:ydata[indxnum],
-                      axdict[axis]:zdata[indxnum]}
-        new_coords = sp.zeros((indxnum.sum(),3))
+        dataout = geod.data[gkey][indxnum]
+        title = insertinfo(title,gkey,geod.times[:,0].min(),geod.times[:,1].max())
     else:
         #make matrices
         xvec = xyzvecs[veckeys[0]]
@@ -492,14 +491,14 @@ def scatterGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
         xdata = M1.flatten()
         ydata= M2.flatten()
 
-    #make coordinates
-    for ckey in rec_coords.keys():
-        new_coords[:,ckey] = rec_coords[ckey]
+        #make coordinates
+        for ckey in rec_coords.keys():
+            new_coords[:,ckey] = rec_coords[ckey]
+    
+    
+        dataout = geod.datareducelocation(new_coords,geod.coordnames,gkey)
 
-
-    dataout = geod.datareducelocation(new_coords,geod.coordnames,gkey)
-
-    title = insertinfo(title,gkey,geod.times[time,0],geod.times[time,1])
+        title = insertinfo(title,gkey,geod.times[time,0],geod.times[time,1])
 
     if (ax is None) and (fig is None):
         fig = plt.figure(facecolor='white')

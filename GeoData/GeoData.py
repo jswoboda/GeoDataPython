@@ -15,6 +15,7 @@ from copy import deepcopy
 import numpy as np
 import scipy as sp
 import scipy.interpolate as spinterp
+import scipy.spatial.qhull as qhull
 import tables
 from pandas import DataFrame
 import pdb
@@ -152,11 +153,13 @@ class GeoData(object):
         gd2 = self.copy()
         if gd2.issatellite():
             gd2.times = gd2.times[loclist]
+            gd2.dataloc = gd2.dataloc[loclist]
             for idata in gd2.datanames():
                 if isinstance(gd2.data[idata],DataFrame):
                     gd2.data[idata] = gd2.data[idata][gd2.times] #data is a vector
                 else:
-                    gd2.data[idata] = gd2.data[idata][:loclist]
+                    gd2.data[idata] = gd2.data[idata][loclist]
+                    
 
         else:
             if gd2.times.ndim==1:
@@ -206,10 +209,12 @@ class GeoData(object):
 #        print NNlocs
         new_coordsorig = deepcopy(new_coords)
         curcoords = self.__changecoords__(newcoordname)
+        d=3
 #        pdb.set_trace()
         # XXX Pulling axes where all of the elements are the same.
         # Probably not the best way to fix issue with two dimensional interpolation
         if twodinterp:
+            d=2
             firstel = new_coords[0]
             firstelold = curcoords[0]
             keepaxis = np.ones(firstel.shape, dtype=bool)
@@ -222,7 +227,9 @@ class GeoData(object):
             curcoords = curcoords[:,keepaxis]
             new_coords = new_coords[:,keepaxis]
             NNlocs = new_coords.shape[0]
-
+        if method.lower()=='linear':
+            firsttime=True
+            
         # Check to see if you're outputing all of the parameters
         if ikey is None or ikey not in self.data.keys():
             # Loop through parameters and create temp variable
@@ -252,7 +259,13 @@ class GeoData(object):
                         coordkeep = curcoords
 
                     if len(coordkeep)>0: # at least one finite value
-                        intparam = spinterp.griddata(coordkeep,curparam,new_coords,method,fill_value)
+                        if method.lower()=='linear':
+                            if firsttime:
+                                vtx, wts =interp_weights(curcoords, new_coords,d)
+                                firsttime=False
+                            intparam = interpolate(curparam, vtx, wts,fill_value)        
+                        else:
+                            intparam = spinterp.griddata(coordkeep,curparam,new_coords,method,fill_value)
                     else: # no finite values
                         intparam = np.nan
                     New_param[:,itime] = intparam
@@ -430,3 +443,18 @@ def timerepair(timear):
     timear2 = np.roll(timear,-1)
     timear2[-1]=timear2[-2]+avdiff
     return np.column_stack((timear,timear2))
+    
+#%% Interpolation speed up code
+def interp_weights(xyz, uvw,d=3):
+    tri = qhull.Delaunay(xyz)
+    simplex = tri.find_simplex(uvw)
+    vertices = np.take(tri.simplices, simplex, axis=0)
+    temp = np.take(tri.transform, simplex, axis=0)
+    delta = uvw - temp[:, d]
+    bary = np.einsum('njk,nk->nj', temp[:, :d, :], delta)
+    return vertices, np.hstack((bary, 1 - bary.sum(axis=1, keepdims=True)))
+    
+def interpolate(values, vtx, wts, fill_value=np.nan):
+    ret = np.einsum('nj,nj->n', np.take(values, vtx), wts)
+    ret[np.any(wts < 0, axis=1)] = fill_value
+    return ret
