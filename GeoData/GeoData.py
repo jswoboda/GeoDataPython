@@ -300,8 +300,9 @@ class GeoData(object):
         if self.coordnames==newcoordname:
             return self.dataloc
         if self.coordnames=='Spherical' and newcoordname=='WGS84':
-            enu = CT.cartisian2enu(self.dataloc)
-            ECEF = CT.enu2ecef4vec(enu,np.tile(self.sensorloc[:2][np.newaxis,:],len(enu)))
+            cart1 = CT.sphereical2Cartisian(self.dataloc)
+            enu = CT.cartisian2enu(cart1)
+            ECEF = CT.enu2ecef4vec(enu,np.tile(self.sensorloc[np.newaxis,:],(len(enu),1)))
             return CT.ecef2wgs(ECEF).transpose()
         raise ValueError('Wrong inputs for coordnate names was given.')
 

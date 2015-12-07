@@ -16,6 +16,7 @@ import datetime as dt
 import matplotlib.pyplot as plt
 from matplotlib.dates import DateFormatter
 from matplotlib.ticker import ScalarFormatter
+import pdb
 #from mpl_toolkits.mplot3d import Axes3D
 #from matplotlib import cm
 #from matplotlib import ticker
@@ -304,8 +305,8 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
         axdict = {'x':0,'y':1,'z':2}
         veckeys = ['x','y','z']
     elif geod.coordnames.lower() == 'wgs84':
-        axdict = {'lat':1,'long':0,'alt':2}
-        veckeys = ['long','lat','alt']
+        axdict = {'lat':0,'long':1,'alt':2}# shows which row is this coordinate
+        veckeys = ['long','lat','alt']# shows which is the x, y and z axes for plotting
         
     if type(axstr)==str:
         axis=axstr
@@ -332,6 +333,7 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
     if gkey is None:
         gkey = geod.data.keys[0]
     # get the data location
+    pdb.set_trace()
     dataout = geod.datareducelocation(new_coords,geod.coordnames,gkey)[:,time]
 
 
@@ -357,15 +359,12 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
     else:
         N1,N2 = m(M1,M2)
         ploth = m.pcolor(N1,N2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
-        ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(),
-                 xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
+
         if cbar:
-            cbar2 = m.colorbar(ploth, ax=ax, format='%.0e')
+            cbar2 = m.colorbar(ploth, format='%.0e')
         else:
             cbar2 = None
-        ax.set_title(title)
-        ax.set_xlabel(veckeys[0])
-        ax.set_ylabel(veckeys[1])
+
 
     return(ploth,cbar2)
 
@@ -378,8 +377,8 @@ def contourGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',
         axdict = {'x':0,'y':1,'z':2}
         veckeys = ['x','y','z']
     elif geod.coordnames.lower() == 'wgs84':
-        axdict = {'lat':1,'long':0,'alt':2}
-        veckeys = ['long','lat','alt']
+        axdict = {'lat':0,'long':1,'alt':2}# shows which row is this coordinate
+        veckeys = ['long','lat','alt']# shows which is the x, y and z axes for plotting
     if type(axstr)==str:
         axis=axstr
     else:
@@ -431,15 +430,12 @@ def contourGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',
     else:
         N1,N2 = m(M1,M2)
         ploth = ax.contour(N1,N2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
-        ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(),
-                 xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
+
         if cbar:
-            cbar2 = m.colorbar(ploth, ax=ax, format='%.0e')
+            cbar2 = m.colorbar(ploth,  format='%.0e')
         else:
             cbar2 = None
-        ax.set_title(title)
-        ax.set_xlabel(veckeys[0])
-        ax.set_ylabel(veckeys[1])
+        
 
     return(ploth,cbar2)
 
@@ -453,8 +449,8 @@ def scatterGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
         axdict = {'x':0,'y':1,'z':2}
         veckeys = ['x','y','z']
     elif geod.coordnames.lower() == 'wgs84':
-        axdict = {'lat':1,'long':0,'alt':2}
-        veckeys = ['long','lat','alt']
+        axdict = {'lat':0,'long':1,'alt':2}# shows which row is this coordinate
+        veckeys = ['long','lat','alt']# shows which is the x, y and z axes for plotting
     if type(axstr)==str:
         axis=axstr
     else:
@@ -463,7 +459,6 @@ def scatterGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
     #determine the data name
     if gkey is None:
         gkey = geod.data.keys[0]
-
     geod=geod.timeslice(time)
     veckeys.remove(axis.lower())
     veckeys.append(axis.lower())
@@ -499,7 +494,7 @@ def scatterGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
         dataout = geod.datareducelocation(new_coords,geod.coordnames,gkey)
 
         title = insertinfo(title,gkey,geod.times[time,0],geod.times[time,1])
-
+    
     if (ax is None) and (fig is None):
         fig = plt.figure(facecolor='white')
         ax = fig.gca()
@@ -513,19 +508,18 @@ def scatterGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
             cbar2 = plt.colorbar(ploth, ax=ax, format='%.0e')
         else:
             cbar2 = None
-
+        ax.set_title(title)
+        ax.set_xlabel(veckeys[0])
+        ax.set_ylabel(veckeys[1])
     else:
         Xdata,Ydata = m(xdata,ydata)
         ploth = m.scatter(Xdata,Ydata,c=dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
-        ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(),
-                 xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
+        
         if cbar:
-            cbar2 = m.colorbar(ploth, ax=ax, format='%.0e')
+            cbar2 = m.colorbar(ploth, format='%.0e')
         else:
             cbar2 = None
-    ax.set_title(title)
-    ax.set_xlabel(veckeys[0])
-    ax.set_ylabel(veckeys[1])
+    
     return(ploth,cbar2)
 
 def sliceGDsphere(geod,coordnames ='cartesian' ,vbounds=None,time = 0,gkey = None,cmap='jet',fig=None,ax=None,title='',cbar=True):

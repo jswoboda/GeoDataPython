@@ -339,7 +339,7 @@ def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc):
 
     az = fits.open(azmap)[0].data
     el = fits.open(elmap)[0].data
-    dataloc[:,0] = heightkm*sp.ones_like(az.flatten())*(1+sp.sin(el.flatten()*sp.pi/180)) #
+    dataloc[:,0] = sp.ones_like(el.flatten())*heightkm/(sp.cos((90.-el.flatten())*sp.pi/180)) #
     dataloc[:,1] = az.flatten()
     dataloc[:,2] = el.flatten()
 
