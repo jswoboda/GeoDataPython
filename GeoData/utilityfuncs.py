@@ -17,6 +17,7 @@ from pandas import DataFrame
 from datetime import datetime
 from warnings import warn
 from os.path import expanduser
+import pdb
 #
 from . import CoordTransforms as CT
 
@@ -318,7 +319,7 @@ def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc):
     header = fits.open(flist[0])
     img = header[0].data
     data = np.zeros((img.size,len(flist)))
-    dataloc = np.empty((img.size,3))
+    
     times = np.zeros((len(flist),2))
     for i in range(len(flist)):
         try:
@@ -333,15 +334,28 @@ def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc):
             data[:,i] = img.flatten()
         except:
             print(fn + ' has error')
-    data = {'image':data}
+    
 
     coordnames="Spherical"
 
     az = fits.open(azmap)[0].data
     el = fits.open(elmap)[0].data
-    dataloc[:,0] = sp.ones_like(el.flatten())*heightkm/(sp.cos((90.-el.flatten())*sp.pi/180)) #
-    dataloc[:,1] = az.flatten()
-    dataloc[:,2] = el.flatten()
+    
+    #%% Get rid of bad data
+    grad_thresh = 15.
+    (Fx,Fy) = sp.gradient(az)
+    bad_datalog = sp.hypot(Fx,Fy)>grad_thresh
+    pdb.set_trace()
+    zerodata = sp.logical_or(bad_datalog,sp.logical_and(az==0.,el==0.))
+    keepdata= sp.logical_not(zerodata.flatten())
+    data = {'image':data[keepdata]}
+    elfl = el.flatten()[keepdata]
+    
+    sinel = sp.sin(elfl*sp.pi/180)
+    dataloc = np.empty((keepdata.sum(),3))
+    dataloc[:,0] = sp.ones_like(sinel)*heightkm/sinel #
+    dataloc[:,1] = az.flatten()[keepdata]
+    dataloc[:,2] = el.flatten()[keepdata]
 
     sensorloc=sensorloc
 
