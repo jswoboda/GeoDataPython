@@ -358,7 +358,7 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
         ax.set_ylabel(veckeys[1])
     else:
         N1,N2 = m(M1,M2)
-        ploth = m.pcolor(N1,N2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
+        ploth = m.pcolor(N1,N2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap,alpha=.4)
 
         if cbar:
             cbar2 = m.colorbar(ploth, format='%.0e')
