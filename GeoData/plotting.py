@@ -578,7 +578,7 @@ def scatterGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
         ploth = m.scatter(Xdata,Ydata,c=dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
 
         if cbar:
-            cbar2 = m.colorbar(ploth, format='%.0e')
+            cbar2 = m.colorbar(ploth)
         else:
             cbar2 = None
 
@@ -790,6 +790,7 @@ def insertinfo(strin,key='',posix=None,posixend = None):
                 '$tms',#UT minutes seconds
                 '$tmdyhms',#UT month/day/year hours minutes seconds
                 '$tmdyhm',#UT month/day/year hours minutes
+                '$tmdy',#UT month/day/year
                 '$tmdhm'#UT month/day hours minutes
                 ]
             datestrcell = [
@@ -801,6 +802,7 @@ def insertinfo(strin,key='',posix=None,posixend = None):
                 time.strftime('%M:%S',curdt)+' UT',
                 time.strftime('%m/%d/%Y %H:%M:%S',curdt)+' UT',
                 time.strftime('%m/%d/%Y %H:%M',curdt)+' UT',
+                time.strftime('%m/%d/%Y',curdt),
                 time.strftime('%m/%d %H:%M',curdt)+' UT']
             for imark in range(len(markers)):
                 strout=strout.replace(markers[imark],datestrcell[imark]);
