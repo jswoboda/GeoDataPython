@@ -382,7 +382,7 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
         N1,N2 = m(M1,M2)
         ploth = m.pcolor(N1,N2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap,
                          alpha=.4,linewidth=0,rasterized=True)
-        ploth.set_edgecolor('face')
+
         if cbar:
             cbar2 = m.colorbar(ploth, format='%.0e')
         else:
