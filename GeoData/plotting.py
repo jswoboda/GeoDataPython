@@ -333,12 +333,32 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
     #determine the data name
     if gkey is None:
         gkey = geod.data.keys[0]
-    # get the data location
-    dataout = geod.datareducelocation(new_coords,geod.coordnames,gkey)[:,time]
 
+
+    # get the data location, first check if the data can be just reshaped then do a
+    # search
+
+    sliceindx = slicenum==datacoords[:,axdict[axis]]
+
+    datacoordred = datacoords[sliceindx]
+    rstypes = ['C','F','A']
+    nfounds = True
+    M1dlfl = datacoordred[:,axdict[veckeys[0]]]
+    M2dlfl = datacoordred[:,axdict[veckeys[1]]]
+    for ir in rstypes:
+        M1dl = sp.reshape(M1dlfl,M1.shape,order =ir)
+        M2dl = sp.reshape(M2dlfl,M1.shape,order =ir)
+        if sp.logical_and(sp.allclose(M1dl,M1),sp.allclose(M2dl,M2)):
+            nfounds=False
+            break
+    if nfounds:
+        dataout = geod.datareducelocation(new_coords,geod.coordnames,gkey)[:,time]
+        dataout = sp.reshape(dataout,M1.shape)
+    else:
+        dataout = sp.reshape(geod.data[gkey][sliceindx,time],M1.shape,order=ir)
 
     title = insertinfo(title,gkey,geod.times[time,0],geod.times[time,1])
-    dataout = sp.reshape(dataout,M1.shape)
+
 
     if (ax is None) and (fig is None):
         fig = plt.figure(facecolor='white')
@@ -346,7 +366,9 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
     elif ax is None:
         ax = fig.gca()
     if m is None:
-        ploth = ax.pcolor(M1,M2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
+        ploth = ax.pcolor(M1,M2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap,
+                          linewidth=0,rasterized=True)
+        ploth.set_edgecolor('face')
         ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(),
                  xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
         if cbar:
@@ -358,8 +380,9 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
         ax.set_ylabel(veckeys[1])
     else:
         N1,N2 = m(M1,M2)
-        ploth = m.pcolor(N1,N2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap,alpha=.4)
-
+        ploth = m.pcolor(N1,N2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap,
+                         alpha=.4,linewidth=0,rasterized=True)
+        ploth.set_edgecolor('face')
         if cbar:
             cbar2 = m.colorbar(ploth, format='%.0e')
         else:
@@ -403,12 +426,30 @@ def contourGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',
     #determine the data name
     if gkey is None:
         gkey = geod.data.keys[0]
-    # get the data location
-    dataout = geod.datareducelocation(new_coords,'Cartesian',gkey)[:,time]
 
+    # get the data location, first check if the data can be just reshaped then do a
+    # search
+
+    sliceindx = slicenum==datacoords[:,axdict[axis]]
+
+    datacoordred = datacoords[sliceindx]
+    rstypes = ['C','F','A']
+    nfounds = True
+    M1dlfl = datacoordred[:,axdict[veckeys[0]]]
+    M2dlfl = datacoordred[:,axdict[veckeys[1]]]
+    for ir in rstypes:
+        M1dl = sp.reshape(M1dlfl,M1.shape,order =ir)
+        M2dl = sp.reshape(M2dlfl,M1.shape,order =ir)
+        if sp.logical_and(sp.allclose(M1dl,M1),sp.allclose(M2dl,M2)):
+            nfounds=False
+            break
+    if nfounds:
+        dataout = geod.datareducelocation(new_coords,geod.coordnames,gkey)[:,time]
+        dataout = sp.reshape(dataout,M1.shape)
+    else:
+        dataout = sp.reshape(geod.data[gkey][sliceindx,time],M1.shape,order=ir)
 
     title = insertinfo(title,gkey,geod.times[time,0],geod.times[time,1])
-    dataout = sp.reshape(dataout,M1.shape)
 
     if (ax is None) and (fig is None):
         fig = plt.figure(facecolor='white')
@@ -432,7 +473,8 @@ def contourGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',
         ploth = ax.contour(N1,N2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
 
         if cbar:
-            cbar2 = m.colorbar(ploth,  format='%.0e')
+            #cbar2 = m.colorbar(ploth,  format='%.0e')
+            cbar2 = m.colorbar(ploth)
         else:
             cbar2 = None
 
@@ -491,7 +533,27 @@ def scatterGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
             new_coords[:,ckey] = rec_coords[ckey]
 
 
-        dataout = geod.datareducelocation(new_coords,geod.coordnames,gkey)
+        # get the data location, first check if the data can be just reshaped then do a
+        # search
+
+        sliceindx = slicenum==datacoords[:,axdict[axis]]
+
+        datacoordred = datacoords[sliceindx]
+        rstypes = ['C','F','A']
+        nfounds = True
+        M1dlfl = datacoordred[:,axdict[veckeys[0]]]
+        M2dlfl = datacoordred[:,axdict[veckeys[1]]]
+        for ir in rstypes:
+            M1dl = sp.reshape(M1dlfl,M1.shape,order =ir)
+            M2dl = sp.reshape(M2dlfl,M1.shape,order =ir)
+            if sp.logical_and(sp.allclose(M1dl,M1),sp.allclose(M2dl,M2)):
+                nfounds=False
+                break
+        if nfounds:
+            dataout = geod.datareducelocation(new_coords,geod.coordnames,gkey)[:,time]
+            dataout = sp.reshape(dataout,M1.shape)
+        else:
+            dataout = sp.reshape(geod.data[gkey][sliceindx,time],M1.shape,order=ir)
 
         title = insertinfo(title,gkey,geod.times[time,0],geod.times[time,1])
 
