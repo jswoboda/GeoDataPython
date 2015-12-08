@@ -300,22 +300,23 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
     #xyzvecs is the area that the data covers.
     poscoords = ['cartesian','wgs84','enu','ecef']
     assert geod.coordnames.lower() in poscoords
-    
+
     if geod.coordnames.lower() in ['cartesian','enu','ecef']:
         axdict = {'x':0,'y':1,'z':2}
         veckeys = ['x','y','z']
     elif geod.coordnames.lower() == 'wgs84':
         axdict = {'lat':0,'long':1,'alt':2}# shows which row is this coordinate
         veckeys = ['long','lat','alt']# shows which is the x, y and z axes for plotting
-        
+
     if type(axstr)==str:
         axis=axstr
     else:
         axis= veckeys[axstr]
     veckeys.remove(axis.lower())
+    veckeys.append(axis.lower())
     datacoords = geod.dataloc
     xyzvecs = {l:sp.unique(datacoords[:,axdict[l]]) for l in veckeys}
-    veckeys.sort()
+
     #make matrices
     M1,M2 = sp.meshgrid(xyzvecs[veckeys[0]],xyzvecs[veckeys[1]])
     slicevec = sp.unique(datacoords[:,axdict[axis]])
@@ -333,7 +334,6 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
     if gkey is None:
         gkey = geod.data.keys[0]
     # get the data location
-    pdb.set_trace()
     dataout = geod.datareducelocation(new_coords,geod.coordnames,gkey)[:,time]
 
 
@@ -384,9 +384,9 @@ def contourGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',
     else:
         axis= veckeys[axstr]
     veckeys.remove(axis.lower())
+    veckeys.append(axis.lower())
     datacoords = geod.dataloc
     xyzvecs = {l:sp.unique(datacoords[:,axdict[l]]) for l in veckeys}
-    veckeys.sort()
     #make matrices
     M1,M2 = sp.meshgrid(xyzvecs[veckeys[0]],xyzvecs[veckeys[1]])
     slicevec = sp.unique(datacoords[:,axdict[axis]])
@@ -435,7 +435,7 @@ def contourGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',
             cbar2 = m.colorbar(ploth,  format='%.0e')
         else:
             cbar2 = None
-        
+
 
     return(ploth,cbar2)
 
@@ -489,12 +489,12 @@ def scatterGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
         #make coordinates
         for ckey in rec_coords.keys():
             new_coords[:,ckey] = rec_coords[ckey]
-    
-    
+
+
         dataout = geod.datareducelocation(new_coords,geod.coordnames,gkey)
 
         title = insertinfo(title,gkey,geod.times[time,0],geod.times[time,1])
-    
+
     if (ax is None) and (fig is None):
         fig = plt.figure(facecolor='white')
         ax = fig.gca()
@@ -514,12 +514,12 @@ def scatterGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
     else:
         Xdata,Ydata = m(xdata,ydata)
         ploth = m.scatter(Xdata,Ydata,c=dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
-        
+
         if cbar:
             cbar2 = m.colorbar(ploth, format='%.0e')
         else:
             cbar2 = None
-    
+
     return(ploth,cbar2)
 
 def sliceGDsphere(geod,coordnames ='cartesian' ,vbounds=None,time = 0,gkey = None,cmap='jet',fig=None,ax=None,title='',cbar=True):

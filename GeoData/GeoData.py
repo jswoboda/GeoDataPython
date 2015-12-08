@@ -159,7 +159,7 @@ class GeoData(object):
                     gd2.data[idata] = gd2.data[idata][gd2.times] #data is a vector
                 else:
                     gd2.data[idata] = gd2.data[idata][loclist]
-                    
+
 
         else:
             if gd2.times.ndim==1:
@@ -229,7 +229,7 @@ class GeoData(object):
             NNlocs = new_coords.shape[0]
         if method.lower()=='linear':
             firsttime=True
-            
+
         # Check to see if you're outputing all of the parameters
         if ikey is None or ikey not in self.data.keys():
             # Loop through parameters and create temp variable
@@ -263,7 +263,7 @@ class GeoData(object):
                             if firsttime:
                                 vtx, wts =interp_weights(curcoords, new_coords,d)
                                 firsttime=False
-                            intparam = interpolate(curparam, vtx, wts,fill_value)        
+                            intparam = interpolate(curparam, vtx, wts,fill_value)
                         else:
                             intparam = spinterp.griddata(coordkeep,curparam,new_coords,method,fill_value)
                     else: # no finite values
@@ -302,7 +302,8 @@ class GeoData(object):
         if self.coordnames=='Spherical' and newcoordname=='WGS84':
             cart1 = CT.sphereical2Cartisian(self.dataloc)
             enu = CT.cartisian2enu(cart1)
-            ECEF = CT.enu2ecef4vec(enu,np.tile(self.sensorloc[np.newaxis,:],(len(enu),1)))
+            sloc = np.tile(self.sensorloc[np.newaxis,:],(len(enu),1))
+            ECEF = CT.enu2ecefl(enu,sloc)
             return CT.ecef2wgs(ECEF).transpose()
         raise ValueError('Wrong inputs for coordnate names was given.')
 
@@ -444,7 +445,7 @@ def timerepair(timear):
     timear2 = np.roll(timear,-1)
     timear2[-1]=timear2[-2]+avdiff
     return np.column_stack((timear,timear2))
-    
+
 #%% Interpolation speed up code
 def interp_weights(xyz, uvw,d=3):
     tri = qhull.Delaunay(xyz)
@@ -454,7 +455,7 @@ def interp_weights(xyz, uvw,d=3):
     delta = uvw - temp[:, d]
     bary = np.einsum('njk,nk->nj', temp[:, :d, :], delta)
     return vertices, np.hstack((bary, 1 - bary.sum(axis=1, keepdims=True)))
-    
+
 def interpolate(values, vtx, wts, fill_value=np.nan):
     ret = np.einsum('nj,nj->n', np.take(values, vtx), wts)
     ret[np.any(wts < 0, axis=1)] = fill_value
