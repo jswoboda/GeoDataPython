@@ -51,6 +51,14 @@ class GeoData(object):
         assert isinstance(self.sensorloc,numerics),"sensorloc needs to be a numpy array"
         assert isinstance(self.times,numerics),"times needs to be a numpy array"
         self.times = timerepair(self.times)
+        
+        # Make sure the times vector is sorted 
+        if not self.issatellite():
+            timestemp = self.times[:,0]
+            sortvec = sp.argsort(timestemp)
+            self.times=self.times[sortvec]
+            for ikey in self.datanames():
+                self.data[ikey]=self.data[ikey][:,sortvec]
 
     def datanames(self):
         '''Returns the data names.'''
