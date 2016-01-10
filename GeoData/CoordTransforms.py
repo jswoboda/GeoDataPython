@@ -8,7 +8,6 @@ Created on Sat Nov  1 19:09:47 2014
 """
 from __future__ import division,absolute_import
 import numpy as np
-
 def sphereical2Cartisian(spherecoords):
     """This function will convert Spherical coordinates to Cartisian coordinates.
     Input:

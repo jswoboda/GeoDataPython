@@ -6,16 +6,19 @@ Created on Thu Jul 17 12:46:46 2014
 @author: John Swoboda
 """
 from __future__ import division,absolute_import
-import logging
-from datetime import datetime
-from pytz import UTC
 from six import integer_types,string_types
+#import os
+#import time
+
 import posixpath
 from copy import deepcopy
 import numpy as np
+import scipy as sp
 import scipy.interpolate as spinterp
 import tables
 from pandas import DataFrame
+import pdb
+from warnings import warn
 #
 from . import CoordTransforms as CT
 from .utilityfuncs import read_h5_main
@@ -47,6 +50,14 @@ class GeoData(object):
         assert isinstance(self.sensorloc,numerics),"sensorloc needs to be a numpy array"
         assert isinstance(self.times,numerics),"times needs to be a numpy array"
         self.times = timerepair(self.times)
+        
+        # Make sure the times vector is sorted 
+        if not self.issatellite():
+            timestemp = self.times[:,0]
+            sortvec = sp.argsort(timestemp)
+            self.times=self.times[sortvec]
+            for ikey in self.datanames():
+                self.data[ikey]=self.data[ikey][:,sortvec]
 
     def datanames(self):
         '''Returns the data names.'''
@@ -147,22 +158,32 @@ class GeoData(object):
             loclist = np.where(ix)[0]
 
         gd2 = self.copy()
-        if gd2.times.ndim==1:
+        if gd2.issatellite():
             gd2.times = gd2.times[loclist]
-        elif gd2.times.ndim==2:
-            gd2.times = gd2.times[loclist,:]
-        else:
-            raise TypeError('i only expect 1 or 2 dimensions for time')
+            gd2.dataloc = gd2.dataloc[loclist]
+            for idata in gd2.datanames():
+                if isinstance(gd2.data[idata],DataFrame):
+                    gd2.data[idata] = gd2.data[idata][gd2.times] #data is a vector
+                else:
+                    gd2.data[idata] = gd2.data[idata][loclist]
 
-        for idata in gd2.datanames():
-            if isinstance(gd2.data[idata],DataFrame):
-                gd2.data[idata] = gd2.data[idata][gd2.times] #data is a vector
-            elif gd2.data[idata].ndim==2:
-                gd2.data[idata] = gd2.data[idata][:,loclist]
-            elif gd2.data[idata].ndim==3:
-                gd2.data[idata] = gd2.data[idata][loclist,:,:]
+        else:
+            if gd2.times.ndim==1:
+                gd2.times = gd2.times[loclist]
+            elif gd2.times.ndim==2:
+                gd2.times = gd2.times[loclist,:]
             else:
-                raise TypeError('unknown data shape for gd2 data')
+                raise TypeError('i only expect 1 or 2 dimensions for time')
+
+            for idata in gd2.datanames():
+                if isinstance(gd2.data[idata],DataFrame):
+                    gd2.data[idata] = gd2.data[idata][gd2.times] #data is a vector
+                elif gd2.data[idata].ndim==2:
+                    gd2.data[idata] = gd2.data[idata][:,loclist]
+                elif gd2.data[idata].ndim==3:
+                    gd2.data[idata] = gd2.data[idata][loclist,:,:]
+                else:
+                    raise TypeError('unknown data shape for gd2 data')
         return gd2
 #%% Satellite Data
     def issatellite(self):
@@ -197,9 +218,11 @@ class GeoData(object):
 #        print NNlocs
         new_coordsorig = deepcopy(new_coords)
         curcoords = self.__changecoords__(newcoordname)
+#       d=3
         # XXX Pulling axes where all of the elements are the same.
         # Probably not the best way to fix issue with two dimensional interpolation
         if twodinterp:
+            d=2
             firstel = new_coords[0]
             firstelold = curcoords[0]
             keepaxis = np.ones(firstel.shape, dtype=bool)
@@ -212,15 +235,19 @@ class GeoData(object):
             curcoords = curcoords[:,keepaxis]
             new_coords = new_coords[:,keepaxis]
             NNlocs = new_coords.shape[0]
+        if method.lower()=='linear':
+            firsttime=True
 
         # Check to see if you're outputing all of the parameters
         if ikey is None or ikey not in self.data.keys():
             # Loop through parameters and create temp variable
             for iparam in self.data.keys():
+                print("Interpolating {0}".format(iparam))
                 usepandas=True if isinstance(self.data[iparam],DataFrame) else False
                 # won't it virtually always be float?
                 New_param = np.empty((NNlocs,Nt))#,dtype=self.data[iparam].dtype)
                 for itime,tim in enumerate(self.times):
+                    print("\tInterpolating time instance {0} of {1} for parameter {2}".format(itime,len(self.times),iparam))
                     if usepandas:
                         curparam = self.data[iparam][tim] #dataframe: columns are time in this case
                     else: #assume Numpy
@@ -240,9 +267,13 @@ class GeoData(object):
                         coordkeep = curcoords
 
                     if len(coordkeep)>0: # at least one finite value
-#%% this line can take an eternity
-                        intparam = spinterp.griddata(coordkeep,curparam,new_coords,method,fill_value)
-#%%
+                        if method.lower()=='linear':
+                            if firsttime:
+                                vtx, wts =interp_weights(curcoords, new_coords,d)
+                                firsttime=False
+                            intparam = interpolate(curparam, vtx, wts,fill_value)
+                        else:
+                            intparam = spinterp.griddata(coordkeep,curparam,new_coords,method,fill_value)
                     else: # no finite values
                         logging.warning('No {} data available at {}'.format(iparam,datetime.fromtimestamp(tim[0],tz=UTC)))
                         intparam = np.nan
@@ -277,6 +308,12 @@ class GeoData(object):
             return CT.cartisian2Sphereical(self.dataloc)
         if self.coordnames.lower()==newcoordname.lower():
             return self.dataloc
+        if self.coordnames=='Spherical' and newcoordname=='WGS84':
+            cart1 = CT.sphereical2Cartisian(self.dataloc)
+            enu = CT.cartisian2enu(cart1)
+            sloc = np.tile(self.sensorloc[np.newaxis,:],(len(enu),1))
+            ECEF = CT.enu2ecefl(enu,sloc)
+            return CT.ecef2wgs(ECEF).transpose()
         raise ValueError('Wrong inputs for coordnate names was given.')
 
     def checkcoords(self,newcoords,coordname):
