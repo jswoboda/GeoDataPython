@@ -337,6 +337,7 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
     datacoords = geod.dataloc
     xyzvecs = {l:sp.unique(datacoords[:,axdict[l]]) for l in veckeys}
 
+
     #make matrices
     M1,M2 = sp.meshgrid(xyzvecs[veckeys[0]],xyzvecs[veckeys[1]])
     slicevec = sp.unique(datacoords[:,axdict[axis]])
@@ -353,7 +354,6 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
     #determine the data name
     if gkey is None:
         gkey = geod.data.keys[0]
-
 
     # get the data location, first check if the data can be just reshaped then do a
     # search

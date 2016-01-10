@@ -246,7 +246,7 @@ def readOMTI(filename, paramstr):
     The data paths are known a priori, so read directly ~10% faster than pytables
     """
     filename = expanduser(filename)
-    with h5py.File(filename,'r') as f:
+    with h5py.File(filename,'r',libver='latest') as f:
         optical = {'optical':f['data/optical'].value} #for legacy API compatibility
         dataloc = CT.enu2cartisian(f['dataloc'].value)
         coordnames = 'Cartesian'
@@ -380,7 +380,7 @@ def readNeoCMOS(imgfn, azelfn, heightkm=110.,treq=None):
         else:
             mask = np.ones(f['/rawimg'].shape[0]).astype(bool)
 
-        if mask.sum()*npix*2 > 1e9: #loading more than 1GByte into RAM
+        if mask.sum()*npix*2 > 2e9: # RAM
             logging.warning('trying to load {:.1f} GB of image data, your program may crash'.format(mask.sum()*npix*2/1e9))
 
         imgs = f['/rawimg'][mask,...]
@@ -404,13 +404,12 @@ def readNeoCMOS(imgfn, azelfn, heightkm=110.,treq=None):
 
     optical = {'optical':imgs}
 
-    coordnames = 'Spherical'
+    coordnames = 'spherical'
     dataloc[:,0] = heightkm
-    with h5py.File(azelfn,'r',libver='latest') as f:
-        dataloc[:,1] = f['/az'].value.ravel()
-        dataloc[:,2] = f['/el'].value.ravel()
+    dataloc[:,1] = az.ravel()
+    dataloc[:,2] = el.ravel()
 
-    return optical, coordnames, dataloc, sensorloc, times
+    return optical, coordnames, dataloc, sensorloc, times[mask],None
 
 
 def readAVI(fn,fwaem):
@@ -555,4 +554,4 @@ def readIonofiles(filename):
     coordnames = 'WGS84'
     sensorloc = sp.nan*sp.ones(3)
     dataloc = sp.column_stack((piercelat,piercelong,350e3*sp.ones_like(piercelat)))
-    return (data,coordnames,dataloc,sensorloc,uttime)
+    return (data,coordnames,dataloc,sensorloc,uttime,None)

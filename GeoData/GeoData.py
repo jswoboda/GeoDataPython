@@ -7,18 +7,13 @@ Created on Thu Jul 17 12:46:46 2014
 """
 from __future__ import division,absolute_import
 from six import integer_types,string_types
-#import os
-#import time
-
+import logging
 import posixpath
 from copy import deepcopy
 import numpy as np
-import scipy as sp
 import scipy.interpolate as spinterp
 import tables
 from pandas import DataFrame
-import pdb
-from warnings import warn
 #
 from . import CoordTransforms as CT
 from .utilityfuncs import read_h5_main
@@ -50,11 +45,11 @@ class GeoData(object):
         assert isinstance(self.sensorloc,numerics),"sensorloc needs to be a numpy array"
         assert isinstance(self.times,numerics),"times needs to be a numpy array"
         self.times = timerepair(self.times)
-        
-        # Make sure the times vector is sorted 
+
+        # Make sure the times vector is sorted
         if not self.issatellite():
             timestemp = self.times[:,0]
-            sortvec = sp.argsort(timestemp)
+            sortvec = timestemp.argsort()
             self.times=self.times[sortvec]
             for ikey in self.datanames():
                 self.data[ikey]=self.data[ikey][:,sortvec]
@@ -308,13 +303,13 @@ class GeoData(object):
             return CT.cartisian2Sphereical(self.dataloc)
         if self.coordnames.lower()==newcoordname.lower():
             return self.dataloc
-        if self.coordnames=='Spherical' and newcoordname=='WGS84':
+        if self.coordnames.lower()=='spherical' and newcoordname.lower()=='wgs84':
             cart1 = CT.sphereical2Cartisian(self.dataloc)
             enu = CT.cartisian2enu(cart1)
             sloc = np.tile(self.sensorloc[np.newaxis,:],(len(enu),1))
             ECEF = CT.enu2ecefl(enu,sloc)
             return CT.ecef2wgs(ECEF).transpose()
-        raise ValueError('Wrong inputs for coordnate names was given.')
+        raise ValueError('Wrong inputs for coordinate names was given.')
 
     def checkcoords(self,newcoords,coordname):
         """ This method checks to see if all of the coordiantes are in the class instance.
