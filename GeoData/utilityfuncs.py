@@ -14,6 +14,7 @@ import scipy as sp
 import tables
 from astropy.io import fits
 from pandas import DataFrame
+import pytz
 from datetime import datetime
 from warnings import warn
 from os.path import expanduser
@@ -325,9 +326,10 @@ def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc):
         try:
             fn = flist[i]
             fund = fn.find('PKR')
-            date = (datetime(int(fn[fund+14:fund+18]),int(fn[fund+18:fund+20]),
+            ut_tup = (int(fn[fund+14:fund+18]),int(fn[fund+18:fund+20]),
                 int(fn[fund+20:fund+22]),int(fn[fund+23:fund+25]),int(fn[fund+25:fund+27]),
-                int(fn[fund+27:fund+29]))-datetime(1970,1,1,0,0,0)).total_seconds()
+                int(fn[fund+27:fund+29]))
+            date = (datetime(*ut_tup,tzinfo=pytz.utc)-datetime(1970,1,1,0,0,0,tzinfo=pytz.utc)).total_seconds()
             times[i] = [date,date+1]
             header = fits.open(fn)
             img = header[0].data

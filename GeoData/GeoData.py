@@ -12,6 +12,8 @@ from six import integer_types,string_types
 
 import posixpath
 from copy import deepcopy
+from datetime import datetime
+import pytz
 import numpy as np
 import scipy as sp
 import scipy.interpolate as spinterp
@@ -187,6 +189,16 @@ class GeoData(object):
                 else:
                     raise TypeError('unknown data shape for gd2 data')
         return gd2
+    def timelisting(self):
+        """ This will output a list of lists that contains the times in strings."""
+        
+        curtimes = self.times
+        timestrs = []
+        for (i,j) in curtimes:
+            curlist = [datetime.utcfromtimestamp(i).__str__(),datetime.utcfromtimestamp(j).__str__()]
+            timestrs.append(curlist)
+        
+        return timestrs
 #%% Satellite Data
     def issatellite(self):
         """Checks if the instance is satellite data. It will give true if the sensorloc array is all nans"""
