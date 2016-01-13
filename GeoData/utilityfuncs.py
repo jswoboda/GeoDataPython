@@ -157,12 +157,12 @@ def readSRI_h5(filename,paramstr,timelims = None):
         # Get the times and time lims
         times = f['/Time/UnixTime'].value
         # get the sensor location
-        sensorloc = np.array([f['/Site/Latitude'],
-                              f['/Site/Longitude'],
-                              f['/Site/Altitude']])
+        sensorloc = np.array([f['/Site/Latitude'].value,
+                              f['/Site/Longitude'].value,
+                              f['/Site/Altitude'].value])
         # Get the locations of the data points
         rng = f['/FittedParams/Range'].value / 1e3
-        angles = f['/BeamCodes'][:,1:2].value
+        angles = f['/BeamCodes'].value[:,1:2]
 
     nt = times.shape[0]
     if timelims is not None:
@@ -192,7 +192,7 @@ def readSRI_h5(filename,paramstr,timelims = None):
             if curint is None:
                 tempdata = f[curpath].value
             else:
-                tempdata = f[curpath][:,:,:,curint[0],curint[1]].value
+                tempdata = f[curpath].value[:,:,:,curint[0],curint[1]]
             data[istr] = np.array([tempdata[iT,:,:].ravel() for iT in range(nt)]).transpose()
 
     return (data,coordnames,dataloc,sensorloc,times)
