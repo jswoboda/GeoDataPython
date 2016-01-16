@@ -53,8 +53,8 @@ class GeoData(object):
         assert isinstance(self.sensorloc,numerics),"sensorloc needs to be a numpy array"
         assert isinstance(self.times,numerics),"times needs to be a numpy array"
         self.times = timerepair(self.times)
-        
-        # Make sure the times vector is sorted 
+
+        # Make sure the times vector is sorted
         if not self.issatellite():
             timestemp = self.times[:,0]
             sortvec = sp.argsort(timestemp)
@@ -191,13 +191,13 @@ class GeoData(object):
         return gd2
     def timelisting(self):
         """ This will output a list of lists that contains the times in strings."""
-        
+
         curtimes = self.times
         timestrs = []
         for (i,j) in curtimes:
             curlist = [datetime.utcfromtimestamp(i).__str__(),datetime.utcfromtimestamp(j).__str__()]
             timestrs.append(curlist)
-        
+
         return timestrs
 #%% Satellite Data
     def issatellite(self):
@@ -270,7 +270,7 @@ class GeoData(object):
                         else:
                             raise ValueError('incorrect data matrix shape')
 
-                    if iparam != 'optical':
+                    if (iparam != 'optical') and (method.lower()!='linear'):
                         dfmask = np.isfinite(curparam)
                         curparam = curparam[dfmask]
                         npmask=dfmask.values if usepandas else dfmask #have to do this for proper indexing of numpy arrays!
@@ -281,7 +281,7 @@ class GeoData(object):
                     if len(coordkeep)>0: # at least one finite value
                         if method.lower()=='linear':
                             if firsttime:
-                                vtx, wts =interp_weights(curcoords, new_coords,d)
+                                vtx, wts =interp_weights(coordkeep, new_coords,d)
                                 firsttime=False
                             intparam = interpolate(curparam, vtx, wts,fill_value)
                         else:
@@ -477,6 +477,7 @@ def interp_weights(xyz, uvw,d=3):
     return vertices, np.hstack((bary, 1 - bary.sum(axis=1, keepdims=True)))
 
 def interpolate(values, vtx, wts, fill_value=np.nan):
+
     ret = np.einsum('nj,nj->n', np.take(values, vtx), wts)
     ret[np.any(wts < 0, axis=1)] = fill_value
     return ret

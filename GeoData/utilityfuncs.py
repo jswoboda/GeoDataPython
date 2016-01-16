@@ -163,7 +163,8 @@ def readSRI_h5(filename,paramstr,timelims = None):
                               f['/Site/Altitude'].value])
         # Get the locations of the data points
         rng = f['/FittedParams/Range'].value / 1e3
-        angles = f['/BeamCodes'].value[:,1:2]
+
+        angles = f['/BeamCodes'].value[:,1:3]
 
     nt = times.shape[0]
     if timelims is not None:
@@ -172,7 +173,7 @@ def readSRI_h5(filename,paramstr,timelims = None):
         nt = times.shape[0]
 #
     nrng = rng.shape[1]
-    repangles = np.tile(angles,(1,2.0*nrng))
+    repangles = np.tile(angles,(1,nrng))
     allaz = repangles[:,::2]
     allel = repangles[:,1::2]
 #   NOTE dataloc = DataFrame(index=times,
