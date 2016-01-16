@@ -17,7 +17,7 @@ import pytz
 import numpy as np
 import scipy as sp
 import scipy.interpolate as spinterp
-import scipy.spatial.qhull as qhull
+from  scipy.spatial import Delaunay
 import tables
 from pandas import DataFrame
 import pdb
@@ -279,6 +279,7 @@ class GeoData(object):
                         coordkeep = curcoords
 
                     if len(coordkeep)>0: # at least one finite value
+                        
                         if method.lower()=='linear':
                             if firsttime:
                                 vtx, wts =interp_weights(coordkeep, new_coords,d)
@@ -468,7 +469,8 @@ def timerepair(timear):
 
 #%% Interpolation speed up code
 def interp_weights(xyz, uvw,d=3):
-    tri = qhull.Delaunay(xyz)
+    
+    tri = Delaunay(xyz)
     simplex = tri.find_simplex(uvw)
     vertices = np.take(tri.simplices, simplex, axis=0)
     temp = np.take(tri.transform, simplex, axis=0)
@@ -477,7 +479,6 @@ def interp_weights(xyz, uvw,d=3):
     return vertices, np.hstack((bary, 1 - bary.sum(axis=1, keepdims=True)))
 
 def interpolate(values, vtx, wts, fill_value=np.nan):
-
     ret = np.einsum('nj,nj->n', np.take(values, vtx), wts)
     ret[np.any(wts < 0, axis=1)] = fill_value
     return ret
