@@ -12,6 +12,8 @@ import re
 import datetime
 from dateutil import parser
 import os
+import requests
+requests.packages.urllib3.disable_warnings()
 
 def datedwebsite(baseurl,daterange,basedir=''):
     """This function will download a set of files from a directory structure based
@@ -86,3 +88,61 @@ def datedwebsite(baseurl,daterange,basedir=''):
 
 def genwebscraperallsky(baseurl,daterange,basedir=''):
     """ """
+    
+    
+def download(urls,dldir):
+   if not os.path.exists(dldir) and dldir!='':
+        os.mkdir(dldir)
+        
+   for url in urls:
+       f = open(os.path.join(dldir,url.split('/')[-1]),'wb')
+       for i in requests.get(url,verify=False).iter_content():
+           f.write(i)
+       f.close()
+       print urls.index(url),'out of',len(urls)
+    
+    
+def searchsite(date1,date2,url):
+
+    dlurls=[]
+    
+    date1 = datetime.datetime.fromtimestamp(date1)
+    date2 = datetime.datetime.fromtimestamp(date2)
+    
+    soup = BeautifulSoup(requests.get(url,verify=False).content)
+    yearlist = []
+    for link in soup.find_all("a",href=re.compile("^(20)")):
+        if 'href' in link.attrs:
+            yearlist.append(link.attrs['href'])
+    yearnum = [int(iyr.strip('/')) for iyr in yearlist]
+    
+    yearurls=[]
+    for i in range(len(yearnum)):
+        if yearnum[i]>=date1.year and yearnum[i]<=date2.year:
+            yearurls.append(yearlist[i])
+    print str(len(yearurls))+' years'  
+    for year in yearurls:
+        dates=[]
+        dateurls=[]
+        ydir = BeautifulSoup(requests.get(url+year,verify=False).content)
+        for link in ydir.find_all("a",href=re.compile("^(20)")):
+            if 'href' in link.attrs:
+                dates.append(link.attrs['href'])
+                
+        for i in range(len(dates)):
+            d1 = datetime.date(int(dates[i][:4]),int(dates[i][4:6]),int(dates[i][6:8]))
+            if d1 >= date1.date() and d1 <= date2.date():
+                dateurls.append(dates[i])
+                
+        print str(len(dateurls))+' dates from '+year
+        for date in dateurls:
+            fdir=BeautifulSoup(requests.get(url+year+date,verify=False).content)
+            for link in fdir.find_all("a",href=re.compile("^(PKR)")):
+                if 'href' in link.attrs:
+                    pkfile = link.attrs['href']
+                    pkfilesp = pkfile[:-5].split('_')
+                    filetime = (parser.parse(pkfilesp[-2]+' '+pkfilesp[-1]))
+                    if filetime>=date1 and filetime<=date2:
+                        dlurls.append(url+year+date+pkfile)
+                        
+    return dlurls
