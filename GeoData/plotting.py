@@ -763,6 +763,97 @@ def polarplot(az,el,markerarea=500,title=None,minel=30,elstep=10):
 
     ax.set_title(title)
 
+#quiver() creates quiver plots with contours from GeoData objects
+#arrowscale is the scale of the quiver plot vector arrows
+
+def quiverGD(geod,axstr,slicenum,arrowscale,vbounds=None,time = 0,gkey = None,cmap='jet', fig=None,ax=None,title='',cbar=True,m=None):
+    poscoords = ['cartesian','wgs84','enu','ecef']
+    assert geod.coordnames.lower() in poscoords
+
+    if geod.coordnames.lower() in ['cartesian','enu','ecef']:
+        axdict = {'x':0,'y':1,'z':2}
+        veckeys = ['x','y','z']
+    elif geod.coordnames.lower() == 'wgs84':
+        axdict = {'lat':0,'long':1,'alt':2}# shows which row is this coordinate
+        veckeys = ['long','lat','alt']# shows which is the x, y and z axes for plotting
+    if type(axstr)==str:
+        axis=axstr
+    else:
+        axis= veckeys[axstr]
+    veckeys.remove(axis.lower())
+    veckeys.append(axis.lower())
+    datacoords = geod.dataloc
+    xyzvecs = {l:sp.unique(datacoords[:,axdict[l]]) for l in veckeys}
+    #make matrices
+    M1,M2 = sp.meshgrid(xyzvecs[veckeys[0]],xyzvecs[veckeys[1]])
+    slicevec = sp.unique(datacoords[:,axdict[axis]])
+    min_idx = sp.argmin(sp.absolute(slicevec-slicenum))
+    slicenum=slicevec[min_idx]
+    rec_coords = {axdict[veckeys[0]]:M1.flatten(),axdict[veckeys[1]]:M2.flatten(),
+                  axdict[axis]:slicenum*sp.ones(M2.size)}
+
+
+    new_coords = sp.zeros((M1.size,3))
+    #make coordinates
+    for ckey in rec_coords.keys():
+        new_coords[:,ckey] = rec_coords[ckey]
+    #determine the data name
+    if gkey is None:
+        gkey = geod.data.keys()[0]
+
+    # get the data location, first check if the data can be just reshaped then do a
+    # search
+
+    sliceindx = slicenum==datacoords[:,axdict[axis]]
+
+    datacoordred = datacoords[sliceindx]
+    rstypes = ['C','F','A']
+    nfounds = True
+    M1dlfl = datacoordred[:,axdict[veckeys[0]]]
+    M2dlfl = datacoordred[:,axdict[veckeys[1]]]
+    for ir in rstypes:
+        M1dl = sp.reshape(M1dlfl,M1.shape,order =ir)
+        M2dl = sp.reshape(M2dlfl,M1.shape,order =ir)
+        if sp.logical_and(sp.allclose(M1dl,M1),sp.allclose(M2dl,M2)):
+            nfounds=False
+            break
+    if nfounds:
+        
+        dx = geod.datareducelocation(new_coords,geod.coordnames,gkey[0])[:,time]
+        dy = geod.datareducelocation(new_coords,geod.coordnames,gkey[1])[:,time]
+        dx = sp.reshape(dx,M1.shape)
+        dy = sp.reshape(dy,M1.shape)
+    else:
+        dx = sp.reshape(geod.data[gkey[0]][sliceindx,time],M1.shape,order=ir)
+        dy = sp.reshape(geod.data[gkey[1]][sliceindx,time],M1.shape,order=ir)
+
+    
+    title = insertinfo(title,gkey[0],geod.times[time,0],geod.times[time,1])
+
+    if (ax is None) and (fig is None):
+        fig = plt.figure(facecolor='white')
+        ax = fig.gca()
+    elif ax is None:
+        ax = fig.gca()
+
+    if m is None:
+        
+        
+        quiv = ax.quiver(M1,M2,dx,dy,scale=arrowscale)
+            
+        ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(),
+                 xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
+        
+        ax.set_title(title)
+        ax.set_xlabel(veckeys[0])
+        ax.set_ylabel(veckeys[1])
+    else:
+        N1,N2 = m(M1,M2)
+        
+        quiv = ax.quiver(M1,M2,dx,dy,scale=arrowscale)
+
+
+    return(quiv)
 
 def insertinfo(strin,key='',posix=None,posixend = None):
 
