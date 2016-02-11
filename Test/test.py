@@ -14,5 +14,5 @@ def test_risr():
                     [119949930314.93805,79983425500.702927])
     assert_allclose(omti.data['optical'][[32,41],[22,39]],
                     [ 603.03568232,  611.20040632])
-test_risr()
-#run_module_suite()
+#test_risr()
+run_module_suite()
