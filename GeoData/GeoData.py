@@ -189,6 +189,32 @@ class GeoData(object):
                 else:
                     raise TypeError('unknown data shape for gd2 data')
         return gd2
+    def timereduce(self,timebounds):        
+        """This method will remove any data points out side of the time limits.
+        Inputs
+            timebounds - A list of length 2 of posix times."""
+        
+        lowerbnd = self.times[:,0]>=timebounds[0]
+        upperbnd = self.times[:,1]<=timebounds[1]
+        keep=sp.logical_and(lowerbnd,upperbnd)
+        if self.issatellite():
+            self.times=self.times[keep]
+            self.dataloc=self.dataloc[keep]
+            for idata in self.datanames():
+                if isinstance(self.data[idata],DataFrame):
+                    self.data[idata] = self.data[idata][self.times] #data is a vector
+                else:
+                    self.data[idata] = self.data[idata][keep]
+        else:
+            self.times=self.times[keep]
+            for idata in self.datanames():
+                #XXX Probably want to check this with a data frame
+                if isinstance(self.data[idata],DataFrame):
+                    self.data[idata] = self.data[idata][:,self.times] #data is a vector
+                else:
+                    self.data[idata] = self.data[idata][:,keep]
+                    
+    
     def timelisting(self):
         """ This will output a list of lists that contains the times in strings."""
 
