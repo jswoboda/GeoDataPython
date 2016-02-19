@@ -509,13 +509,13 @@ def readIonofiles(filename):
     #%% Get in GeoData format
     doy = data[0]
     year=data[1].astype(int)
-    dtsp = datetime(1970,1,1,0,0,0)
+    dtsp = datetime(1970,1,1,0,0,0,tzinfo=pytz.utc)
     if np.all(year==year[1]):
-        unixyear =(datetime(year[0],1,1,0,0,0)-dtsp).total_seconds()
-        uttime = unixyear+24*3600*sp.column_stack((doy,doy+1))
+        unixyear =(datetime(year[0],1,1,0,0,0,tzinfo=pytz.utc)-dtsp).total_seconds()
+        uttime = unixyear+24*3600*sp.column_stack((doy,doy+1./24./60.)) # Making the difference in time to be a minute
     else:
         (y_u,y_iv) = np.unique(year,return_inverse=True)
-        unixyearu = sp.array([(datetime(iy,1,1,0,0,0)-dtsp).total_seconds() for iy in y_u])
+        unixyearu = sp.array([(datetime(iy,1,1,0,0,0,tzinfo=pytz.utc)-dtsp).total_seconds() for iy in y_u])
         unixyear = unixyearu[y_iv]
         uttime = unixyear+24*3600*sp.column_stack((doy,doy+1))
 
