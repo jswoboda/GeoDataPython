@@ -357,12 +357,10 @@ def readNeoCMOS(imgfn, azelfn, heightkm=110.,treq=None):
     treq is pair or vector of UT1 unix epoch times to load--often file is so large we can't load all frames into RAM.
     assumes that /rawimg is a 3-D array Nframe x Ny x Nx
     """
-    assert isinstance(imgfn,string_types)
-    assert isinstance(azelfn,string_types)
     assert isinstance(heightkm,(integer_types,float))
 
-    imgfn = expanduser(imgfn)
-    azelfn = expanduser(azelfn)
+    imgfn = expanduser(str(imgfn))
+    azelfn = expanduser(str(azelfn))
 #%% load data
     with h5py.File(azelfn,'r',libver='latest') as f:
         az = f['/az'].value
@@ -376,13 +374,14 @@ def readNeoCMOS(imgfn, azelfn, heightkm=110.,treq=None):
         dataloc = np.empty((npix,3),dtype=float)
 
         if treq is not None:
-            mask = (treq[0]<times) & (times<treq[-1])
+            mask = (treq[0]<=times) & (times<=treq[-1])
         else:
             mask = np.ones(f['/rawimg'].shape[0]).astype(bool)
 
         if mask.sum()*npix*2 > 2e9: # RAM
             logging.warning('trying to load {:.1f} GB of image data, your program may crash'.format(mask.sum()*npix*2/1e9))
 
+#        assert mask.sum()>0,'no times in {} within specified times.'.format(imgfn)
         imgs = f['/rawimg'][mask,...]
 #%% plate scale
         if f['/params']['transpose']:
