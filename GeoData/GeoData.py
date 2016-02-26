@@ -374,15 +374,23 @@ class GeoData(object):
     def datareducelocation(self,newcoords,coordname,key=None):
         """ This method takes a list of coordinates and finds what instances are in
         the set of locations for the instance of the class.
-        newcoords -A numpy array where each row is a coordinate that the user desires to keep.
-        coordname - This is coordinate names of the input directory.
-        key - The name of the data that the user wants extracted"""
+        Inputs
+            newcoords -A numpy array where each row is a coordinate that the user 
+                desires to keep. Or a list of indices that are to be kept.
+            coordname - This is coordinate names of the input directory.
+            key - The name of the data that the user wants extracted"""
         assert(self.coordnames.lower()==coordname.lower())
 
-        reorderlist = sp.zeros(len(newcoords)).astype('int64')
-        for irown,irow in enumerate(newcoords):
-            reorderlist[irown]=sp.where(sp.all(self.dataloc==irow,axis=1))[0][0]
+        if newcoords.ndim == 1:
+            reorderlist=newcoords
+        else:
+            reorderlist = sp.zeros(len(newcoords)).astype('int64')
+            for irown,irow in enumerate(newcoords):
+                reorderlist[irown]=sp.where(sp.all(self.dataloc==irow,axis=1))[0][0]
+        
         if key is None:
+            if self.issatellite():
+                self.times[reorderlist]
             for ikey in self.datanames():
                 self.data[ikey]= self.data[ikey][reorderlist]
         else:
