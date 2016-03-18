@@ -320,7 +320,8 @@ def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc,timelims=[-sp.infty,sp.i
     hightkm - The height the data will be projected on to in km
     sensorloc - A numpy array of latitude longitude and altitude in wgs coordinates of
     the location of the sensor.
-
+    timelims - A list of time limits in POSIX, the first element is the lower 
+       limit, the second is the upper limit.
     """
     if type(flist)==str:
         flist=[flist]
