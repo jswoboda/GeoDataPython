@@ -197,6 +197,7 @@ def readSRI_h5(filename,paramstr,timelims = None):
                 tempdata = f[curpath].value[:,:,:,curint[0],curint[1]]
             data[istr] = np.array([tempdata[iT,:,:].ravel() for iT in range(nt)]).transpose()
     
+    # remove nans from SRI file
     nanlog = sp.any(sp.isnan(dataloc),1)
     keeplog = sp.logical_not(nanlog)
     dataloc = dataloc[keeplog]
@@ -309,7 +310,7 @@ def readIono(iono):
 
 #data, coordnames, dataloc, sensorloc, times = readMad_hdf5('/Users/anna/Research/Ionosphere/2008WorldDaysPDB/son081001g.001.hdf5', ['ti', 'dti', 'nel'])
 
-def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc):
+def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc,timelims=[-sp.infty,sp.infty]):
     """ @author: Greg Starr
     This function will read a Fits file into the proper GeoData variables.
     inputs
@@ -327,16 +328,22 @@ def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc):
     img = header[0].data
     data = np.zeros((img.size,len(flist)))
 
-    times = np.zeros((len(flist),2))
-    for i in range(len(flist)):
+    # search through the times to see if anything is between the limits
+    times =[]
+    flist2 = []
+    for fn in flist:
+        fund = fn.find('PKR')
+        ut_tup = (int(fn[fund+14:fund+18]),int(fn[fund+18:fund+20]),
+            int(fn[fund+20:fund+22]),int(fn[fund+23:fund+25]),int(fn[fund+25:fund+27]),
+            int(fn[fund+27:fund+29]))
+        date = (datetime(*ut_tup,tzinfo=pytz.utc)-datetime(1970,1,1,0,0,0,tzinfo=pytz.utc)).total_seconds()
+        if date>=timelims[0] and date<=timelims[1]:
+            times.append([date,date+1])
+            flist2.append(fn)
+    times = sp.array(times)
+    # read in the data that is in between the time limits
+    for i,fn in enumerate(flist2):
         try:
-            fn = flist[i]
-            fund = fn.find('PKR')
-            ut_tup = (int(fn[fund+14:fund+18]),int(fn[fund+18:fund+20]),
-                int(fn[fund+20:fund+22]),int(fn[fund+23:fund+25]),int(fn[fund+25:fund+27]),
-                int(fn[fund+27:fund+29]))
-            date = (datetime(*ut_tup,tzinfo=pytz.utc)-datetime(1970,1,1,0,0,0,tzinfo=pytz.utc)).total_seconds()
-            times[i] = [date,date+1]
             header = fits.open(fn)
             img = header[0].data
             data[:,i] = img.flatten()
