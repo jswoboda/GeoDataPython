@@ -196,7 +196,12 @@ def readSRI_h5(filename,paramstr,timelims = None):
             else:
                 tempdata = f[curpath].value[:,:,:,curint[0],curint[1]]
             data[istr] = np.array([tempdata[iT,:,:].ravel() for iT in range(nt)]).transpose()
-
+    
+    nanlog = sp.any(sp.isnan(dataloc),1)
+    keeplog = sp.logical_not(nanlog)
+    dataloc = dataloc[keeplog]
+    for ikey in data.keys():
+        data[ikey]= data[ikey][keeplog]
     return (data,coordnames,dataloc,sensorloc,times)
 
 def read_h5_main(filename):

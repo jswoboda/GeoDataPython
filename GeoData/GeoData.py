@@ -308,11 +308,18 @@ class GeoData(object):
                         
                         if method.lower()=='linear':
                             if firsttime:
+                                nanlog = sp.any(sp.isnan(coordkeep),1)
+                                keeplog = sp.logical_not(nanlog)
+                                coordkeep = coordkeep[keeplog]
+                                
                                 vtx, wts =interp_weights(coordkeep, new_coords,d)
                                 firsttime=False
-                            intparam = interpolate(curparam, vtx, wts,fill_value)
+                            intparam = interpolate(curparam[keeplog], vtx, wts,fill_value)
                         else:
-                            intparam = spinterp.griddata(coordkeep,curparam,new_coords,method,fill_value)
+                            nanlog = sp.any(sp.isnan(coordkeep),1)
+                            keeplog = sp.logical_not(nanlog)
+                            coordkeep = coordkeep[keeplog]
+                            intparam = spinterp.griddata(coordkeep,curparam[keeplog],new_coords,method,fill_value)
                     else: # no finite values
                         intparam = np.nan
                     New_param[:,itime] = intparam
