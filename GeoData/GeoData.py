@@ -102,7 +102,7 @@ class GeoData(object):
         of the first object."""
         times1 = timerepair(self.times)
         times2 = timerepair(self2.times)
-        outcell = [[] for i in range(times1.shape[0])]
+        outcell = [sp.array([])]*times1.shape[0]
         for k in  range(times1.shape[0]):
             l = times1[k,:]
 
