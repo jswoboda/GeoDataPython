@@ -392,7 +392,7 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
     return(ploth,cbar2)
 
 def contourGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',
-              fig=None,ax=None,title='',cbar=True,m=None):
+              fig=None,ax=None,title='',cbar=True,m=None,levels=None):
     poscoords = ['cartesian','wgs84','enu','ecef']
     assert geod.coordnames.lower() in poscoords
 
@@ -456,9 +456,13 @@ def contourGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',
         ax = fig.gca()
     elif ax is None:
         ax = fig.gca()
-
+    
+    if vbounds is None:
+        vbounds=[sp.nanmin(dataout),sp.nanmax(dataout)]
+    if levels is None:
+        levels=sp.linspace(vbounds[0],vbounds[1],5)
     if m is None:
-        ploth = ax.contour(M1,M2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
+        ploth = ax.contour(M1,M2,dataout,levels = levels,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
         ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(),
                  xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
         if cbar:
@@ -470,7 +474,7 @@ def contourGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',
         ax.set_ylabel(veckeys[1])
     else:
         N1,N2 = m(M1,M2)
-        ploth = ax.contour(N1,N2,dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
+        ploth = ax.contour(N1,N2,dataout,levels = levels,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
 
         if cbar:
             #cbar2 = m.colorbar(ploth,  format='%.0e')
