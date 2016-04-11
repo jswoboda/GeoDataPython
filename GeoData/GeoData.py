@@ -83,11 +83,13 @@ class GeoData(object):
                         dictkeys = vardict[cvar].keys()
                         group2 = h5file.create_group('/',cvar,cvar+' dictionary')
                         for ikeys in dictkeys:
-                            h5file.createArray(group2,ikeys,vardict[cvar][ikeys],'Static array')
+                            h5file.create_array(group2,ikeys,vardict[cvar][ikeys])#,'Static array')
                     else:
-                        h5file.createArray('/',cvar,vardict[cvar],'Static array')
+                        if isinstance(vardict[cvar],string_types):
+                            vardict[cvar] = np.string_(vardict[cvar]) #HDF5 wants fixed length strings
+                        h5file.create_array(h5file.root, cvar, vardict[cvar])#,'Static array')
             except Exception as e: # catch *all* exceptions
-                exit('problem writing ' + str(filename) + ' due to ' +str(e))
+                raise ValueError('problem writing {} due to {}'.format(filename,e))
 
     #%% Time registration
     def timeregister(self,self2):
@@ -189,11 +191,11 @@ class GeoData(object):
                 else:
                     raise TypeError('unknown data shape for gd2 data')
         return gd2
-    def timereduce(self,timebounds):        
+    def timereduce(self,timebounds):
         """This method will remove any data points out side of the time limits.
         Inputs
             timebounds - A list of length 2 of posix times."""
-        
+
         lowerbnd = self.times[:,0]>=timebounds[0]
         upperbnd = self.times[:,1]<=timebounds[1]
         keep=sp.logical_and(lowerbnd,upperbnd)
@@ -213,8 +215,8 @@ class GeoData(object):
                     self.data[idata] = self.data[idata][:,self.times] #data is a vector
                 else:
                     self.data[idata] = self.data[idata][:,keep]
-                    
-    
+
+
     def timelisting(self):
         """ This will output a list of lists that contains the times in strings."""
 
@@ -305,13 +307,13 @@ class GeoData(object):
                         coordkeep = curcoords
 
                     if len(coordkeep)>0: # at least one finite value
-                        
+
                         if method.lower()=='linear':
                             if firsttime:
                                 nanlog = sp.any(sp.isnan(coordkeep),1)
                                 keeplog = sp.logical_not(nanlog)
                                 coordkeep = coordkeep[keeplog]
-                                
+
                                 vtx, wts =interp_weights(coordkeep, new_coords,d)
                                 firsttime=False
                             intparam = interpolate(curparam[keeplog], vtx, wts,fill_value)
@@ -382,7 +384,7 @@ class GeoData(object):
         """ This method takes a list of coordinates and finds what instances are in
         the set of locations for the instance of the class.
         Inputs
-            newcoords -A numpy array where each row is a coordinate that the user 
+            newcoords -A numpy array where each row is a coordinate that the user
                 desires to keep. Or a list of indices that are to be kept.
             coordname - This is coordinate names of the input directory.
             key - The name of the data that the user wants extracted"""
@@ -394,7 +396,7 @@ class GeoData(object):
             reorderlist = sp.zeros(len(newcoords)).astype('int64')
             for irown,irow in enumerate(newcoords):
                 reorderlist[irown]=sp.where(sp.all(self.dataloc==irow,axis=1))[0][0]
-        
+
         if key is None:
             if self.issatellite():
                 self.times[reorderlist]
@@ -510,7 +512,7 @@ def timerepair(timear):
 
 #%% Interpolation speed up code
 def interp_weights(xyz, uvw,d=3):
-    
+
     tri = Delaunay(xyz)
     simplex = tri.find_simplex(uvw)
     vertices = np.take(tri.simplices, simplex, axis=0)
