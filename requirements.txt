@@ -4,3 +4,5 @@ numpy
 scipy
 h5py
 pytables
+pandas
+xarray
