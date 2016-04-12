@@ -21,22 +21,20 @@ Requirements
 ============
 Full functionality requires Python 2.7 due to Mayavi/VTK.
 Non-mayavi functionality also available in Python 3.
-The packages required include:
+The packages required are installed by::
 
-``numpy  scipy  pytables  matplotlib  mayavi``
+	python setup.py develop
 
 Installation
 ============
 To install first clone repository::
 
-	$ git clone https://github.com/jswoboda/GeoDataPython.git
+ git clone https://github.com/jswoboda/GeoDataPython.git
 
-Then move to the main directory and run the Python setup script, which should be run in develop mode.
+Then move to the main directory and run the Python setup script, which should be run in develop mode::
 
-.. code:: bash
-
-	$ cd GeoDataPython
-	$ python setup.py develop
+ cd GeoDataPython 
+ python setup.py develop
 
 Software Structure
 ==================
