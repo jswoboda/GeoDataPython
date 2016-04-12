@@ -1,3 +1,6 @@
+.. image:: https://travis-ci.org/jswoboda/GeoDataPython.svg?branch=master
+    :target: https://travis-ci.org/jswoboda/GeoDataPython
+
 =============
 GeoDataPython
 =============
