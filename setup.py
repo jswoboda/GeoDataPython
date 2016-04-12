@@ -9,32 +9,26 @@ python setup.py develop --uninstall
 
 @author: John Swoboda
 """
-import os, inspect
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
+import os,sys
+from setuptools import setup
+import subprocess
 
-with open('README.rst') as f:
+exepath = os.path.dirname(sys.executable)
+try:
+    subprocess.call([os.path.join(exepath,'conda'),'install','--file','requirements.txt'])
+except Exception as e:
+    print('tried conda in {}, but you will need to install packages in requirements.txt  {}'.format(exepath,e))
+
+with open('README.rst','r') as f:
 	long_description = f.read()
 
-config = {
-    'description': 'GeoData class and needed functions.',
-    'author': 'John Swoboda',
-    'url': '',
-    'download_url': 'https://github.com/jswoboda/GeoDataPython.git',
-    'author_email': 'swoboj@bu.edu',
-    'version': '0.2',
-    'install_requires': ['numpy', 'scipy', 'tables','h5py'],
-    'packages': ['GeoData'],
-    'scripts': [],
-    'name': 'GeoData',
-    'long_description': long_description
-}
+setup(description='GeoData class and needed functions.',
+      author='John Swoboda',
+      version=0.2,
+      install_requires=[],
+      extras_require={'mayavi2':'mayavi2'},
+      packages=['GeoData'],
+      name='GeoData',
+      long_description=long_description
+)
 
-curpath = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-testpath = os.path.join(curpath,'Test')
-if not os.path.exists(testpath):
-    os.mkdir(testpath)
-    print("Making a path for testing at "+testpath)
-setup(**config)
