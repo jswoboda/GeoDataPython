@@ -6,3 +6,4 @@ h5py
 pytables
 pandas
 xarray
+astropy
