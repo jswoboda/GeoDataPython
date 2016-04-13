@@ -25,21 +25,14 @@ try:
 except Exception as e:
     pass
 #
-from .CoordTransforms import angles2xy
-#
-try:
-    plt.rc('text', usetex=True)
-    plt.rc('font', family='serif')
-except Exception as e:
-    logging.info('Latex install not complete, falling back to basic fonts.  sudo apt-get install dvipng')
-#
-try:
-    import seaborn as sns
-    sns.color_palette(sns.color_palette("cubehelix"))
-    sns.set(context='poster', style='whitegrid')
-    sns.set(rc={'image.cmap': 'cubehelix_r'}) #for contour
-except Exception as e:
-    logging.info('could not import seaborn  {}'.format(e))
+from .CoordTransforms import angles2xy,sphereical2Cartisian
+from .GeoData import GeoData
+# NOTE: using usetex can make complicated plots unstable and crash
+#try:
+#    plt.rc('text', usetex=True)
+#    plt.rc('font', family='serif')
+#except Exception as e:
+#    logging.info('Latex install not complete, falling back to basic fonts.  sudo apt-get install dvipng')
 #
 sfmt = ScalarFormatter(useMathText=True)
 #%%
@@ -74,22 +67,25 @@ def _dointerp(geodatalist,altlist,xyvecs,picktimeind):
         G.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
         interpData = G.data[key['opt'][0]]
         opt = interpData[:,0].reshape(x.shape)
+    except IndexError as e:
+        logging.warning('did you pick a time index outside camera observation?  {}'.format(e))
     except Exception as e:
-        logging.warning('skipping instrument   {}'.format(e))
+        logging.error('problem in optical interpolation   {}'.format(e))
 #%% isr
     g = geodatalist[1]
     try:
         key['isr'] = list(g.data.keys()) #list necessary for Python3
         G = g.timeslice(picktimeind)
-        G.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
+        G.interpolate(new_radar_coords, newcoordname='Cartesian', method='nearest', 
+                      fill_value=np.nan)
         interpData = G.data[key['isr'][0]]
         isr = interpData[:,0].reshape(x.shape)
     except Exception as e:
-        logging.warning('skipping instrument   {}'.format(e))
+        logging.error('problem in ISR interpolation   {}'.format(e))
 
     return opt,isr,extent,key,x,y
 #%%
-def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,picktimeind=[1,2]):
+def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,picktimeind=[0]):
     """
     geodatalist - A list of geodata objects that will be overlayed, first object is on the bottom and in gray scale
     altlist - A list of the altitudes that we can overlay.
@@ -117,15 +113,18 @@ def alt_slice_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,pi
         c = fg.colorbar(bottom,ax=ax)
         c.set_label(key['opt'][0])
     except Exception as e:
-        logging.info('problem plotting instrument  {}'.format(e))
+        logging.info('problem plotting Optical slice {}'.format(e))
 #%%
+    if isr is None or not np.isfinite(isr).any():
+        logging.warning('Nothing to plot for ISR, all NaN')
+
     try:
         top = ax.imshow(isr, alpha=0.4, extent=extent, origin='lower',interpolation='none',
                         vmin=vbounds[1][0],vmax=vbounds[1][1])
         c = fg.colorbar(top,ax=ax)
         c.set_label(key['isr'][0])
     except Exception as e:
-        logging.info('problem plotting instrument  {}'.format(e))
+        logging.info('problem plotting ISR slice {}'.format(e))
 
     return ax
 #%%
@@ -157,7 +156,7 @@ def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,
         cbar1 = plt.colorbar(bottom, orientation='horizontal',ax=ax)
         cbar1.set_label(key['opt'][0])
     except Exception as e:
-        logging.info('problem plotting instrument  {}'.format(e))
+        logging.info('problem plotting optical   {}'.format(e))
 
     try:
         top = ax.contour(x,y, isr,extent=extent, origin='lower', interpolation='none',
@@ -166,7 +165,7 @@ def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,
         cbar2 = fg.colorbar(top, format='%.0e',ax=ax)
         cbar2.set_label(key['isr'][0])
     except Exception as e:
-        logging.info('problem plotting instrument  {}'.format(e))
+        logging.info('problem plotting isr contour {}'.format(e))
 
     return ax
 
@@ -333,7 +332,6 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
     #determine the data name
     if gkey is None:
         gkey = geod.data.keys[0]
-
 
     # get the data location, first check if the data can be just reshaped then do a
     # search
@@ -627,7 +625,6 @@ def sliceGDsphere(geod,coordnames ='cartesian' ,vbounds=None,time = 0,gkey = Non
     return(ploth,cbar2)
 
 def plotbeamposfig(geod,height,coordnames,fig=None,ax=None,title=''):
-    d2r = sp.pi/180.
     if (ax is None) and (fig is None):
         fig = plt.figure(facecolor='white')
         ax = fig.gca()
@@ -637,9 +634,9 @@ def plotbeamposfig(geod,height,coordnames,fig=None,ax=None,title=''):
     (beams,beaminds,beamnums) = uniquerows(geod.dataloc[:,1:])
     az = beams[:,0]
     el = beams[:,1]
-    rho = height*sp.tan((90-el)*d2r)
-    y = rho*sp.cos(az*d2r)
-    x = rho*sp.sin(az*d2r)
+    rho = height*np.tan(np.radians((90-el)))
+    y = rho*np.cos(np.radians(az))
+    x = rho*np.sin(np.radians(az))
 
     ploth = ax.scatter(x,y)
     return(ploth)
@@ -647,7 +644,7 @@ def plotbeamposfig(geod,height,coordnames,fig=None,ax=None,title=''):
 def rangevstime(geod,beam,vbounds=(None,None),gkey = None,cmap=None,fig=None,ax=None,
                 title='',cbar=True,tbounds=(None,None),ic=True,ir=True,it=True):
     """ This method will create a color graph of range vs time for data in spherical coordinates"""
-    assert geod.coordnames.lower() =='spherical'
+    assert geod.coordnames.lower() =='spherical', 'I expect speherical coordinate data'
 
     if (ax is None) and (fig is None):
         fig = plt.figure(figsize=(12,8))
@@ -658,7 +655,7 @@ def rangevstime(geod,beam,vbounds=(None,None),gkey = None,cmap=None,fig=None,ax=
     if gkey is None:
         gkey = geod.data.keys[0]
 #%% get unique ranges for plot limits, note beamid is not part of class.
-    match = np.isclose(geod.dataloc[:,1:],beam,atol=1e-2).all(axis=1) #FIXME what should tolerance be for Sondrestrom mechanical dish
+    match = np.isclose(geod.dataloc[:,1:],beam,atol=1e-2).all(axis=1) #TODO what should tolerance be for Sondrestrom mechanical dish
     if (~match).all(): #couldn't find this beam
         logging.error('beam az,el {} not found'.format(beam))
         return
@@ -682,10 +679,9 @@ def rangevstime(geod,beam,vbounds=(None,None),gkey = None,cmap=None,fig=None,ax=
         ax.set_ylabel('az,el = {} \n slant range [km]'.format(beam))
     if ir:
         ax.set_xlabel('UTC')
-    if tbounds[0]:
-        fig.suptitle(tbounds[0].strftime('%Y-%m-%d'))
-    else:
-        fig.suptitle(t[0].strftime('%Y-%m-%d'))
+
+    ttxt = tbounds[0].strftime('%Y-%m-%d') if tbounds[0] else t[0].strftime('%Y-%m-%d')
+    fig.suptitle(ttxt,fontsize='xx-large')
 
     ax.autoscale(axis='y',tight=True) #fills axis
     ax.xaxis.set_major_formatter(DateFormatter('%H:%M'))
@@ -763,7 +759,7 @@ def polarplot(az,el,markerarea=500,title=None,minel=30,elstep=10):
     yt = np.arange(0., 90.-minel+elstep, elstep)
     ax.set_yticks(yt)
     ylabel = (yt[::-1]+minel).astype(int).astype(str)
-    ax.set_yticklabels(ylabel,fontsize='x-small')
+    ax.set_yticklabels(ylabel)
 
     ax.set_title(title)
 
@@ -907,3 +903,28 @@ def insertinfo(strin,key='',posix=None,posixend = None):
         else:
             stroutall = strout
     return stroutall
+
+def plotazelscale(opt,az=None,el=None):
+    """
+    diagnostic: plots az/el map over test image
+    Michael Hirsch
+    """
+    if isinstance(opt,GeoData):
+        img = opt.data['optical'][0,...]
+        az = opt.dataloc[:,1].reshape(img.shape)
+        el = opt.dataloc[:,2].reshape(img.shape)
+    elif isinstance(opt,np.ndarray):
+        img = opt
+    else:
+        raise NotImplementedError('not sure what your opt array {} is'.format(type(opt)))
+
+    assert img.ndim==2, 'just one image please'
+    assert img.shape==az.shape==el.shape,'do you need to reshape your az/el into 2-D like image?'
+
+    fg,ax = plt.subplots(1,2,figsize=(12,6))
+    for a,q,t in zip(ax,(az,el),('azimuth','elevation')):
+        a.imshow(img,origin='lower',interpolation='none',cmap='gray')
+        c=a.contour(q)
+        a.clabel(c, inline=1,fmt='%0.1f')
+        a.set_title(t)
+        a.grid(False)
