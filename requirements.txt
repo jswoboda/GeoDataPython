@@ -1,12 +1,14 @@
 setuptools
 nose
 six
-dateutil
+python-dateutil
 matplotlib
+astropy
 numpy
 scipy
+pandas
 h5py
 pytables
-pandas
+beautifulsoup4
+seaborn
 xarray
-astropy
