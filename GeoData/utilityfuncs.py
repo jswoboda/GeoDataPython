@@ -1,24 +1,23 @@
 #!/usr/bin/env python
 """
-Created on Thu Sep 11 15:29:27 2014
+Note: "cartesian" column order is x,y,z in the Nx3 matrix
 
 @author: John Swoboda
 """
 from __future__ import division,absolute_import
+from six import string_types,integer_types
 import logging
 import numpy as np
 import tables as tb
 import h5py
 import posixpath
 import scipy as sp
-import tables
 from astropy.io import fits
 from pandas import DataFrame
-import pytz
 from datetime import datetime
-from warnings import warn
+from dateutil.parser import parse
+from pytz import UTC
 from os.path import expanduser
-import pdb
 #
 from . import CoordTransforms as CT
 
@@ -49,15 +48,15 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     instrument = str(sensor_data[0][1]) #instrument type string, comes out as bytes so cast to str
     if "Sondrestrom" in instrument:
         radar = 1
-        print("Sondrestrom data")
+        logging.info("Sondrestrom data")
     elif "Poker Flat" in instrument:
         radar = 2
-        print("PFISR data")
+        logging.info("PFISR data")
     elif "Resolute Bay" in instrument:
         radar = 3
-        print ("RISR data")
+        logging.info("RISR data")
     else:
-        exit("Error: Radar type "+str(instrument) +" not supported by program in this version.")
+        raise NotImplementedError("Radar type "+str(instrument) +" not supported.")
 
     # get the data location (range, el1, azm)
     if radar == 1:
@@ -102,7 +101,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     data = {}
     for p in paramstr:
         if not p in all_data.dtype.names:
-            warn('{} is not a valid parameter name.'.format(p))
+            logging.warning('{} is not a valid parameter name.'.format(p))
             continue
 
         if USEPANDAS:
@@ -140,7 +139,9 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     #NOTE temporarily passing dataloc as Numpy array till rest of program is updated to Pandas
     return (data,coordnames,dataloc.values,sensorloc,uniq_times)
 
-def readSRI_h5(filename,paramstr,timelims = None):
+def readSRI_h5(fn,params,timelims = None):
+    assert isinstance(params,(tuple,list))
+    fn = expanduser(fn)
     '''This will read the SRI formated h5 files for RISR and PFISR.'''
     coordnames = 'Spherical'
 
@@ -154,7 +155,7 @@ def readSRI_h5(filename,paramstr,timelims = None):
                 'Te':('/FittedParams/Fits',  (-1,1)),
                 'Ti':('/FittedParams/Errors',(-1,1))}
 
-    with h5py.File(filename,'r',libver='latest') as f:
+    with h5py.File(fn,'r',libver='latest') as f:
         # Get the times and time lims
         times = f['/Time/UnixTime'].value
         # get the sensor location
@@ -163,40 +164,33 @@ def readSRI_h5(filename,paramstr,timelims = None):
                               f['/Site/Altitude'].value])
         # Get the locations of the data points
         rng = f['/FittedParams/Range'].value / 1e3
-
-        angles = f['/BeamCodes'].value[:,1:3]
+        angles = f['/BeamCodes'][:,1:3]
 
     nt = times.shape[0]
     if timelims is not None:
-        timelog = times[:,0]>= timelims[0] and times[:,1]<timelims[1]
-        times = times[timelog,:]
+        times = times[(times[:,0]>= timelims[0]) & (times[:,1]<timelims[1]) ,:]
         nt = times.shape[0]
-#
-    nrng = rng.shape[1]
-    repangles = np.tile(angles,(1,nrng))
-    allaz = repangles[:,::2]
-    allel = repangles[:,1::2]
-#   NOTE dataloc = DataFrame(index=times,
-#                              {'rng':rng.ravel(),
-#                               'allaz':allaz.ravel(),'allel':allel.ravel()})
-    dataloc =np.vstack((rng.ravel(),allaz.ravel(),allel.ravel())).transpose()
+
+    allaz = np.tile(angles[:,0],rng.shape[1])
+    allel = np.tile(angles[:,1],rng.shape[1])
+
+    dataloc =np.vstack((rng.ravel(),allaz,allel)).T
     # Read in the data
     data = {}
-    with h5py.File(filename,'r',libver='latest') as f:
-        for istr in paramstr:
-            if not istr in list(pathdict.keys()):
-                warn(istr + ' is not a valid parameter name.')
-
+    with h5py.File(fn,'r',libver='latest') as f:
+        for istr in params:
+            if not istr in pathdict.keys(): #list() NOT needed
+                logging.error('{} is not a valid parameter name.'.format(istr))
                 continue
             curpath = pathdict[istr][0]
             curint = pathdict[istr][-1]
 
-            if curint is None:
-                tempdata = f[curpath].value
-            else:
-                tempdata = f[curpath].value[:,:,:,curint[0],curint[1]]
-            data[istr] = np.array([tempdata[iT,:,:].ravel() for iT in range(nt)]).transpose()
-    
+            if curint is None: #3-D data
+                tempdata = f[curpath]
+            else: #5-D data -> 3-D data
+                tempdata = f[curpath][:,:,:,curint[0],curint[1]]
+            data[istr] = np.array([tempdata[iT,:,:].ravel() for iT in range(nt)]).T
+
     # remove nans from SRI file
     nanlog = sp.any(sp.isnan(dataloc),1)
     keeplog = sp.logical_not(nanlog)
@@ -306,110 +300,148 @@ def readIono(iono):
         coordnames = 'Cartesian'
         coords = iono.Cart_Coords
 
-    return (paramdict,coordnames,coords,sp.array(iono.Sensor_loc),iono.Time_Vector)
+    return (paramdict,coordnames,coords,np.array(iono.Sensor_loc),iono.Time_Vector)
 
 #data, coordnames, dataloc, sensorloc, times = readMad_hdf5('/Users/anna/Research/Ionosphere/2008WorldDaysPDB/son081001g.001.hdf5', ['ti', 'dti', 'nel'])
 
-def readAllskyFITS(flist,azmap,elmap,heightkm,sensorloc,timelims=[-sp.infty,sp.infty]):
-    """ @author: Greg Starr
-    This function will read a Fits file into the proper GeoData variables.
-    inputs
+def readAllskyFITS(flist,azelfn,heightkm,timelims=[-sp.infty,sp.infty]):
+    """ :author: Michael Hirsch, Greg Starr
+    For example, this works with Poker Flat DASC all-sky, FITS data available from:
+    https://amisr.asf.alaska.edu/PKR/DASC/RAW/
+
+    This function will read a FITS file into the proper GeoData variables.
+
+    inputs:
+    ------
     flist - A list of Fits files that will be read in.
-    azmap - A file name of the az mapping.
-    elmap - A file name of the elevation maping
-    hightkm - The height the data will be projected on to in km
-    sensorloc - A numpy array of latitude longitude and altitude in wgs coordinates of
-    the location of the sensor.
-    timelims - A list of time limits in POSIX, the first element is the lower 
+    azelfn - A tuple of file names  for az,el map files
+    heightkm - The height the data will be projected on to in km
+    timelims - A list of time limits in POSIX, the first element is the lower
        limit, the second is the upper limit.
     """
-    if type(flist)==str:
+    if isinstance(flist,string_types):
         flist=[flist]
-    header = fits.open(flist[0])
-    img = header[0].data
-    data = np.zeros((img.size,len(flist)))
+    assert isinstance(flist,(list,tuple)) and len(flist)>0, 'I did not find any image files to read'
+    assert isinstance(azelfn,(tuple,list)) and len(azelfn)==2, 'You must specify BOTH of the az/el files'
+    assert isinstance(heightkm,(integer_types,float)), 'specify one altitude'
+#%% priming read
+    with fits.open(flist[0],mode='readonly') as h:
+        img = h[0].data
+        sensorloc = np.array([h[0].header['GLAT'], h[0].header['GLON'], 0.]) #TODO real sensor altitude in km
 
-    # search through the times to see if anything is between the limits
+
+    epoch = datetime(1970,1,1,0,0,0,tzinfo=UTC)
+#%% search through the times to see if anything is between the limits
     times =[]
     flist2 = []
-    for fn in flist:
-        fund = fn.find('PKR')
-        ut_tup = (int(fn[fund+14:fund+18]),int(fn[fund+18:fund+20]),
-            int(fn[fund+20:fund+22]),int(fn[fund+23:fund+25]),int(fn[fund+25:fund+27]),
-            int(fn[fund+27:fund+29]))
-        date = (datetime(*ut_tup,tzinfo=pytz.utc)-datetime(1970,1,1,0,0,0,tzinfo=pytz.utc)).total_seconds()
-        if date>=timelims[0] and date<=timelims[1]:
-            times.append([date,date+1])
-            flist2.append(fn)
-    times = sp.array(times)
-    # read in the data that is in between the time limits
-    for i,fn in enumerate(flist2):
+    for f in flist:
+        try: #KEEP THIS try
+            with fits.open(f,mode='readonly') as h:
+                expstart_dt = parse(h[0].header['OBSDATE'] + ' ' + h[0].header['OBSSTART']+'Z') #implied UTC
+                expstart_unix = (expstart_dt - epoch).total_seconds()
+            if (expstart_unix>=timelims[0]) & (expstart_unix<=timelims[1]):
+                times.append([expstart_unix,expstart_unix + h[0].header['EXPTIME']])
+                flist2.append(f)
+        except OSError as e:
+            logging.warning('trouble reading time from {}   {}'.format(f,e))
+    times = np.array(times)
+#%% read in the data that is in between the time limits
+    img = np.empty((img.size,len(flist2)),dtype=img.dtype)
+    for i,f in enumerate(flist2):
         try:
-            header = fits.open(fn)
-            img = header[0].data
-            data[:,i] = img.flatten()
+            with fits.open(f,mode='readonly') as h:
+                img[:,i] = h[0].data.ravel()
+
+            if not(i % 200):
+                print('{}/{} FITS allsky read'.format(i+1,len(flist2)))
         except:
-            print(fn + ' has error')
+             #TODO pop time off list!
+             logging.error('trouble reading images from {}   {}'.format(f,e))
 
 
-    coordnames="Spherical"
+    coordnames="spherical"
 
-    az = fits.open(azmap)[0].data
-    el = fits.open(elmap)[0].data
+    with fits.open(expanduser(azelfn[0]),mode='readonly') as h:
+        az = h[0].data
+    with fits.open(expanduser(azelfn[1]),mode='readonly') as h:
+        el = h[0].data
 
     #%% Get rid of bad data
     grad_thresh = 15.
-    (Fx,Fy) = sp.gradient(az)
-    bad_datalog = sp.hypot(Fx,Fy)>grad_thresh
-    zerodata = sp.logical_or(bad_datalog,sp.logical_and(az==0.,el==0.))
-    keepdata= sp.logical_not(zerodata.flatten())
-    data = {'image':data[keepdata]}
-    elfl = el.flatten()[keepdata]
+    (Fx,Fy) = np.gradient(az)
+    bad_datalog = np.hypot(Fx,Fy)>grad_thresh
+    zerodata = bad_datalog | ((az==0.) & (el==0.))
+    keepdata = ~(zerodata.ravel())
+    optical = {'image':img[keepdata]}
+    elfl = el.ravel()[keepdata]
 
-    sinel = sp.sin(elfl*sp.pi/180)
+    sinel = sp.sin(np.radians(elfl))
     dataloc = np.empty((keepdata.sum(),3))
-    dataloc[:,0] = sp.ones_like(sinel)*heightkm/sinel #
-    dataloc[:,1] = az.flatten()[keepdata]
-    dataloc[:,2] = el.flatten()[keepdata]
+    dataloc[:,0] = sp.ones_like(sinel)*heightkm/sinel #ALITUDE
 
-    sensorloc=sensorloc
+    dataloc[:,1] = az.ravel()[keepdata]  # AZIMUTH
+    dataloc[:,2] = el.ravel()[keepdata] # ELEVATION
 
-    return (data,coordnames,dataloc,sensorloc,times)
 
-def readNeoCMOS(imgfn, azelfn, heightkm,treq=None):
+    return (optical,coordnames,dataloc,sensorloc,times)
+
+def readNeoCMOS(imgfn, azelfn, heightkm=110.,treq=None):
     """
     treq is pair or vector of UT1 unix epoch times to load--often file is so large we can't load all frames into RAM.
-    assumes that /rawimg is a 3-D array
+    assumes that /rawimg is a 3-D array Nframe x Ny x Nx
     """
-    imgfn = expanduser(imgfn)
-    azelfn = expanduser(azelfn)
+    assert isinstance(heightkm,(integer_types,float))
+
+    imgfn = expanduser(str(imgfn))
+    azelfn = expanduser(str(azelfn))
+#%% load data
+    with h5py.File(azelfn,'r',libver='latest') as f:
+        az = f['/az'].value
+        el = f['/el'].value
 
     with h5py.File(imgfn,'r',libver='latest') as f:
         times = f['/ut1_unix'].value
         sensorloc = f['/sensorloc'].value
 
-        npix = f['/rawimg'].shape[1] * f['/rawimg'].shape[2] #number of pixels in one image
+        npix = np.prod(f['/rawimg'].shape[1:]) #number of pixels in one image
         dataloc = np.empty((npix,3))
 
         if treq is not None:
-            mask = (times>treq[0]) & (times<treq[-1])
+            mask = (treq[0]<=times) & (times<=treq[-1])
         else:
             mask = np.ones(f['/rawimg'].shape[0]).astype(bool)
 
-        if mask.sum()*npix*2 > 1e9:
-            logging.warning('trying to load very large amount of image data, your program may crash')
-        try:
-            optical = {'optical':f['/rawimg'][mask,...]}
-        except Exception as e:
-            logging.error('could not load optical data  {}'.format(e))
+        if mask.sum()*npix*2 > 1e9: # RAM
+            logging.warning('trying to load {:.1f} GB of image data, your program may crash'.format(mask.sum()*npix*2/1e9))
 
-    coordnames = 'Spherical'
+#        assert mask.sum()>0,'no times in {} within specified times.'.format(imgfn)
+        imgs = f['/rawimg'][mask,...]
+#%% plate scale
+        if f['/params']['transpose']:
+            imgs = imgs.transpose(0,2,1)
+            az   = az.T
+            el   = el.T
+        if f['/params']['rotccw']: #NOT isinstance integer_types!
+            imgs = np.rot90(imgs.transpose(1,2,0),k=f['/params']['rotccw']).transpose(2,0,1)
+            az   = np.rot90(az,k=f['/params']['rotccw'])
+            el   = np.rot90(el,k=f['/params']['rotccw'])
+        if f['/params']['fliplr']:
+            imgs = np.fliplr(imgs)
+            az   = np.fliplr(az)
+            el   = np.fliplr(el)
+        if f['/params']['flipud']:
+            imgs = np.flipud(imgs.transpose(1,2,0)).transpose(2,0,1)
+            az   = np.flipud(az)
+            el   = np.flipud(el)
+
+    optical = {'optical':imgs}
+
+    coordnames = 'spherical'
     dataloc[:,0] = heightkm
-    with h5py.File(azelfn,'r',libver='latest') as f:
-        dataloc[:,1] = f['/az'].value.ravel()
-        dataloc[:,2] = f['/el'].value.ravel()
+    dataloc[:,1] = az.ravel()
+    dataloc[:,2] = el.ravel()
 
-    return optical, coordnames, dataloc, sensorloc, times
+    return optical, coordnames, dataloc, sensorloc, times[mask]
 
 
 def readAVI(fn,fwaem):
@@ -517,18 +549,17 @@ def readIonofiles(filename):
 #               dtype={'names': ('ToY', 'year', 'rlat', 'rlong', 'TEC', 'nTEC','vTEC','az','el','mf','plat','plon','sat','site','rbias','nrbias'),
 #               'formats': ('float', 'float','float','float','float','float','float','float','float','float','float','float','float','S4', 'float','float')})
 #    fd.close()
-    data = np.genfromtxt(filename)
-    data = data.transpose()
+    data = np.genfromtxt(filename).T #NOTE this takes a long time, new data uses HDF5
     #%% Get in GeoData format
     doy = data[0]
     year=data[1].astype(int)
-    dtsp = datetime(1970,1,1,0,0,0,tzinfo=pytz.utc)
-    if np.all(year==year[1]):
-        unixyear =(datetime(year[0],1,1,0,0,0,tzinfo=pytz.utc)-dtsp).total_seconds()
+    dtsp = datetime(1970,1,1,0,0,0,tzinfo=UTC)
+    if (year==year[1]).all():
+        unixyear =(datetime(year[0],1,1,0,0,0,tzinfo=UTC)-dtsp).total_seconds()
         uttime = unixyear+24*3600*sp.column_stack((doy,doy+1./24./60.)) # Making the difference in time to be a minute
     else:
         (y_u,y_iv) = np.unique(year,return_inverse=True)
-        unixyearu = sp.array([(datetime(iy,1,1,0,0,0,tzinfo=pytz.utc)-dtsp).total_seconds() for iy in y_u])
+        unixyearu = sp.array([(datetime(iy,1,1,0,0,0,tzinfo=UTC)-dtsp).total_seconds() for iy in y_u])
         unixyear = unixyearu[y_iv]
         uttime = unixyear+24*3600*sp.column_stack((doy,doy+1))
 

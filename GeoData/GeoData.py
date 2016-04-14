@@ -349,13 +349,13 @@ class GeoData(object):
         outputs
         outcoords: A new coordinate system where each row is a coordinate in the new system.
         """
-        if self.coordnames=='Spherical' and newcoordname=='Cartesian':
+        if self.coordnames.lower()=='spherical' and newcoordname.lower()=='cartesian':
             return CT.sphereical2Cartisian(self.dataloc)
-        if self.coordnames== 'Cartesian'and newcoordname=='Spherical':
+        if self.coordnames.lower()== 'cartesian'and newcoordname.lower()=='spherical':
             return CT.cartisian2Sphereical(self.dataloc)
         if self.coordnames==newcoordname:
             return self.dataloc
-        if self.coordnames=='Spherical' and newcoordname=='WGS84':
+        if self.coordnames.lower()=='spherical' and newcoordname.lower()=='wgs84':
             cart1 = CT.sphereical2Cartisian(self.dataloc)
             enu = CT.cartisian2enu(cart1)
             sloc = np.tile(self.sensorloc[np.newaxis,:],(len(enu),1))
