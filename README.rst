@@ -1,5 +1,8 @@
 .. image:: https://travis-ci.org/jswoboda/GeoDataPython.svg?branch=master
     :target: https://travis-ci.org/jswoboda/GeoDataPython
+    
+.. image:: https://coveralls.io/repos/github/jswoboda/GeoDataPython/badge.svg?branch=master 
+    :target: https://coveralls.io/github/jswoboda/GeoDataPython?branch=master
 
 =============
 GeoDataPython
