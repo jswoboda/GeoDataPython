@@ -485,7 +485,7 @@ def contourGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',
 
 def scatterGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',fig=None,
               ax=None,title='',cbar=True,err=.1,m=None):
-    """ """
+    """ This will make a scatter plot given a GeoData object."""
     poscoords = ['cartesian','wgs84','enu','ecef']
     assert geod.coordnames.lower() in poscoords
 
@@ -510,10 +510,11 @@ def scatterGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
     xyzvecs = {l:sp.unique(datacoords[:,axdict[l]]) for l in veckeys}
     xyzvecsall = {l:datacoords[:,axdict[l]] for l in veckeys}
     if geod.issatellite():
-        xdata =xyzvecsall[veckeys[0]]
-        ydata =xyzvecsall[veckeys[1]]
+        
         zdata = xyzvecsall[veckeys[2]]
         indxnum = np.abs(zdata-slicenum)<err
+        xdata =xyzvecsall[veckeys[0]][indxnum]
+        ydata =xyzvecsall[veckeys[1]][indxnum]
         dataout = geod.data[gkey][indxnum]
         title = insertinfo(title,gkey,geod.times[:,0].min(),geod.times[:,1].max())
     else:
@@ -577,6 +578,7 @@ def scatterGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
         ax.set_ylabel(veckeys[1])
     else:
         Xdata,Ydata = m(xdata,ydata)
+        pdb.set_trace()
         ploth = m.scatter(Xdata,Ydata,c=dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
 
         if cbar:
