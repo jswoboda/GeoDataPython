@@ -295,7 +295,7 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='j
 
 def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',fig=None,
               ax=None,title='',cbar=True,m=None):
-
+    """ """
     #xyzvecs is the area that the data covers.
     poscoords = ['cartesian','wgs84','enu','ecef']
     assert geod.coordnames.lower() in poscoords
@@ -391,6 +391,7 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
 
 def contourGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',
               fig=None,ax=None,title='',cbar=True,m=None,levels=None):
+    """ """
     poscoords = ['cartesian','wgs84','enu','ecef']
     assert geod.coordnames.lower() in poscoords
 
