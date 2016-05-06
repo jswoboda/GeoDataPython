@@ -1,3 +1,9 @@
+.. image:: https://travis-ci.org/jswoboda/GeoDataPython.svg?branch=master
+    :target: https://travis-ci.org/jswoboda/GeoDataPython
+    
+.. image:: https://coveralls.io/repos/github/jswoboda/GeoDataPython/badge.svg?branch=master 
+    :target: https://coveralls.io/github/jswoboda/GeoDataPython?branch=master
+
 =============
 GeoDataPython
 =============
@@ -14,26 +20,14 @@ Overview
 ========
 This is the repository for the Python version of GeoData to plot and analyze data from geophysics sources such as radar and optical systems.
 
-Requirements
-============
-Full functionality requires Python 2.7 due to Mayavi/VTK.
-Non-mayavi functionality also available in Python 3.
-The packages required include:
-
-``numpy  scipy  pytables  matplotlib  mayavi``
 
 Installation
 ============
-To install first clone repository::
+::
 
-	$ git clone https://github.com/jswoboda/GeoDataPython.git
-
-Then move to the main directory and run the Python setup script, which should be run in develop mode.
-
-.. code:: bash
-
-	$ cd GeoDataPython
-	$ python setup.py develop
+ git clone https://github.com/jswoboda/GeoDataPython.git
+ cd GeoDataPython 
+ python setup.py develop
 
 Software Structure
 ==================
@@ -123,7 +117,7 @@ run all these from the GeoDataPython/Test/ directory
  Test               Description
  ================== ===========
  subplots_test.py   overlays Ne data in transparent and contour forms in two panels
- plottingtest3d.py  quad plot of radar beams, and three cool image/radar overlays (python 2.7 only)
+ plottingtest3d.py  quad plot of radar beams, and three cool image/radar overlays
  rangevtime.py      of the radar only
  altitudeslicev2.py
  ================== ===========
