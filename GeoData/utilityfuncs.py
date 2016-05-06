@@ -170,7 +170,7 @@ def readSRI_h5(fn,params,timelims = None):
     if timelims is not None:
         times = times[(times[:,0]>= timelims[0]) & (times[:,1]<timelims[1]) ,:]
         nt = times.shape[0]
-
+# allaz, allel corresponds to rng.ravel()
     allaz = np.tile(angles[:,0],rng.shape[1])
     allel = np.tile(angles[:,1],rng.shape[1])
 
@@ -252,7 +252,7 @@ def readOMTI(filename, paramstr):
     The data paths are known a priori, so read directly ~10% faster than pytables
     """
     filename = expanduser(filename)
-    with h5py.File(filename,'r') as f:
+    with h5py.File(filename,'r',libver='latest') as f:
         optical = {'optical':f['data/optical'].value} #for legacy API compatibility
         dataloc = CT.enu2cartisian(f['dataloc'].value)
         coordnames = 'Cartesian'
