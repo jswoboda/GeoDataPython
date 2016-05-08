@@ -2,6 +2,19 @@
 """
 Note: "cartesian" column order is x,y,z in the Nx3 matrix
 
+This module holds a number of functions that can be used to read data into 
+GeoData objects. All of the function s have the following outputs
+(data,coordnames,dataloc,sensorloc,times)
+Outputs 
+    data - A dictionary with keys that are the names of the data. The values
+        are numpy arrays. If the data comes from satilites the arrays are one
+        dimensional. If the data comes from sensors that are not moving the 
+        values are NlxNt numpy arrays.
+    coordnames - The type of coordinate system.
+    dataloc - A Nlx3 numpy array of the location of the measurement.
+    sensorloc - The location of the sensor in WGS84 coordinates.
+    times - A Ntx2 numpy array of times.
+
 @author: John Swoboda
 """
 from __future__ import division,absolute_import
@@ -581,6 +594,54 @@ def readIonofiles(filename):
     recBias = data[14]
     nrecBias = data[15]
 
+    data = {'TEC':TEC,'nTEC':nTEC,'vTEC':vTEC,'recBias':recBias,'nrecBias':nrecBias,'satnum':satnum,'az2sat':az2sat,'el2sat':el2sat}
+    coordnames = 'WGS84'
+    sensorloc = sp.nan*sp.ones(3)
+    dataloc = sp.column_stack((piercelat,piercelong,350e3*sp.ones_like(piercelat)))
+    return (data,coordnames,dataloc,sensorloc,uttime)
+    
+def readMahalih5(filename,des_site):
+    """ This function will read the mahali GPS data into a GeoData data structure.
+        The user only has to give a filename and name of the desired site.
+        Input
+            filename - A string that holds the file name.
+            des_site - The site name. Should be listed in the h5 file in the 
+                table sites.
+    """
+    
+    
+    f = h5py.File(filename, "r", libver='latest')
+    sites = f['data']['site']
+    despnts = sp.where(sites==des_site)[0]
+    
+    doy= f['data']['time'][despnts]
+    # hard coded for now
+    year = 2015*sp.ones_like(doy).astype(int)
+    dtsp = datetime(1970,1,1,0,0,0,tzinfo=UTC)
+    # Make the integration time on the order of 15 seconds.
+    if (year==year[1]).all():
+        unixyear =(datetime(year[0],1,1,0,0,0,tzinfo=UTC)-dtsp).total_seconds()
+        uttime = unixyear+sp.round_(24*3600*sp.column_stack((doy,doy+15./24./3600.))) # Making the difference in time to be a minute
+    else:
+        (y_u,y_iv) = np.unique(year,return_inverse=True)
+        unixyearu = sp.array([(datetime(iy,1,1,0,0,0,tzinfo=UTC)-dtsp).total_seconds() for iy in y_u])
+        unixyear = unixyearu[y_iv]
+        uttime = unixyear+24*3600*sp.column_stack((doy,doy+15./24./3600.))
+        
+    TEC = f['data']['los_tec'][despnts]
+
+    nTEC = f['data']['err_los_tec'][despnts]
+
+    vTEC = f['data']['vtec'][despnts]
+    az2sat = f['data']['az'][despnts]
+    el2sat = f['data']['az'][despnts]
+    
+    piercelat = f['data']['pplat'][despnts]
+    piercelong = f['data']['pplon'][despnts]
+    satnum= f['data']['prn'][despnts]
+    recBias = f['data']['rec_bias'][despnts]
+    nrecBias = f['data']['err_rec_bias'][despnts]
+    
     data = {'TEC':TEC,'nTEC':nTEC,'vTEC':vTEC,'recBias':recBias,'nrecBias':nrecBias,'satnum':satnum,'az2sat':az2sat,'el2sat':el2sat}
     coordnames = 'WGS84'
     sensorloc = sp.nan*sp.ones(3)
