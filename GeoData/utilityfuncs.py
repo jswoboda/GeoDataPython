@@ -13,7 +13,8 @@ Outputs
     coordnames - The type of coordinate system.
     dataloc - A Nlx3 numpy array of the location of the measurement.
     sensorloc - The location of the sensor in WGS84 coordinates.
-    times - A Ntx2 numpy array of times.
+    times - A Ntx2 numpy array of times. The first element is start of the 
+        measurement the second element is the end of the measurement.
 
 @author: John Swoboda
 """
