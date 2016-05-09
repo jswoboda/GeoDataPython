@@ -61,27 +61,29 @@ def _dointerp(geodatalist,altlist,xyvecs,picktimeind):
 #                logging.warning('skipping instrument   {}'.format(e))
 #%% optical
     g = geodatalist[0]
-    try:
-        key['opt'] = list(g.data.keys()) #list necessary for Python3
-        G = g.timeslice(picktimeind)
-        G.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
-        interpData = G.data[key['opt'][0]]
-        opt = interpData[:,0].reshape(x.shape)
-    except IndexError as e:
-        logging.warning('did you pick a time index outside camera observation?  {}'.format(e))
-    except Exception as e:
-        logging.error('problem in optical interpolation   {}'.format(e))
+    if g is not None:
+        try:
+            key['opt'] = list(g.data.keys()) #list necessary for Python3
+            G = g.timeslice(picktimeind)
+            G.interpolate(new_coords, newcoordname='Cartesian', method='nearest', fill_value=np.nan)
+            interpData = G.data[key['opt'][0]]
+            opt = interpData[:,0].reshape(x.shape)
+        except IndexError as e:
+            logging.warning('did you pick a time index outside camera observation?  {}'.format(e))
+        except Exception as e:
+            logging.error('problem in optical interpolation   {}'.format(e))
 #%% isr
     g = geodatalist[1]
-    try:
-        key['isr'] = list(g.data.keys()) #list necessary for Python3
-        G = g.timeslice(picktimeind)
-        G.interpolate(new_radar_coords, newcoordname='Cartesian', method='nearest', 
-                      fill_value=np.nan)
-        interpData = G.data[key['isr'][0]]
-        isr = interpData[:,0].reshape(x.shape)
-    except Exception as e:
-        logging.error('problem in ISR interpolation   {}'.format(e))
+    if g is not None:
+        try:
+            key['isr'] = list(g.data.keys()) #list necessary for Python3
+            G = g.timeslice(picktimeind)
+            G.interpolate(new_coords, newcoordname='Cartesian', method='nearest',
+                          fill_value=np.nan)
+            interpData = G.data[key['isr'][0]]
+            isr = interpData[:,0].reshape(x.shape)
+        except Exception as e:
+            logging.error('problem in ISR interpolation   {}'.format(e))
 
     return opt,isr,extent,key,x,y
 #%%
@@ -455,7 +457,7 @@ def contourGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',
         ax = fig.gca()
     elif ax is None:
         ax = fig.gca()
-    
+
     if vbounds is None:
         vbounds=[sp.nanmin(dataout),sp.nanmax(dataout)]
     if levels is None:
@@ -511,7 +513,7 @@ def scatterGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
     xyzvecs = {l:sp.unique(datacoords[:,axdict[l]]) for l in veckeys}
     xyzvecsall = {l:datacoords[:,axdict[l]] for l in veckeys}
     if geod.issatellite():
-        
+
         zdata = xyzvecsall[veckeys[2]]
         indxnum = np.abs(zdata-slicenum)<err
         xdata =xyzvecsall[veckeys[0]][indxnum]
@@ -821,7 +823,7 @@ def quiverGD(geod,axstr,slicenum,arrowscale,vbounds=None,time = 0,gkey = None,cm
             nfounds=False
             break
     if nfounds:
-        
+
         dx = geod.datareducelocation(new_coords,geod.coordnames,gkey[0])[:,time]
         dy = geod.datareducelocation(new_coords,geod.coordnames,gkey[1])[:,time]
         dx = sp.reshape(dx,M1.shape)
@@ -830,7 +832,7 @@ def quiverGD(geod,axstr,slicenum,arrowscale,vbounds=None,time = 0,gkey = None,cm
         dx = sp.reshape(geod.data[gkey[0]][sliceindx,time],M1.shape,order=ir)
         dy = sp.reshape(geod.data[gkey[1]][sliceindx,time],M1.shape,order=ir)
 
-    
+
     title = insertinfo(title,gkey[0],geod.times[time,0],geod.times[time,1])
 
     if (ax is None) and (fig is None):
@@ -840,19 +842,19 @@ def quiverGD(geod,axstr,slicenum,arrowscale,vbounds=None,time = 0,gkey = None,cm
         ax = fig.gca()
 
     if m is None:
-        
-        
+
+
         quiv = ax.quiver(M1,M2,dx,dy,scale=arrowscale)
-            
+
         ax.axis([xyzvecs[veckeys[0]].min(), xyzvecs[veckeys[0]].max(),
                  xyzvecs[veckeys[1]].min(), xyzvecs[veckeys[1]].max()])
-        
+
         ax.set_title(title)
         ax.set_xlabel(veckeys[0])
         ax.set_ylabel(veckeys[1])
     else:
         N1,N2 = m(M1,M2)
-        
+
         quiv = ax.quiver(M1,M2,dx,dy,scale=arrowscale)
 
 

@@ -26,7 +26,7 @@ VARNAMES = ['data','coordnames','dataloc','sensorloc','times']
 
 def readMad_hdf5 (filename, paramstr): #timelims=None
     """@author: Michael Hirsch / Anna Stuhlmacher
-    madgrigal h5 read in function for the python implementation of GeoData for Madrigal Sondrestrom data
+    madrigal h5 read in function for the python implementation of GeoData for Madrigal Sondrestrom data
     Input:
     filename path to hdf5 file
     list of parameters to look at written as strings
@@ -45,14 +45,14 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
         sensor_data = f['/Metadata/Experiment Parameters'].value
 
 
-    instrument = str(sensor_data[0][1]) #instrument type string, comes out as bytes so cast to str
-    if "Sondrestrom" in instrument:
+    instrument = str(sensor_data[0][1]).lower() #instrument type string, needed for 2to3 compatibility (verified MH)
+    if "sondrestrom" in instrument:
         radar = 1
         logging.info("Sondrestrom data")
-    elif "Poker Flat" in instrument:
+    elif "poker flat" in instrument:
         radar = 2
         logging.info("PFISR data")
-    elif "Resolute Bay" in instrument:
+    elif "resolute bay" in instrument:
         radar = 3
         logging.info("RISR data")
     else:
@@ -321,11 +321,14 @@ def readAllskyFITS(flist,azelfn,heightkm,timelims=[-sp.infty,sp.infty]):
     """
     if isinstance(flist,string_types):
         flist=[flist]
+
     assert isinstance(flist,(list,tuple)) and len(flist)>0, 'I did not find any image files to read'
-    assert isinstance(azelfn,(tuple,list)) and len(azelfn)==2, 'You must specify BOTH of the az/el files'
-    assert isinstance(heightkm,(integer_types,float)), 'specify one altitude'
+
+    if azelfn is not None:
+        assert isinstance(heightkm,(integer_types,float)), 'specify one altitude'
+        assert isinstance(azelfn,(tuple,list)) and len(azelfn)==2, 'You must specify BOTH of the az/el files'
 #%% priming read
-    with fits.open(flist[0],mode='readonly') as h:
+    with fits.open(str(flist[0]),mode='readonly') as h:
         img = h[0].data
         sensorloc = np.array([h[0].header['GLAT'], h[0].header['GLON'], 0.]) #TODO real sensor altitude in km
 
@@ -336,7 +339,7 @@ def readAllskyFITS(flist,azelfn,heightkm,timelims=[-sp.infty,sp.infty]):
     flist2 = []
     for f in flist:
         try: #KEEP THIS try
-            with fits.open(f,mode='readonly') as h:
+            with fits.open(str(f),mode='readonly') as h:
                 expstart_dt = parse(h[0].header['OBSDATE'] + ' ' + h[0].header['OBSSTART']+'Z') #implied UTC
                 expstart_unix = (expstart_dt - epoch).total_seconds()
             if (expstart_unix>=timelims[0]) & (expstart_unix<=timelims[1]):
@@ -354,36 +357,37 @@ def readAllskyFITS(flist,azelfn,heightkm,timelims=[-sp.infty,sp.infty]):
 
             if not(i % 200):
                 print('{}/{} FITS allsky read'.format(i+1,len(flist2)))
-        except:
+        except Exception as e:
              #TODO pop time off list!
              logging.error('trouble reading images from {}   {}'.format(f,e))
 
 
     coordnames="spherical"
 
-    with fits.open(expanduser(azelfn[0]),mode='readonly') as h:
-        az = h[0].data
-    with fits.open(expanduser(azelfn[1]),mode='readonly') as h:
-        el = h[0].data
+    if azelfn is not None:
+        with fits.open(expanduser(azelfn[0]),mode='readonly') as h:
+            az = h[0].data
+        with fits.open(expanduser(azelfn[1]),mode='readonly') as h:
+            el = h[0].data
+        #%% Get rid of bad data
+        grad_thresh = 15.
+        (Fx,Fy) = np.gradient(az)
+        bad_datalog = np.hypot(Fx,Fy)>grad_thresh
+        zerodata = bad_datalog | ((az==0.) & (el==0.))
+        keepdata = ~(zerodata.ravel())
+        optical = {'image':img[keepdata]}
+        elfl = el.ravel()[keepdata]
 
-    #%% Get rid of bad data
-    grad_thresh = 15.
-    (Fx,Fy) = np.gradient(az)
-    bad_datalog = np.hypot(Fx,Fy)>grad_thresh
-    zerodata = bad_datalog | ((az==0.) & (el==0.))
-    keepdata = ~(zerodata.ravel())
-    optical = {'image':img[keepdata]}
-    elfl = el.ravel()[keepdata]
+        sinel = sp.sin(np.radians(elfl))
+        dataloc = np.empty((keepdata.sum(),3))
+        dataloc[:,0] = sp.ones_like(sinel)*heightkm/sinel #ALITUDE
 
-    sinel = sp.sin(np.radians(elfl))
-    dataloc = np.empty((keepdata.sum(),3))
-    dataloc[:,0] = sp.ones_like(sinel)*heightkm/sinel #ALITUDE
+        dataloc[:,1] = az.ravel()[keepdata]  # AZIMUTH
+        dataloc[:,2] = el.ravel()[keepdata] # ELEVATION
+    else: # external program
+        az=el=dataloc=None
 
-    dataloc[:,1] = az.ravel()[keepdata]  # AZIMUTH
-    dataloc[:,2] = el.ravel()[keepdata] # ELEVATION
-
-
-    return (optical,coordnames,dataloc,sensorloc,times)
+    return optical,coordnames,dataloc,sensorloc,times
 
 def readNeoCMOS(imgfn, azelfn, heightkm=110.,treq=None):
     """
@@ -392,7 +396,7 @@ def readNeoCMOS(imgfn, azelfn, heightkm=110.,treq=None):
     """
     assert isinstance(heightkm,(integer_types,float))
 
-    imgfn = expanduser(str(imgfn))
+    imgfn = expanduser(str(imgfn)) #str() in case Path was passed in
     azelfn = expanduser(str(azelfn))
 #%% load data
     with h5py.File(azelfn,'r',libver='latest') as f:
@@ -402,19 +406,21 @@ def readNeoCMOS(imgfn, azelfn, heightkm=110.,treq=None):
     with h5py.File(imgfn,'r',libver='latest') as f:
         times = f['/ut1_unix'].value
         sensorloc = f['/sensorloc'].value
+        if sensorloc.dtype.fields is not None: #recarray
+            sensorloc = sensorloc.view((float, len(sensorloc.dtype.names)))
 
         npix = np.prod(f['/rawimg'].shape[1:]) #number of pixels in one image
         dataloc = np.empty((npix,3))
 
         if treq is not None:
             mask = (treq[0]<=times) & (times<=treq[-1])
-        else:
+        else: #load all
             mask = np.ones(f['/rawimg'].shape[0]).astype(bool)
 
         if mask.sum()*npix*2 > 1e9: # RAM
             logging.warning('trying to load {:.1f} GB of image data, your program may crash'.format(mask.sum()*npix*2/1e9))
 
-#        assert mask.sum()>0,'no times in {} within specified times.'.format(imgfn)
+        assert mask.sum()>0,'no times in {} within specified times.'.format(imgfn)
         imgs = f['/rawimg'][mask,...]
 #%% plate scale
         if f['/params']['transpose']:

@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """
-Example code on using the alt_slice_overlay function in the plotting.py file.
-Takes two h5 files--a PFISR file and a Neo sCMOS file-- and creates 2 objects. This is inputed into alt_slice_overlay.
-The output is a 2D colorplot with the optical data on the bottom in grayscale and the ISR parameter on top with an alpha of 0.4
-@author:  Michael Hirsch
+Data may be obtained from
+https://drive.google.com/open?id=0B7P8Xeeyo_YIVTlfMk9wY0YtbzQ
 
-first you need to install GeoDataPython by python setup.py develop
+Example code on using the alt_slice_overlay function in the plotting.py file.
+Takes two h5 files--a PFISR file and a Neo sCMOS file-- and creates 2 objects,
+which are input into alt_slice_overlay.
+The output is a 2D colorplot with the optical data on the bottom in grayscale
+and the ISR parameter on top with an alpha of 0.4
+
 """
 from __future__ import division, absolute_import
 from matplotlib.pyplot import subplots,show
@@ -15,11 +18,11 @@ import GeoData.plotting as GP
 #
 from load_isropt import load_pfisr_neo
 #
-picktimeind = [3,4] #arbitrary user time index choice
+treq = [1.29905394E9,1.299053940142857E9] # unix time
 
 def plotisropt(isrName,optName,azelfn,heightkm):
 
-    isr,opt = load_pfisr_neo(isrName,optName,azelfn,heightkm)
+    isr,opt = load_pfisr_neo(isrName,optName,azelfn,heightkm,treq=treq)
     #first object in geodatalist is being overlayed over by the second object
     altlist = [300]
     xyvecs = [np.linspace(-100.0,500.0),np.linspace(0.0,600.0)]
@@ -28,11 +31,9 @@ def plotisropt(isrName,optName,azelfn,heightkm):
 
     fig3, (ax1, ax2) = subplots(1,2,figsize=(10,5))
 
-    ax1 = GP.alt_slice_overlay((opt, isr), altlist, xyvecs, vbounds, title, axis=ax1,
-                               picktimeind=picktimeind)
+    ax1 = GP.alt_slice_overlay((opt, isr), altlist, xyvecs, vbounds, title, ax1,treq)
 
-    ax2 = GP.alt_contour_overlay((opt, isr), altlist, xyvecs, vbounds, title, axis=ax2,
-                                 picktimeind=picktimeind)
+    ax2 = GP.alt_contour_overlay((opt, isr), altlist, xyvecs, vbounds, title, ax2,treq)
 
     ax1.set_ylabel('y')
     ax1.set_xlabel('x')

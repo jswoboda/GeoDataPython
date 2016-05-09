@@ -13,7 +13,6 @@ from six import integer_types,string_types
 import posixpath
 from copy import deepcopy
 from datetime import datetime
-import pytz
 import numpy as np
 import scipy as sp
 import scipy.interpolate as spinterp
@@ -117,7 +116,9 @@ class GeoData(object):
             outcell[k]=sp.arange(ind1,ind2+1).astype('int64')
         return outcell
 
-
+    def time2ind(self,timelist):
+        ix = np.in1d(self.times[:,0],timelist)
+        return np.where(ix)[0]
     #%% Time augmentation
     def add_times(self,self2):
         """This method will combine the times and content of two instances of the GeoData class.
@@ -155,12 +156,14 @@ class GeoData(object):
                 to array elements or 'Time' for the times list to represent posix times.
                 If nothing is entered thedefault is 'Array'."""
         if listtype is None:
-            loclist = timelist
+            if isinstance(timelist[0],float) and timelist[0]>1e9:
+                loclist = self.time2ind(timelist)
+            else:
+                loclist = timelist
         elif listtype =='Array':
             loclist = timelist
         elif listtype == 'Time':
-            ix = np.in1d(self.times[:,0],timelist)
-            loclist = np.where(ix)[0]
+            loclist = self.time2ind(timelist)
 
         gd2 = self.copy()
         if gd2.issatellite():
@@ -229,11 +232,11 @@ class GeoData(object):
         return timestrs
 #%% Satellite Data
     def issatellite(self):
-        """Checks if the instance is satellite data. It will give true if the sensorloc array is all nans"""
-        if sp.all(sp.isnan(self.sensorloc)):
-            return True
-        else:
-            return False
+        """
+        Checks if the instance is satellite data.
+           It will give true if the sensorloc array is all nans
+        """
+        return sp.isnan(self.sensorloc).all()
 #%% Changing data based on location
     def interpolate(self,new_coords,newcoordname,method='nearest',fill_value=np.nan,twodinterp = False,ikey=None):
         """This method will take the data points in the dictionary data and spatially.
@@ -282,12 +285,12 @@ class GeoData(object):
         if ikey is None or ikey not in self.data.keys():
             # Loop through parameters and create temp variable
             for iparam in self.data.keys():
-                print("Interpolating {0}".format(iparam))
+                print("Interpolating {}".format(iparam))
                 usepandas=True if isinstance(self.data[iparam],DataFrame) else False
                 # won't it virtually always be float?
                 New_param = np.empty((NNlocs,Nt))#,dtype=self.data[iparam].dtype)
                 for itime,tim in enumerate(self.times):
-                    print("\tInterpolating time instance {0} of {1} for parameter {2}".format(itime,len(self.times),iparam))
+                    print("\tInterpolating time instance {} of {} for parameter {}".format(itime,len(self.times),iparam))
                     if usepandas:
                         curparam = self.data[iparam][tim] #dataframe: columns are time in this case
                     else: #assume Numpy
@@ -306,21 +309,22 @@ class GeoData(object):
                     else:
                         coordkeep = curcoords
 
-                    if len(coordkeep)>0: # at least one finite value
+                    if coordkeep.shape[0]>0: # at least one finite value
 
                         if method.lower()=='linear':
                             if firsttime:
                                 nanlog = sp.any(sp.isnan(coordkeep),1)
-                                keeplog = sp.logical_not(nanlog)
+                                keeplog = ~nanlog
                                 coordkeep = coordkeep[keeplog]
 
                                 vtx, wts =interp_weights(coordkeep, new_coords,d)
                                 firsttime=False
                             intparam = interpolate(curparam[keeplog], vtx, wts,fill_value)
                         else:
-                            nanlog = sp.any(sp.isnan(coordkeep),1)
-                            keeplog = sp.logical_not(nanlog)
-                            coordkeep = coordkeep[keeplog]
+                            nanlog = sp.isnan(coordkeep).any(axis=1)
+                            assert isinstance(nanlog,np.ndarray),'you must have more than one value to griddata interp, try method=linear'
+                            keeplog = ~nanlog
+                            coordkeep = coordkeep[keeplog,:]
                             intparam = spinterp.griddata(coordkeep,curparam[keeplog],new_coords,method,fill_value)
                     else: # no finite values
                         intparam = np.nan
@@ -525,3 +529,5 @@ def interpolate(values, vtx, wts, fill_value=np.nan):
     ret = np.einsum('nj,nj->n', np.take(values, vtx), wts)
     ret[np.any(wts < 0, axis=1)] = fill_value
     return ret
+
+
