@@ -163,7 +163,8 @@ class GeoData(object):
         elif listtype =='Array':
             loclist = timelist
         elif listtype == 'Time':
-            loclist = self.time2ind(timelist)
+            ix = np.in1d(self.times[:,0],timelist)
+            loclist = np.where(ix)[0]
 
         gd2 = self.copy()
         if gd2.issatellite():
