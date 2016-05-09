@@ -362,23 +362,27 @@ def readAllskyFITS(flist,azelfn,heightkm,timelims=[-sp.infty,sp.infty]):
                 times.append([expstart_unix,expstart_unix + h[0].header['EXPTIME']])
                 flist2.append(f)
         except OSError as e:
-            logging.warning('trouble reading time from {}   {}'.format(f,e))
+            logging.info('trouble reading time from {}   {}'.format(f,e)) # so many corrupted files, we opt for INFO instead of WARNING
     times = np.array(times)
 #%% read in the data that is in between the time limits
-    img = np.empty((img.size,len(flist2)),dtype=img.dtype)
+    img = np.empty((img.size,len(flist2)),dtype=img.dtype)  #len(flist2) == len(times)
+    iok = np.zeros(len(flist2)).astype(bool)
     for i,f in enumerate(flist2):
         try:
-            with fits.open(f,mode='readonly') as h:
+            with fits.open(str(f),mode='readonly') as h:
                 img[:,i] = h[0].data.ravel()
+
+            iok[i] = True
 
             if not(i % 200):
                 print('{}/{} FITS allsky read'.format(i+1,len(flist2)))
-        except Exception as e:
-             #TODO pop time off list!
+        except OSError as e:
              logging.error('trouble reading images from {}   {}'.format(f,e))
-
-
-    coordnames="spherical"
+#%% keep only good times
+    img = img[:,iok]
+    times = times[iok]
+#%%
+    coordnames = "spherical"
 
     if azelfn is not None:
         with fits.open(expanduser(azelfn[0]),mode='readonly') as h:

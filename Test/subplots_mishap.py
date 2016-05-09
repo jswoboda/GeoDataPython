@@ -10,7 +10,6 @@ The output is a 2D colorplot with the optical data on the bottom in grayscale
 and the ISR parameter on top with an alpha of 0.4
 
 """
-from __future__ import division, absolute_import
 from matplotlib.pyplot import subplots,show
 import numpy as np
 #
