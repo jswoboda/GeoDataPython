@@ -374,7 +374,7 @@ def readAllskyFITS(flist,azelfn,heightkm,timelims=[-sp.infty,sp.infty]):
 
             iok[i] = True
 
-            if not(i % 200):
+            if not(i % 200) and i>0:
                 print('{}/{} FITS allsky read'.format(i+1,len(flist2)))
         except OSError as e:
              logging.error('trouble reading images from {}   {}'.format(f,e))
