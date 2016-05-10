@@ -380,7 +380,7 @@ def readAllskyFITS(flist,azelfn,heightkm,timelims=[-sp.infty,sp.infty]):
              logging.error('trouble reading images from {}   {}'.format(f,e))
 #%% keep only good times
     img = img[:,iok]
-    times = times[iok]
+    times = times[iok,:]
 #%%
     coordnames = "spherical"
 
