@@ -370,7 +370,7 @@ def readAllskyFITS(flist,azelfn,heightkm,timelims=[-sp.infty,sp.infty]):
     for i,f in enumerate(flist2):
         try:
             with fits.open(str(f),mode='readonly') as h:
-                img[:,i] = h[0].data.ravel()
+                img[:,i] = np.rot90(h[0].data,1).ravel()
 
             iok[i] = True
 
