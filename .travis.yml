@@ -1,28 +1,36 @@
-language: python
-
-python:
-    - 2.7
-
-sudo: false
 
 notifications:
   email: false
 
 git:
-  depth: 1
+  depth: 3
+  
+env: 
+  matrix:
+    - pyv=3.5
+    - pyv=2.7
 
-before_install:
-    - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
-    - chmod +x miniconda.sh
-    - bash miniconda.sh -b -p $HOME/miniconda
-    - export PATH=$HOME/miniconda/bin:$PATH
+matrix:
+  include:
+    - os: osx
+      env: 
+        - osv=MacOSX
+
+    - os: linux
+      env: 
+        - osv=Linux
 
 install:
-    - conda create --yes -n test python=$TRAVIS_PYTHON_VERSION
+    - wget http://repo.continuum.io/miniconda/Miniconda-latest-$osv-x86_64.sh -O miniconda.sh
+    - bash miniconda.sh -b -p $HOME/miniconda
+    - export PATH=$HOME/miniconda/bin:$PATH
+    - conda update conda
+    - conda create --yes -n test python=$pyv
     - source activate test
     - pip -q install coveralls
     - python setup.py develop
-
+#    - conda install --yes scipy=0.16.1 #patch for library travis
+    
 script:
     - coverage run Test/test.py
 
