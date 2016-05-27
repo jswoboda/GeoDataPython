@@ -581,7 +581,6 @@ def scatterGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
         ax.set_ylabel(veckeys[1])
     else:
         Xdata,Ydata = m(xdata,ydata)
-        pdb.set_trace()
         ploth = m.scatter(Xdata,Ydata,c=dataout,vmin=vbounds[0], vmax=vbounds[1],cmap = cmap)
 
         if cbar:
