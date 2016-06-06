@@ -239,7 +239,7 @@ class GeoData(object):
         """
         return sp.isnan(self.sensorloc).all()
 #%% Changing data based on location
-    def interpolate(self,new_coords,newcoordname,method='nearest',fill_value=np.nan,twodinterp = False,ikey=None):
+    def interpolate(self,new_coords,newcoordname,method='nearest',fill_value=np.nan,twodinterp = False,ikey=None,oldcoords=None):
         """This method will take the data points in the dictionary data and spatially.
         interpolate the points given the new coordinates. The method of interpolation
         will be determined by the input parameter method.
@@ -260,7 +260,10 @@ class GeoData(object):
         NNlocs = new_coords.shape[0]
 #        print NNlocs
         new_coordsorig = deepcopy(new_coords)
-        curcoords = self.__changecoords__(newcoordname)
+        if oldcoords is None:
+            curcoords = self.__changecoords__(newcoordname)
+        else:
+            curcoords = oldcoords
         d=3
 #        pdb.set_trace()
         # XXX Pulling axes where all of the elements are the same.
