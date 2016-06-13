@@ -9,13 +9,11 @@ python setup.py develop --uninstall
 
 @author: John Swoboda
 """
-import os,sys
 from setuptools import setup
 import subprocess
 
-exepath = os.path.dirname(sys.executable)
 try:
-    subprocess.call([os.path.join(exepath,'conda'),'install','--yes','--file','requirements.txt'])
+    subprocess.call(['conda','install','--yes','--file','requirements.txt'])
 except Exception as e:
     print('tried conda in {}, but you will need to install packages in requirements.txt  {}'.format(exepath,e))
 

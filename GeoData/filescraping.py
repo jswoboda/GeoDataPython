@@ -79,10 +79,13 @@ def datedwebsite(baseurl,daterange,basedir=''):
                         filelist.append(pkfile)
 
     # Create directory and download the files
-    if not os.path.exists(basedir) and basedir!='':
-        os.mkdir(basedir)
+    if basedir:
+	try:
+            os.mkdir(basedir)
+        except OSError:
+            pass
 
-    print 'Downloading {0:d} files to {1}'.format(len(fileurls),basedir)
+    print('Downloading {} files to {}'.format(len(fileurls),basedir))
     for ifile in zip(filelist,fileurls):
         urlretrieve(ifile[1],os.path.join(basedir,ifile[0]))
 
