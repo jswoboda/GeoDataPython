@@ -16,6 +16,7 @@ import datetime as dt
 import matplotlib.pyplot as plt
 from matplotlib.dates import DateFormatter
 from matplotlib.ticker import ScalarFormatter
+import pkg_resources
 import pdb
 #from mpl_toolkits.mplot3d import Axes3D
 #from matplotlib import cm
@@ -36,6 +37,34 @@ from .GeoData import GeoData
 #
 sfmt = ScalarFormatter(useMathText=True)
 #%%
+
+
+def vergeq(packagename,verstring):
+    pkg_ver = pkg_resources.get_distribution(packagename).version
+    if pkg_ver==verstring:
+        return True
+    
+    pkg_list = pkg_ver.split('.')
+    verlist = verstring.split('.')
+    # Check each number in the string 
+    for i in range(min(len(verlist),len(pkg_list))):
+        if pkg_list[i] > verlist[i]:
+            return True
+        elif pkg_list[i]< verlist[i]:
+            return False
+    # incase the version is to larg
+    if len(pkg_list)>len(verlist):
+        return True
+    elif len(pkg_list)<len(verlist):
+        return False
+    return True
+
+if vergeq('matplotlib','1.5.1'):
+    defmap = 'viridis'
+else:
+    defmap = 'jet'
+defmap3d = 'jet'
+
 def _dointerp(geodatalist,altlist,xyvecs,picktimeind):
     opt=None; isr=None #in case of failure
     xvec = xyvecs[0]
@@ -173,7 +202,7 @@ def alt_contour_overlay(geodatalist, altlist, xyvecs, vbounds, title, axis=None,
 
 
 #%%
-def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='jet', ax=None,fig=None,method='linear',fill_value=np.nan,view = None,units='',colorbar=False,outimage=False):
+def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap=defmap3d, ax=None,fig=None,method='linear',fill_value=np.nan,view = None,units='',colorbar=False,outimage=False):
     """ This function create 3-D slice image given either a surface or list of coordinates to slice through
     Inputs:
     geodata - A geodata object that will be plotted in 3D
@@ -295,7 +324,7 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap='j
     else:
         return surflist
 
-def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',fig=None,
+def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap=defmap,fig=None,
               ax=None,title='',cbar=True,m=None):
     """ """
     #xyzvecs is the area that the data covers.
@@ -391,7 +420,7 @@ def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
 
     return(ploth,cbar2)
 
-def contourGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',
+def contourGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap=defmap,
               fig=None,ax=None,title='',cbar=True,m=None,levels=None):
     """ """
     poscoords = ['cartesian','wgs84','enu','ecef']
@@ -486,7 +515,7 @@ def contourGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',
 
     return(ploth,cbar2)
 
-def scatterGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',fig=None,
+def scatterGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap=defmap,fig=None,
               ax=None,title='',cbar=True,err=.1,m=None):
     """ This will make a scatter plot given a GeoData object."""
     poscoords = ['cartesian','wgs84','enu','ecef']
@@ -590,7 +619,7 @@ def scatterGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap='jet',f
 
     return(ploth,cbar2)
 
-def sliceGDsphere(geod,coordnames ='cartesian' ,vbounds=None,time = 0,gkey = None,cmap='jet',fig=None,ax=None,title='',cbar=True):
+def sliceGDsphere(geod,coordnames ='cartesian' ,vbounds=None,time = 0,gkey = None,cmap=defmap,fig=None,ax=None,title='',cbar=True):
 
     assert geod.coordnames.lower() =='spherical'
 
@@ -645,7 +674,7 @@ def plotbeamposfig(geod,height,coordnames,fig=None,ax=None,title=''):
     ploth = ax.scatter(x,y)
     return(ploth)
 
-def rangevstime(geod,beam,vbounds=(None,None),gkey = None,cmap=None,fig=None,ax=None,
+def rangevstime(geod,beam,vbounds=(None,None),gkey = None,cmap=defmap,fig=None,ax=None,
                 title='',cbar=True,tbounds=(None,None),ic=True,ir=True,it=True):
     """ This method will create a color graph of range vs time for data in spherical coordinates"""
     assert geod.coordnames.lower() =='spherical', 'I expect speherical coordinate data'
@@ -691,7 +720,49 @@ def rangevstime(geod,beam,vbounds=(None,None),gkey = None,cmap=None,fig=None,ax=
     ax.xaxis.set_major_formatter(DateFormatter('%H:%M'))
     ax.set_xlim(tbounds)
     fig.autofmt_xdate()
+    return ploth
 
+def rangevsparam(geod,beam,time_sel,vbounds=(None,None),gkey = None,fig=None,ax=None,
+                title='',cbar=True,tbounds=(None,None),ic=True,ir=True,it=True):
+
+    assert geod.coordnames.lower() =='spherical', 'I expect speherical coordinate data'
+
+    if (ax is None) and (fig is None):
+        fig = plt.figure(figsize=(12,8))
+        ax = fig.gca()
+    elif ax is None:
+        ax = fig.gca()
+
+    if gkey is None:
+        gkey = geod.data.keys[0]
+#%% get unique ranges for plot limits, note beamid is not part of class.
+    match = np.isclose(geod.dataloc[:,1:],beam,atol=1e-2).all(axis=1) #TODO what should tolerance be for Sondrestrom mechanical dish
+    if (~match).all(): #couldn't find this beam
+        logging.error('beam az,el {} not found'.format(beam))
+        return
+
+    if not title:
+        title = gkey
+
+    dataout = geod.data[gkey][match]
+    rngval =  geod.dataloc[match,0]
+    t = np.asarray(list(map(dt.datetime.utcfromtimestamp, geod.times[:,0])))
+
+    ploth = plt.plot(dataout[:,time_sel],rngval[:,time_sel],label=gkey)
+    
+    if it:
+        ax.set_title(title)
+    if ic:
+        ax.set_ylabel('az,el = {} \n slant range [km]'.format(beam))
+    if ir:
+        ax.set_xlabel(gkey)
+
+    
+
+    ax.autoscale(axis='y',tight=True) #fills axis
+   
+    return ploth
+    
 def uniquerows(a):
     b=np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))
     (rowsinds,rownums) = np.unique(b,return_index=True, return_inverse=True)[1:]
