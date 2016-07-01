@@ -40,23 +40,34 @@ sfmt = ScalarFormatter(useMathText=True)
 
 
 def vergeq(packagename,verstring):
+    """ 
+    This function will check if the version of a given package is higher than a given version number in string form.
+    Inputs
+        packagename - The name of the package to be tested.
+        verstring - The desired version in string form with numbers seperated by periods.
+    Output
+        boolcheck - A bool that determines the 
+    """
+    
     pkg_ver = pkg_resources.get_distribution(packagename).version
+    # if the versions have the same string just return true
     if pkg_ver==verstring:
         return True
     
     pkg_list = pkg_ver.split('.')
     verlist = verstring.split('.')
-    # Check each number in the string 
+    # Check each number in the string and see if any are larger in one or the other.
     for i in range(min(len(verlist),len(pkg_list))):
         if pkg_list[i] > verlist[i]:
             return True
         elif pkg_list[i]< verlist[i]:
             return False
-    # incase the version is to larg
+    # incase the version number strings is larger than the other.
     if len(pkg_list)>len(verlist):
         return True
     elif len(pkg_list)<len(verlist):
         return False
+    # Return true because the numbers are equal but the strings may not be
     return True
 
 if vergeq('matplotlib','1.5.1'):
@@ -676,7 +687,11 @@ def plotbeamposfig(geod,height,coordnames,fig=None,ax=None,title=''):
 
 def rangevstime(geod,beam,vbounds=(None,None),gkey = None,cmap=defmap,fig=None,ax=None,
                 title='',cbar=True,tbounds=(None,None),ic=True,ir=True,it=True):
-    """ This method will create a color graph of range vs time for data in spherical coordinates"""
+    """ 
+    This method will create a color graph of range vs time for data in spherical coordinates
+    Inputs
+    geod - 
+    """
     assert geod.coordnames.lower() =='spherical', 'I expect speherical coordinate data'
 
     if (ax is None) and (fig is None):
@@ -722,8 +737,8 @@ def rangevstime(geod,beam,vbounds=(None,None),gkey = None,cmap=defmap,fig=None,a
     fig.autofmt_xdate()
     return ploth
 
-def rangevsparam(geod,beam,time_sel,vbounds=(None,None),gkey = None,fig=None,ax=None,
-                title='',cbar=True,tbounds=(None,None),ic=True,ir=True,it=True):
+def rangevsparam(geod,beam,time_sel,gkey = None,gkeyerr=None,fig=None,ax=None,
+                title='',ic=True,ir=True,it=True):
 
     assert geod.coordnames.lower() =='spherical', 'I expect speherical coordinate data'
 
@@ -748,8 +763,12 @@ def rangevsparam(geod,beam,time_sel,vbounds=(None,None),gkey = None,fig=None,ax=
     rngval =  geod.dataloc[match,0]
     t = np.asarray(list(map(dt.datetime.utcfromtimestamp, geod.times[:,0])))
 
-    ploth = plt.plot(dataout[:,time_sel],rngval[:,time_sel],label=gkey)
-    
+    ploth = ax.plot(dataout[:,time_sel],rngval,label=gkey)[0]
+    handlist = [ploth]
+    if not gkeyerr is None:
+        dataouterr = geod.data[gkeyerr][match]
+        plotherr = ax.errorbar(dataout[:,time_sel],rngval,xerr=dataouterr[:,time_sel],fmt='-o',color=ploth.get_color())
+        handlist.append(plotherr)
     if it:
         ax.set_title(title)
     if ic:
@@ -757,11 +776,9 @@ def rangevsparam(geod,beam,time_sel,vbounds=(None,None),gkey = None,fig=None,ax=
     if ir:
         ax.set_xlabel(gkey)
 
-    
-
     ax.autoscale(axis='y',tight=True) #fills axis
    
-    return ploth
+    return handlist
     
 def uniquerows(a):
     b=np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))

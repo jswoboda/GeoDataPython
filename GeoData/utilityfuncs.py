@@ -275,7 +275,7 @@ def readOMTI(filename, paramstr):
 
     return optical, coordnames, dataloc, sensorloc, times
 
-def readIono(iono):
+def readIono(iono,coordtype=None):
     """ @author:John Swoboda
     This function will bring in instances of the IonoContainer class into GeoData.
     This is using the set up from the RadarDataSim codebase"""
@@ -307,13 +307,22 @@ def readIono(iono):
             Nisum = Nis[ikey]+Nisum
         if len(Ti)!=0:
             paramdict['Ti'] = Ti/Nisum
-    if iono.Coord_Vecs == ['r','theta','phi']:
-        coordnames = 'Spherical'
-        coords = iono.Sphere_Coords
-    elif iono.Coord_Vecs == ['x','y','z']:
+    # Get line of sight velocity
+    if not 'Vi' in paramdict.keys():
+        paramdict['Vi'] = iono.getDoppler()
+    if coordtype is None:
+        if iono.Coord_Vecs == ['r','theta','phi']:
+            coordnames = 'Spherical'
+            coords = iono.Sphere_Coords
+        elif iono.Coord_Vecs == ['x','y','z']:
+            coordnames = 'Cartesian'
+            coords = iono.Cart_Coords
+    elif coordtype.lower()=='cartesian':
         coordnames = 'Cartesian'
         coords = iono.Cart_Coords
-
+    elif coordtype.lower() == 'spherical':
+        coordnames = 'Spherical'
+        coords = iono.Sphere_Coords
     return (paramdict,coordnames,coords,np.array(iono.Sensor_loc),iono.Time_Vector)
 
 #data, coordnames, dataloc, sensorloc, times = readMad_hdf5('/Users/anna/Research/Ionosphere/2008WorldDaysPDB/son081001g.001.hdf5', ['ti', 'dti', 'nel'])
