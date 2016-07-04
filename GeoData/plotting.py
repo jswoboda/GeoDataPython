@@ -337,7 +337,25 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap=de
 
 def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap=defmap,fig=None,
               ax=None,title='',cbar=True,m=None):
-    """ """
+    """ 
+    This function create 2-D slice image given either a surface or list of coordinates to slice through
+    Inputs:
+    geodata - A geodata object that will be plotted.
+    axstr - A string that specifies the plane that will be ploted.
+    slicenum - The index location of that slice in the axis if the data were in a 3-D array.   
+    vbounds = a list of bounds for the geodata objec's parameters. ie, vbounds=[500,2000]
+    time - The index of for the location in time that will be plotted.
+    gkey - The name of the data that will be plotted.
+    cmap - The color map to be used.
+    fig - The figure handle that will be used.
+    title - A string that holds for the overall image
+    ax - A handle for an axis that this will be plotted on.
+    cbar - A bool for creating the color bar, default =True.
+    m - A handle for a map object if plotting over one.
+    Outputs:
+        ploth - The handle for the ploted image.
+        cbar - The color bar handle for the image.
+    """
     #xyzvecs is the area that the data covers.
     poscoords = ['cartesian','wgs84','enu','ecef']
     assert geod.coordnames.lower() in poscoords
@@ -738,7 +756,7 @@ def rangevstime(geod,beam,vbounds=(None,None),gkey = None,cmap=defmap,fig=None,a
     return ploth
 
 def rangevsparam(geod,beam,time_sel,gkey = None,gkeyerr=None,fig=None,ax=None,
-                title='',ic=True,ir=True,it=True):
+                 title='',ic=True,ir=True,it=True,label=None):
 
     assert geod.coordnames.lower() =='spherical', 'I expect speherical coordinate data'
 
@@ -763,7 +781,7 @@ def rangevsparam(geod,beam,time_sel,gkey = None,gkeyerr=None,fig=None,ax=None,
     rngval =  geod.dataloc[match,0]
     t = np.asarray(list(map(dt.datetime.utcfromtimestamp, geod.times[:,0])))
 
-    ploth = ax.plot(dataout[:,time_sel],rngval,label=gkey)[0]
+    ploth = ax.plot(dataout[:,time_sel],rngval,label=label)[0]
     handlist = [ploth]
     if not gkeyerr is None:
         dataouterr = geod.data[gkeyerr][match]
@@ -786,12 +804,12 @@ def uniquerows(a):
     rows = a[rowsinds]
     return (rows,rowsinds,rownums)
 
-def plotbeamposGD(geod,title='Beam Positions',minel=30,elstep=10):
+def plotbeamposGD(geod,title='Beam Positions',minel=30,elstep=10,fig=None,ax=None):
     assert geod.coordnames.lower() =='spherical'
 
     (azvec,elvec) = (geod.dataloc[:,1],geod.dataloc[:,2])
 
-    polarplot(azvec,elvec,markerarea=70,title=title,minel=minel,elstep=elstep)
+    polarplot(azvec,elvec,markerarea=70,title=title,minel=minel,elstep=elstep,fig=fig,ax=ax)
 
 def make_polax(zenith):
     """ OBSOLETE
@@ -832,7 +850,7 @@ def make_polax(zenith):
     frame1.axes.get_xaxis().set_visible(False)
     frame1.axes.get_yaxis().set_visible(False)
 
-def polarplot(az,el,markerarea=500,title=None,minel=30,elstep=10):
+def polarplot(az,el,markerarea=500,title=None,minel=30,elstep=10,fig=None,ax=None):
     """
     plots hollow circles at az,el coordinates, with area quantitatively defined
     Michael Hirsch from satkml
@@ -840,8 +858,13 @@ def polarplot(az,el,markerarea=500,title=None,minel=30,elstep=10):
     az = np.radians(np.asarray(az).astype(float))
     el = 90-np.asarray(el).astype(float)
 
-    ax=plt.figure().gca(polar=True)
+    if fig is None:
+        fig = plt.figure()
+        
+    if ax is None:
+        ax=fig.gca(polar=True)
 
+        
     ax.set_theta_zero_location('N')
 #    ax.set_rmax(90-minel)
     ax.set_theta_direction(-1)
