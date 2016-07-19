@@ -437,7 +437,7 @@ def readNeoCMOS(imgfn, azelfn, heightkm=110.,treq=None):
         times = f['/ut1_unix'].value
         sensorloc = f['/sensorloc'].value
         if sensorloc.dtype.fields is not None: #recarray
-            sensorloc = sensorloc.view((float, len(sensorloc.dtype.names)))
+            sensorloc = sensorloc.view((float, len(sensorloc.dtype.names))).squeeze()
 
         npix = np.prod(f['/rawimg'].shape[1:]) #number of pixels in one image
         dataloc = np.empty((npix,3))
