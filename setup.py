@@ -15,7 +15,7 @@ import subprocess
 try:
     subprocess.call(['conda','install','--file','requirements.txt'])
 except Exception as e:
-    print('tried conda in {}, but you will need to install packages in requirements.txt  {}'.format(exepath,e))
+    pass
 
 setup(description='GeoData class and needed functions.',
       author='John Swoboda',
