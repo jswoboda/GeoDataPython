@@ -443,7 +443,10 @@ def readNeoCMOS(imgfn, azelfn, heightkm=110.,treq=None):
         dataloc = np.empty((npix,3))
 
         if treq is not None:
-            mask = (treq[0]<=times) & (times<=treq[-1])
+            # note float() casts datetime64 to unix epoch
+            if isinstance(treq[0],np.datetime64):
+                treq = treq.astype(float)
+            mask = (treq[0] <= times) & (times <= treq[-1])
         else: #load all
             mask = np.ones(f['/rawimg'].shape[0]).astype(bool)
 
@@ -504,7 +507,7 @@ def readAVI(fn,fwaem):
 
     #dataloc
     dataloc=np.zeros((width*height,3))
-    mapping = sio.loadmat(fwaem)
+    mapping = sp.io.loadmat(fwaem)
     dataloc[:,2]=mapping['el'].flatten()
     dataloc[:,1]=mapping['az'].flatten()
     dataloc[:,0]=120/np.cos(90-mapping['el'].flatten())
