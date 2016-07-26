@@ -38,6 +38,8 @@ from . import CoordTransforms as CT
 USEPANDAS = True #20x speedup vs CPython
 VARNAMES = ['data','coordnames','dataloc','sensorloc','times']
 
+EPOCH = datetime(1970,1,1,0,0,0,tzinfo=UTC)
+
 def readMad_hdf5 (filename, paramstr): #timelims=None
     """@author: Michael Hirsch / Anna Stuhlmacher
     madrigal h5 read in function for the python implementation of GeoData for Madrigal Sondrestrom data
@@ -355,7 +357,6 @@ def readAllskyFITS(flist,azelfn,heightkm,timelims=[-sp.infty,sp.infty]):
         img = h[0].data
         sensorloc = np.array([h[0].header['GLAT'], h[0].header['GLON'], 0.]) #TODO real sensor altitude in km
 
-    epoch = datetime(1970,1,1,0,0,0,tzinfo=UTC)
     if isinstance(timelims[0],datetime):
         timelims = [(t-epoch).total_seconds() for t in timelims]
 
@@ -443,9 +444,12 @@ def readNeoCMOS(imgfn, azelfn, heightkm=110.,treq=None):
         dataloc = np.empty((npix,3))
 
         if treq is not None:
-            # note float() casts datetime64 to unix epoch
+            # note float() casts datetime64 to unix epoch for 'ms'
             if isinstance(treq[0],np.datetime64):
                 treq = treq.astype(float)
+            elif isinstance(treq[0],datetime):
+                treq = np.array([(t-EPOCH).total_seconds() for t in treq])
+
             mask = (treq[0] <= times) & (times <= treq[-1])
         else: #load all
             mask = np.ones(f['/rawimg'].shape[0]).astype(bool)
