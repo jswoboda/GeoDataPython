@@ -406,10 +406,12 @@ class GeoData(object):
                 reorderlist[irown]=sp.where(sp.all(self.dataloc==irow,axis=1))[0][0]
 
         if key is None:
+            self.dataloc = self.dataloc[reorderlist]
             if self.issatellite():
                 self.times[reorderlist]
             for ikey in self.datanames():
                 self.data[ikey]= self.data[ikey][reorderlist]
+            
         else:
             return self.data[key][reorderlist]
 

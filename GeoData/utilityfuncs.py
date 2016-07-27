@@ -624,7 +624,8 @@ def readIonofiles(filename):
     recBias = data[14]
     nrecBias = data[15]
 
-    data = {'TEC':TEC,'nTEC':nTEC,'vTEC':vTEC,'recBias':recBias,'nrecBias':nrecBias,'satnum':satnum,'az2sat':az2sat,'el2sat':el2sat}
+    data = {'TEC':TEC,'nTEC':nTEC,'vTEC':vTEC,'recBias':recBias,'nrecBias':nrecBias,'satnum':satnum,'az2sat':az2sat,'el2sat':el2sat,
+            'rlat':reclat,'rlong':reclong}
     coordnames = 'WGS84'
     sensorloc = sp.nan*sp.ones(3)
     dataloc = sp.column_stack((piercelat,piercelong,350e3*sp.ones_like(piercelat)))
