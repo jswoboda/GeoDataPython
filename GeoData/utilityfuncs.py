@@ -358,7 +358,7 @@ def readAllskyFITS(flist,azelfn,heightkm,timelims=[-sp.infty,sp.infty]):
         sensorloc = np.array([h[0].header['GLAT'], h[0].header['GLON'], 0.]) #TODO real sensor altitude in km
 
     if isinstance(timelims[0],datetime):
-        timelims = [(t-epoch).total_seconds() for t in timelims]
+        timelims = [(t-EPOCH).total_seconds() for t in timelims]
 
 #%% search through the times to see if anything is between the limits
     times =[]
@@ -367,7 +367,7 @@ def readAllskyFITS(flist,azelfn,heightkm,timelims=[-sp.infty,sp.infty]):
         try: #KEEP THIS try
             with fits.open(str(f),mode='readonly') as h:
                 expstart_dt = parse(h[0].header['OBSDATE'] + ' ' + h[0].header['OBSSTART']+'Z') #implied UTC
-                expstart_unix = (expstart_dt - epoch).total_seconds()
+                expstart_unix = (expstart_dt - EPOCH).total_seconds()
             if (expstart_unix>=timelims[0]) & (expstart_unix<=timelims[1]):
                 times.append([expstart_unix,expstart_unix + h[0].header['EXPTIME']])
                 flist2.append(f)
