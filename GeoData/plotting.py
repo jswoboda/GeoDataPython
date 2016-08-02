@@ -834,13 +834,13 @@ def make_polax(zenith):
     frame1.axes.get_xaxis().set_visible(False)
     frame1.axes.get_yaxis().set_visible(False)
 
-def polarplot(az,el,markerarea=500,title=None,minel=30,elstep=10,fig=None,ax=None):
+def polarplot(az,el,markerarea=400,title=None,minel=30.,elstep=10.,fig=None,ax=None):
     """
     plots hollow circles at az,el coordinates, with area quantitatively defined
     Michael Hirsch from satkml
     """
     az = np.radians(np.asarray(az).astype(float))
-    el = 90-np.asarray(el).astype(float)
+    el = 90. - np.asarray(el).astype(float)
 
     if fig is None:
         fig = plt.figure()
@@ -853,15 +853,18 @@ def polarplot(az,el,markerarea=500,title=None,minel=30,elstep=10,fig=None,ax=Non
 #    ax.set_rmax(90-minel)
     ax.set_theta_direction(-1)
 
-    ax.scatter(x=az, y=el, marker='o',facecolors='none',edgecolor='red',s=markerarea)
+    ax.scatter(x=az, y=el, marker='o',facecolors='none',
+               edgecolor='red',s=markerarea, linewidths=2)
 
     yt = np.arange(0., 90.-minel+elstep, elstep)
     ax.set_yticks(yt)
     ylabel = (yt[::-1]+minel).astype(int).astype(str)
     ax.set_yticklabels(ylabel)
 
-    ax.set_title(title)
+    ax.set_title(title,y=1.08)
 
+    return fig
+#%%
 #quiver() creates quiver plots with contours from GeoData objects
 #arrowscale is the scale of the quiver plot vector arrows
 
