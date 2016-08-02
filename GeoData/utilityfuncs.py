@@ -67,7 +67,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
 
         try:
             filt_data['range'] = D['gdalt']
-        except KeyError:
+        except ValueError:
             filt_data['range'] = D['range']
 
         filt_data['az'] = D['azm']
