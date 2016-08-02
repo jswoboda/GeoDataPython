@@ -16,64 +16,44 @@ import datetime as dt
 import matplotlib.pyplot as plt
 from matplotlib.dates import DateFormatter
 from matplotlib.ticker import ScalarFormatter
-import pkg_resources
-import pdb
+import pkg_resources as pkgr
 #from mpl_toolkits.mplot3d import Axes3D
 #from matplotlib import cm
 #from matplotlib import ticker
 try:
     from mayavi import mlab
-except Exception as e:
-    pass
+except ImportError:
+    mlab=None
 #
-from .CoordTransforms import angles2xy,sphereical2Cartisian
+from .CoordTransforms import angles2xy#,sphereical2Cartisian
 from .GeoData import GeoData
 # NOTE: using usetex can make complicated plots unstable and crash
 #try:
 #    plt.rc('text', usetex=True)
 #    plt.rc('font', family='serif')
 #except Exception as e:
-#    logging.info('Latex install not complete, falling back to basic fonts.  sudo apt-get install dvipng')
+#    logging.info('Latex install not complete, falling back to basic fonts.  apt-get install dvipng')
 #
 sfmt = ScalarFormatter(useMathText=True)
 #%%
-
-
 def vergeq(packagename,verstring):
-    """ 
+    """
     This function will check if the version of a given package is higher than a given version number in string form.
     Inputs
         packagename - The name of the package to be tested.
         verstring - The desired version in string form with numbers seperated by periods.
     Output
-        boolcheck - A bool that determines the 
+        boolcheck - A bool that determines the
     """
-    
-    pkg_ver = pkg_resources.get_distribution(packagename).version
-    # if the versions have the same string just return true
-    if pkg_ver==verstring:
-        return True
-    
-    pkg_list = pkg_ver.split('.')
-    verlist = verstring.split('.')
-    # Check each number in the string and see if any are larger in one or the other.
-    for i in range(min(len(verlist),len(pkg_list))):
-        if pkg_list[i] > verlist[i]:
-            return True
-        elif pkg_list[i]< verlist[i]:
-            return False
-    # incase the version number strings is larger than the other.
-    if len(pkg_list)>len(verlist):
-        return True
-    elif len(pkg_list)<len(verlist):
-        return False
-    # Return true because the numbers are equal but the strings may not be
-    return True
 
-if vergeq('matplotlib','1.5.1'):
-    defmap = 'viridis'
-else:
+    return pkgr.parse_version(pkgr.get_distribution(packagename).version) > pkgr.parse_version(verstring)
+
+try:
+    plt.get_cmap('plasma')
+    defmap = 'plasma'
+except ValueError:
     defmap = 'jet'
+
 defmap3d = 'jet'
 
 def _dointerp(geodatalist,altlist,xyvecs,picktimeind):
@@ -226,6 +206,10 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap=de
 
     Returns a mayavi image with a surface
     """
+    if mlab is None:
+        print('mayavi was not successfully imported')
+        return
+
     assert geodata.coordnames.lower() =='cartesian'
 
     datalocs = geodata.dataloc
@@ -337,12 +321,12 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap=de
 
 def slice2DGD(geod,axstr,slicenum,vbounds=None,time = 0,gkey = None,cmap=defmap,fig=None,
               ax=None,title='',cbar=True,m=None):
-    """ 
+    """
     This function create 2-D slice image given either a surface or list of coordinates to slice through
     Inputs:
     geodata - A geodata object that will be plotted.
     axstr - A string that specifies the plane that will be ploted.
-    slicenum - The index location of that slice in the axis if the data were in a 3-D array.   
+    slicenum - The index location of that slice in the axis if the data were in a 3-D array.
     vbounds = a list of bounds for the geodata objec's parameters. ie, vbounds=[500,2000]
     time - The index of for the location in time that will be plotted.
     gkey - The name of the data that will be plotted.
@@ -705,10 +689,10 @@ def plotbeamposfig(geod,height,coordnames,fig=None,ax=None,title=''):
 
 def rangevstime(geod,beam,vbounds=(None,None),gkey = None,cmap=defmap,fig=None,ax=None,
                 title='',cbar=True,tbounds=(None,None),ic=True,ir=True,it=True):
-    """ 
+    """
     This method will create a color graph of range vs time for data in spherical coordinates
     Inputs
-    geod - 
+    geod -
     """
     assert geod.coordnames.lower() =='spherical', 'I expect speherical coordinate data'
 
@@ -779,7 +763,7 @@ def rangevsparam(geod,beam,time_sel,gkey = None,gkeyerr=None,fig=None,ax=None,
 
     dataout = geod.data[gkey][match]
     rngval =  geod.dataloc[match,0]
-    t = np.asarray(list(map(dt.datetime.utcfromtimestamp, geod.times[:,0])))
+    #t = np.asarray(list(map(dt.datetime.utcfromtimestamp, geod.times[:,0])))
 
     ploth = ax.plot(dataout[:,time_sel],rngval,label=label)[0]
     handlist = [ploth]
@@ -795,9 +779,9 @@ def rangevsparam(geod,beam,time_sel,gkey = None,gkeyerr=None,fig=None,ax=None,
         ax.set_xlabel(gkey)
 
     ax.autoscale(axis='y',tight=True) #fills axis
-   
+
     return handlist
-    
+
 def uniquerows(a):
     b=np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))
     (rowsinds,rownums) = np.unique(b,return_index=True, return_inverse=True)[1:]
@@ -860,11 +844,11 @@ def polarplot(az,el,markerarea=500,title=None,minel=30,elstep=10,fig=None,ax=Non
 
     if fig is None:
         fig = plt.figure()
-        
+
     if ax is None:
         ax=fig.gca(polar=True)
 
-        
+
     ax.set_theta_zero_location('N')
 #    ax.set_rmax(90-minel)
     ax.set_theta_direction(-1)
