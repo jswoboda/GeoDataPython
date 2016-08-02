@@ -20,7 +20,7 @@ except Exception as e:
 setup(description='GeoData class and needed functions.',
       author='John Swoboda',
       version=0.2,
-      install_requires=[],
+      install_requires=['pathlib2'],
       extras_require={'mayavi':'mayavi'},
       packages=['GeoData'],
       name='GeoData',
