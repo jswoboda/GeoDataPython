@@ -31,9 +31,9 @@ from pandas import DataFrame
 from datetime import datetime
 from dateutil.parser import parse
 from pytz import UTC
-from os.path import expanduser
 #
 from . import CoordTransforms as CT
+from . import Path
 
 USEPANDAS = True #20x speedup vs CPython
 VARNAMES = ['data','coordnames','dataloc','sensorloc','times']
@@ -54,48 +54,30 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
     Here we use Pandas DataFrames internally to speed the reading process by 20+ times,
     while still passing out Numpy arrays
     """
-    filename = expanduser(filename)
-    #open hdf5 file
-    with h5py.File(filename, "r", libver='latest') as f:
-        all_data = f['/Data/Table Layout'].value
-        sensor_data = f['/Metadata/Experiment Parameters'].value
+    h5fn = Path(filename).expanduser()
+#%% read hdf5 file
+    with h5py.File(str(h5fn), "r", libver='latest') as f:
+        lat,lon,sensor_alt = (f['/Metadata/Experiment Parameters'][7][1],
+                              f['/Metadata/Experiment Parameters'][8][1],
+                              f['/Metadata/Experiment Parameters'][9][1])
 
+        D = f['/Data/Table Layout']
 
-    instrument = str(sensor_data[0][1]).lower() #instrument type string, needed for 2to3 compatibility (verified MH)
-    if "sondrestrom" in instrument:
-        radar = 1
-        logging.info("Sondrestrom data")
-    elif "poker flat" in instrument:
-        radar = 2
-        logging.info("PFISR data")
-    elif "resolute bay" in instrument:
-        radar = 3
-        logging.info("RISR data")
-    else:
-        raise NotImplementedError("Radar type "+str(instrument) +" not supported.")
+        filt_data = DataFrame(columns=['range','az','el','ut1','ut2'])
 
-    # get the data location (range, el1, azm)
-    if radar == 1:
-        irng = 'gdalt'
-    elif radar in (2,3):
-        irng = 'range'
+        try:
+            filt_data['range'] = D['gdalt']
+        except KeyError:
+            filt_data['range'] = D['range']
 
-    filt_data = DataFrame(columns=['range','az','el','ut1','ut2'])
-    try:
-        filt_data['range'] = all_data[irng]
-    except ValueError: pass
-    try:
-        filt_data['az'] = all_data['azm']
-    except ValueError: pass
-    try:
-        filt_data['el'] = all_data['elm']
-    except ValueError: pass
+        filt_data['az'] = D['azm']
+        filt_data['el'] = D['elm']
 
-    filt_data['ut1'] = all_data['ut1_unix']
-    filt_data['ut2'] = all_data['ut2_unix']
+        filt_data['ut1'] = D['ut1_unix']
+        filt_data['ut2'] = D['ut2_unix']
 
-    for p in paramstr:
-        filt_data[p] = all_data[p]
+        for p in paramstr:
+            filt_data[p] = D[p]
 
 #%% SELECT
     filt_data.dropna(axis=0,how='any',subset=['range','az','el'],inplace=True)
@@ -116,7 +98,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
 
     data = {}
     for p in paramstr:
-        if not p in all_data.dtype.names:
+        if not p in filt_data:
             logging.warning('{} is not a valid parameter name.'.format(p))
             continue
 
@@ -129,7 +111,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
                                                columns=uniq_times).values
         else:
             #example with CPython
-            vec = filt_data[p].values #list of parameter pulled from all_data
+            vec = filt_data[p].values #list of parameter pulled from all data
             arr = np.empty([maxrows,maxcols]) #converting the tempdata list into array form
 
             for t in range(vec.size):
@@ -149,7 +131,6 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
 
 
     #get the sensor location (lat, long, rng)
-    lat,lon,sensor_alt = sensor_data[7][1],sensor_data[8][1],sensor_data[9][1]
     sensorloc = np.array([lat,lon,sensor_alt], dtype=float) #they are bytes so we NEED float!
     coordnames = 'Spherical'
     #NOTE temporarily passing dataloc as Numpy array till rest of program is updated to Pandas
@@ -157,7 +138,7 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
 
 def readSRI_h5(fn,params,timelims = None):
     assert isinstance(params,(tuple,list))
-    fn = expanduser(fn)
+    h5fn = Path(fn).expanduser()
     '''This will read the SRI formated h5 files for RISR and PFISR.'''
     coordnames = 'Spherical'
 
@@ -171,7 +152,7 @@ def readSRI_h5(fn,params,timelims = None):
                 'Te':('/FittedParams/Fits',  (-1,1)),
                 'Ti':('/FittedParams/Errors',(-1,1))}
 
-    with h5py.File(fn,'r',libver='latest') as f:
+    with h5py.File(str(h5fn),'r',libver='latest') as f:
         # Get the times and time lims
         times = f['/Time/UnixTime'].value
         # get the sensor location
@@ -193,7 +174,7 @@ def readSRI_h5(fn,params,timelims = None):
     dataloc =np.vstack((rng.ravel(),allaz,allel)).T
     # Read in the data
     data = {}
-    with h5py.File(fn,'r',libver='latest') as f:
+    with h5py.File(str(h5fn),'r',libver='latest') as f:
         for istr in params:
             if not istr in pathdict.keys(): #list() NOT needed
                 logging.error('{} is not a valid parameter name.'.format(istr))
@@ -221,12 +202,13 @@ def read_h5_main(filename):
     use caution with this function -- indexing dicts is less safe
     because the index order of dicts is not deterministic.
     '''
-    with tb.openFile(filename) as h5file:
+    h5fn = Path(filename).expanduser()
+    with tb.openFile(str(h5fn)) as f:
         output={}
         # Read in all of the info from the h5 file and put it in a dictionary.
-        for group in h5file.walkGroups(posixpath.sep):
+        for group in f.walkGroups(posixpath.sep):
             output[group._v_pathname]={}
-            for array in h5file.listNodes(group, classname = 'Array'):
+            for array in f.listNodes(group, classname = 'Array'):
                 output[group._v_pathname][array.name]=array.read()
 
     # find the base paOMTIdata.h5ths which could be dictionaries or the base directory
@@ -267,8 +249,8 @@ def readOMTI(filename, paramstr):
     """
     The data paths are known a priori, so read directly ~10% faster than pytables
     """
-    filename = expanduser(filename)
-    with h5py.File(filename,'r',libver='latest') as f:
+    h5fn = Path(filename).expanduser()
+    with h5py.File(str(h5fn),'r',libver='latest') as f:
         optical = {'optical':f['data/optical'].value} #for legacy API compatibility
         dataloc = CT.enu2cartisian(f['dataloc'].value)
         coordnames = 'Cartesian'
@@ -344,6 +326,8 @@ def readAllskyFITS(flist,azelfn,heightkm,timelims=[-sp.infty,sp.infty]):
     timelims - A list of time limits in POSIX, the first element is the lower
        limit, the second is the upper limit.
     """
+    azelfn = [Path(f).expanduser() for f in azelfn]
+
     if isinstance(flist,string_types):
         flist=[flist]
 
@@ -394,10 +378,10 @@ def readAllskyFITS(flist,azelfn,heightkm,timelims=[-sp.infty,sp.infty]):
 #%%
     coordnames = "spherical"
 
-    if azelfn is not None:
-        with fits.open(expanduser(azelfn[0]),mode='readonly') as h:
+    if azelfn:
+        with fits.open(str(azelfn[0]),mode='readonly') as h:
             az = h[0].data
-        with fits.open(expanduser(azelfn[1]),mode='readonly') as h:
+        with fits.open(str(azelfn[1]),mode='readonly') as h:
             el = h[0].data
         #%% Get rid of bad data
         grad_thresh = 15.
@@ -420,21 +404,21 @@ def readAllskyFITS(flist,azelfn,heightkm,timelims=[-sp.infty,sp.infty]):
 
     return optical,coordnames,dataloc,sensorloc,times
 
-def readNeoCMOS(imgfn, azelfn, heightkm=110.,treq=None):
+def readNeoCMOS(imgfn, azelfn, heightkm=None,treq=None):
     """
     treq is pair or vector of UT1 unix epoch times to load--often file is so large we can't load all frames into RAM.
     assumes that /rawimg is a 3-D array Nframe x Ny x Nx
     """
-    assert isinstance(heightkm,(integer_types,float))
+    #assert isinstance(heightkm,(integer_types,float))
 
-    imgfn = expanduser(str(imgfn)) #str() in case Path was passed in
-    azelfn = expanduser(str(azelfn))
+    imgfn =  Path(imgfn).expanduser()
+    azelfn = Path(azelfn).expanduser()
 #%% load data
-    with h5py.File(azelfn,'r',libver='latest') as f:
+    with h5py.File(str(azelfn),'r',libver='latest') as f:
         az = f['/az'].value
         el = f['/el'].value
 
-    with h5py.File(imgfn,'r',libver='latest') as f:
+    with h5py.File(str(imgfn),'r',libver='latest') as f:
         times = f['/ut1_unix'].value
         sensorloc = f['/sensorloc'].value
         if sensorloc.dtype.fields is not None: #recarray
@@ -596,13 +580,13 @@ def readIonofiles(filename):
     #%% Get in GeoData format
     doy = data[0]
     year=data[1].astype(int)
-    dtsp = datetime(1970,1,1,0,0,0,tzinfo=UTC)
+
     if (year==year[1]).all():
-        unixyear =(datetime(year[0],1,1,0,0,0,tzinfo=UTC)-dtsp).total_seconds()
+        unixyear =(datetime(year[0],1,1,0,0,0,tzinfo=UTC) - EPOCH).total_seconds()
         uttime = unixyear+24*3600*sp.column_stack((doy,doy+1./24./60.)) # Making the difference in time to be a minute
     else:
         (y_u,y_iv) = np.unique(year,return_inverse=True)
-        unixyearu = sp.array([(datetime(iy,1,1,0,0,0,tzinfo=UTC)-dtsp).total_seconds() for iy in y_u])
+        unixyearu = sp.array([(datetime(iy,1,1,0,0,0,tzinfo=UTC) - EPOCH).total_seconds() for iy in y_u])
         unixyear = unixyearu[y_iv]
         uttime = unixyear+24*3600*sp.column_stack((doy,doy+1))
 
@@ -615,12 +599,12 @@ def readIonofiles(filename):
     vTEC = data[6]
     az2sat = data[7]
     el2sat = data[8]
-    mapfunc = data[9]
+    #mapfunc = data[9]
 
     piercelat = data[10]
     piercelong = data[11]
     satnum= data[12]
-    site = data[13]
+   # site = data[13]
     recBias = data[14]
     nrecBias = data[15]
 
@@ -639,42 +623,43 @@ def readMahalih5(filename,des_site):
             des_site - The site name. Should be listed in the h5 file in the
                 table sites.
     """
+    h5fn = Path(filename).expanduser()
 
+    with h5py.File(str(h5fn), "r", libver='latest') as f:
 
-    f = h5py.File(filename, "r", libver='latest')
-    sites = f['data']['site']
-    despnts = sp.where(sites==des_site)[0]
+        despnts = sp.where(f['data']['site']==des_site)[0]
+        # TODO: hard coded for now
+        doy =  doy= f['data']['time'][despnts]
+        year = 2015*sp.ones_like(doy,dtype=int)
 
-    doy= f['data']['time'][despnts]
-    # hard coded for now
-    year = 2015*sp.ones_like(doy).astype(int)
-    dtsp = datetime(1970,1,1,0,0,0,tzinfo=UTC)
+        TEC = f['data']['los_tec'][despnts]
+
+        nTEC = f['data']['err_los_tec'][despnts]
+
+        vTEC = f['data']['vtec'][despnts]
+        az2sat = f['data']['az'][despnts]
+        el2sat = f['data']['az'][despnts]
+
+        piercelat = f['data']['pplat'][despnts]
+        piercelong = f['data']['pplon'][despnts]
+        satnum= f['data']['prn'][despnts]
+        recBias = f['data']['rec_bias'][despnts]
+        nrecBias = f['data']['err_rec_bias'][despnts]
+
     # Make the integration time on the order of 15 seconds.
     if (year==year[1]).all():
-        unixyear =(datetime(year[0],1,1,0,0,0,tzinfo=UTC)-dtsp).total_seconds()
-        uttime = unixyear+sp.round_(24*3600*sp.column_stack((doy,doy+15./24./3600.))) # Making the difference in time to be a minute
+        unixyear =(datetime(year[0],1,1,0,0,0,tzinfo=UTC) - EPOCH).total_seconds()
+        uttime = unixyear + sp.round_(24*3600*sp.column_stack((doy,doy+15./24./3600.))) # Making the difference in time to be a minute
     else:
         (y_u,y_iv) = np.unique(year,return_inverse=True)
-        unixyearu = sp.array([(datetime(iy,1,1,0,0,0,tzinfo=UTC)-dtsp).total_seconds() for iy in y_u])
+        unixyearu = sp.array([(datetime(iy,1,1,0,0,0,tzinfo=UTC) - EPOCH).total_seconds() for iy in y_u])
         unixyear = unixyearu[y_iv]
-        uttime = unixyear+24*3600*sp.column_stack((doy,doy+15./24./3600.))
+        uttime = unixyear + 24*3600*sp.column_stack((doy,doy+15./24./3600.))
 
-    TEC = f['data']['los_tec'][despnts]
-
-    nTEC = f['data']['err_los_tec'][despnts]
-
-    vTEC = f['data']['vtec'][despnts]
-    az2sat = f['data']['az'][despnts]
-    el2sat = f['data']['az'][despnts]
-
-    piercelat = f['data']['pplat'][despnts]
-    piercelong = f['data']['pplon'][despnts]
-    satnum= f['data']['prn'][despnts]
-    recBias = f['data']['rec_bias'][despnts]
-    nrecBias = f['data']['err_rec_bias'][despnts]
 
     data = {'TEC':TEC,'nTEC':nTEC,'vTEC':vTEC,'recBias':recBias,'nrecBias':nrecBias,'satnum':satnum,'az2sat':az2sat,'el2sat':el2sat}
     coordnames = 'WGS84'
     sensorloc = sp.nan*sp.ones(3)
-    dataloc = sp.column_stack((piercelat,piercelong,350e3*sp.ones_like(piercelat)))
+    dataloc = sp.column_stack((piercelat,piercelong, 350e3*sp.ones_like(piercelat)))
+
     return (data,coordnames,dataloc,sensorloc,uttime)
