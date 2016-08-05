@@ -3,10 +3,7 @@
 This module will be used for accessing files from different websites
 @author: John Swoboda
 """
-try:
-    from urllib import urlretrieve, urlopen
-except:
-    from urllib.request import urlretrieve, urlopen
+from six.moves.urllib.request import urlretrieve, urlopen
 from bs4 import BeautifulSoup
 import re
 import datetime
