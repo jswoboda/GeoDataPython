@@ -77,6 +77,10 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
         filt_data['ut2'] = D['ut2_unix']
 
         for p in paramstr:
+            if not p in D.dtype.names:
+                logging.warning('{} is not a valid parameter name.'.format(p))
+                continue
+
             filt_data[p] = D[p]
 
 #%% SELECT
@@ -98,10 +102,6 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
 
     data = {}
     for p in paramstr:
-        if not p in filt_data:
-            logging.warning('{} is not a valid parameter name.'.format(p))
-            continue
-
         if USEPANDAS:
         # example of doing via numpy
         # filt_data has already been filtered for time and location with the isr parameter(s) riding along.
