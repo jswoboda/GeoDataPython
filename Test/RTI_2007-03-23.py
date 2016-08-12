@@ -3,7 +3,6 @@
 load isr data vs time and altitude
 """
 from __future__ import division,absolute_import
-import logging
 from matplotlib.pyplot import subplots, show,figure,draw,pause
 from dateutil.parser import parse
 from pytz import UTC
@@ -11,6 +10,8 @@ from datetime import datetime
 from scipy.spatial import cKDTree
 import numpy as np
 import seaborn as sns
+sns.set_context('talk',font_scale=1.5)
+sns.set(rc={'image.cmap':'cubehelix_r'})
 #
 from GeoData.plotting import rangevstime,plotbeamposGD
 #
@@ -78,7 +79,8 @@ if __name__ == "__main__":
     for f in flist:
 
         makeplot(f,
-                 tbounds=(parse('2007-03-23T00:10Z'), parse('2007-03-23T09:30Z')),
+                 tbounds=(parse('2007-03-18T00:00Z'), parse('2007-03-18T06:00Z')),
+                 #tbounds=(parse('2007-03-23T00:10Z'), parse('2007-03-23T12:30Z')),
                  isrparams= ['ne','ti','te','vo'],
                  showbeam=p.showbeams)
 
