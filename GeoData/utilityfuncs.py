@@ -297,7 +297,7 @@ def readIono(iono,coordtype=None):
     if coordtype is None:
         if iono.Coord_Vecs == ['r','theta','phi']:
             coordnames = 'Spherical'
-            coords = iono.Sphere_Coords
+            coords = CT.cartisian2Sphereical(iono.Cart_Coords)
         elif iono.Coord_Vecs == ['x','y','z']:
             coordnames = 'Cartesian'
             coords = iono.Cart_Coords
@@ -306,7 +306,7 @@ def readIono(iono,coordtype=None):
         coords = iono.Cart_Coords
     elif coordtype.lower() == 'spherical':
         coordnames = 'Spherical'
-        coords = iono.Sphere_Coords
+        coords = CT.cartisian2Sphereical(iono.Cart_Coords)
     return (paramdict,coordnames,coords,np.array(iono.Sensor_loc),iono.Time_Vector)
 
 #data, coordnames, dataloc, sensorloc, times = readMad_hdf5('/Users/anna/Research/Ionosphere/2008WorldDaysPDB/son081001g.001.hdf5', ['ti', 'dti', 'nel'])

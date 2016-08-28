@@ -142,10 +142,14 @@ class GeoData(object):
         #sort based off of start times
         s_ind = sp.argsort(alltimes[:,0])
         self.times = alltimes[s_ind]
-
-        for ikey in self.datanames():
-            outarr = sp.hstack((self.data[ikey],self2.data[ikey]))
-            self.data[ikey] = outarr[:,s_ind]
+        
+        if self.issatellite():
+            for ikey in self.datanames():
+                outarr=sp.concatenate((self.data[ikey],self2.data[ikey]),0)
+                self.data[ikey]=outarr[s_ind]
+            for ikey in self.datanames():
+                outarr = sp.hstack((self.data[ikey],self2.data[ikey]))
+                self.data[ikey] = outarr[:,s_ind]
 
     def timeslice(self,timelist,listtype=None):
         """ This method will return a copy of the object with only the desired points of time.

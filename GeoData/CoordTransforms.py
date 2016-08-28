@@ -29,8 +29,8 @@ def sphereical2Cartisian(spherecoords):
     Azr = Az*d2r
     Elr = El*d2r
 
-    kx = np.sin(Azr) * np.cos(Elr)
-    ky = np.cos(Azr) * np.cos(Elr)
+    kx = np.cos(Azr) * np.cos(Elr)
+    ky = np.sin(Azr) * np.cos(Elr)
     kz = np.sin(Elr)
 
     x = R*kx
