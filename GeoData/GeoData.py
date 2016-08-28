@@ -241,7 +241,7 @@ class GeoData(object):
         Checks if the instance is satellite data.
            It will give true if the sensorloc array is all nans
         """
-        return sp.isnan(self.sensorloc).all()
+        return sp.isnan(self.sensorloc).all() or self.sensorloc is None
 #%% Changing data based on location
     def interpolate(self,new_coords,newcoordname,method='nearest',fill_value=np.nan,twodinterp = False,ikey=None,oldcoords=None):
         """This method will take the data points in the dictionary data and spatially.
@@ -415,7 +415,7 @@ class GeoData(object):
                 self.times[reorderlist]
             for ikey in self.datanames():
                 self.data[ikey]= self.data[ikey][reorderlist]
-            
+
         else:
             return self.data[key][reorderlist]
 
@@ -430,7 +430,7 @@ class GeoData(object):
         params - (default - ()) Any extra parameters that are needed for the function.
         rm_old - (default - True) A flag that if set to True will remove the old data."""
 
-        assert dataname in self.data.keys(),"Incorrect data name used."
+        assert dataname in self.data.keys(),"Incorrect old data name {} used.".format(dataname)
         self.data[newname]=func(self.data[dataname],*params)
         if rm_old:
             del self.data[dataname]

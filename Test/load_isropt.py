@@ -25,6 +25,9 @@ def load_pfisr_neo(isrName,optName=None,azelfn=None,heightkm=None,isrparams=['ne
 
     pfisr = GeoData.GeoData(utilityfuncs.readMad_hdf5,(isrName,isrparams))
 
-    pfisr.changedata('nel','ne',revpower,[10.])
+    try:
+        pfisr.changedata('nel','ne',revpower,[10.])
+    except AssertionError:
+        pass
 
     return pfisr,neo
