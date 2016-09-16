@@ -24,6 +24,9 @@ try:
     from mayavi import mlab
 except ImportError:
     mlab=None
+except ValueError:
+    mlab=None
+    print('Mayavi not imported.')
 #
 from .CoordTransforms import angles2xy#,sphereical2Cartisian
 from .GeoData import GeoData
@@ -50,7 +53,7 @@ def vergeq(packagename,verstring):
 
 try:
     plt.get_cmap('plasma')
-    defmap = 'plasma'
+    defmap = 'viridis'
 except ValueError:
     defmap = 'jet'
 

@@ -29,8 +29,8 @@ def sphereical2Cartisian(spherecoords):
     Azr = Az*d2r
     Elr = El*d2r
 
-    kx = np.cos(Azr) * np.cos(Elr)
-    ky = np.sin(Azr) * np.cos(Elr)
+    kx = np.sin(Azr) * np.cos(Elr)
+    ky = np.cos(Azr) * np.cos(Elr)
     kz = np.sin(Elr)
 
     x = R*kx
@@ -62,7 +62,7 @@ def cartisian2Sphereical(cartcoords):
     (x,y,z) = cartcoords[:]
 
     R = np.sqrt(x**2+y**2+z**2)
-    Az = np.arctan2(y,x)*r2d
+    Az = np.arctan2(x,y)*r2d
     El = np.arcsin(z/R)*r2d
 
     spherecoords = np.array([R,Az,El])
