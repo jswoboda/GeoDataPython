@@ -13,13 +13,7 @@ import scipy as sp
 import scipy.interpolate as spinterp
 import time
 import datetime as dt
-import matplotlib.pyplot as plt
-from matplotlib.dates import DateFormatter
-from matplotlib.ticker import ScalarFormatter
-import pkg_resources as pkgr
-#from mpl_toolkits.mplot3d import Axes3D
-#from matplotlib import cm
-#from matplotlib import ticker
+
 try:
     from mayavi import mlab
 except ImportError:
@@ -27,6 +21,15 @@ except ImportError:
 except ValueError:
     mlab=None
     print('Mayavi not imported.')
+    
+import matplotlib.pyplot as plt
+from matplotlib.dates import DateFormatter
+from matplotlib.ticker import ScalarFormatter
+import pkg_resources as pkgr
+#from mpl_toolkits.mplot3d import Axes3D
+#from matplotlib import cm
+#from matplotlib import ticker
+
 #
 from .CoordTransforms import angles2xy#,sphereical2Cartisian
 from .GeoData import GeoData
