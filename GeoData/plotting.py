@@ -204,8 +204,8 @@ def plot3Dslice(geodata,surfs,vbounds, titlestr='', time = 0,gkey = None,cmap=de
     Inputs:
     geodata - A geodata object that will be plotted in 3D
     surfs - This is a three element list. Each element can either be
-    altlist - A list of the altitudes that RISR parameter slices will be taken at
-    xyvecs- A list of x and y numpy arrays that have the x and y coordinates that the data will be interpolated over. ie, xyvecs=[np.linspace(-100.0,500.0),np.linspace(0.0,600.0)]
+        altlist - A list of the altitudes that RISR parameter slices will be taken at
+        xyvecs- A list of x and y numpy arrays that have the x and y coordinates that the data will be interpolated over. ie, xyvecs=[np.linspace(-100.0,500.0),np.linspace(0.0,600.0)]
     vbounds = a list of bounds for the geodata objec's parameters. ie, vbounds=[500,2000]
     title - A string that holds for the overall image
     ax - A handle for an axis that this will be plotted on.
