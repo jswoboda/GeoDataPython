@@ -136,7 +136,7 @@ run all these from the GeoDataPython/Test/ directory
 
 Error diagnosis
 ===============
-Most issues revolve around [Mayavi 3-D plotting](https://github.com/enthought/mayavi/issues/).
+Most issues revolve around `Mayavi 3-D plotting <https://github.com/enthought/mayavi/issues/>`_.
 
 OpenGL
 ------
@@ -149,5 +149,5 @@ If you get `an OpenGL error like this <https://gist.github.com/scienceopen/da7f8
 
 PyQT
 ----
-If you get QT/PyQT errors, be sure you have QT and PyQT version 4.x not 5.x with [Mayavi 4.5](https://github.com/enthought/mayavi/releases).
-Hopefully future versions of Mayavi will be QT 5.x compatible -- [Mayavi 4.5.0 requires QT 4.x](https://github.com/enthought/mayavi/issues/448).
+If you get QT/PyQT errors, be sure you have QT and PyQT version 4.x not 5.x with `Mayavi 4.5 <https://github.com/enthought/mayavi/releases>`_.
+Hopefully future versions of Mayavi will be QT 5.x compatible -- `Mayavi 4.5.0 requires QT 4.x <https://github.com/enthought/mayavi/issues/448>`_.
