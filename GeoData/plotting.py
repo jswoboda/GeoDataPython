@@ -18,10 +18,10 @@ try:
     from mayavi import mlab
 except ImportError:
     mlab=None
-except ValueError:
+except (ValueError,RuntimeError) as e:
     mlab=None
-    print('Mayavi not imported.')
-    
+    print('Mayavi not imported due to {}'.format(e))
+
 import matplotlib.pyplot as plt
 from matplotlib.dates import DateFormatter
 from matplotlib.ticker import ScalarFormatter
