@@ -27,9 +27,17 @@ Installation
 ============
 ::
 
- git clone https://github.com/jswoboda/GeoDataPython.git
- cd GeoDataPython 
- python setup.py develop
+    git clone https://github.com/jswoboda/GeoDataPython.git
+    cd GeoDataPython 
+    python setup.py develop
+ 
+To install Mayavi, suggest "menpo" conda channel as well as creating a separate Conda Environment::
+
+    conda create -n geodata python=3 pyqt=4
+    source activate geodata
+    
+    conda install -c menpo mayavi
+    
 
 Software Structure
 ==================
@@ -126,17 +134,20 @@ run all these from the GeoDataPython/Test/ directory
 
 
 
-Having difficulty?
-------------------
+Error diagnosis
+===============
+Most issues revolve around 3-D plotting.
+
+OpenGL
+------
 
 Fast 3-D plotting typically involves OpenGL these days.
 Mayavi/VTK use OpenGL to make highly dense 3-D plots beautiful.
-If you get `an OpenGL error like this <https://gist.github.com/scienceopen/da7f89e22ced7929c09f>`_ try
+If you get `an OpenGL error like this <https://gist.github.com/scienceopen/da7f89e22ced7929c09f>`_ try::
 
-.. code:: bash
+	sudo apt-get install mayavi2
 
-	$ sudo apt-get install mayavi2
-	$ /usr/bin/python2 mycode.py
-
-where ``mycode.py`` is the file you want to run.
-This uses your distribution's setup of Mayavi, which implicitly ought to be the most likely one to work!
+PyQT
+----
+If you get QT/PyQT errors, be sure you have QT and PyQT version 4.x not 5.x with [Mayavi 4.5](https://github.com/enthought/mayavi/releases).
+Hopefully future versions of Mayavi will be QT 5.x compatible -- Mayavi 4.5.0 requires QT 4.x.
