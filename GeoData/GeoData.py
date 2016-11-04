@@ -62,7 +62,7 @@ class GeoData(object):
                 self.data[ikey]=self.data[ikey][:,sortvec]
 
     def datanames(self):
-        '''Returns the data names.'''
+        '''Returns the data names in a list.'''
         return self.data.keys()
 
     def write_h5(self,filename):
@@ -117,6 +117,14 @@ class GeoData(object):
         return outcell
 
     def time2ind(self,timelist):
+        """ Take a list of times in posix seconds and find where they are in 
+            time array for the object.
+            Input
+                timelist- The list of posix time seconds.
+            Output
+                outlist - The list of indexies that correspond to the locations
+                    in the array.
+        """
         ix = np.in1d(self.times[:,0],timelist)
         return np.where(ix)[0]
     #%% Time augmentation
