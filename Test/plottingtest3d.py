@@ -1,7 +1,5 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 """
-Requires Python 2.x due to Mayavi
-
 @author: John Swoboda
 """
 from __future__ import division,print_function
@@ -17,7 +15,7 @@ from load_isropt import load_risromti
 #
 try:
     from mayavi import mlab
-except Exception as e:
+except ImportError:
     pass
 
 omtislices =  [[],[],[140]]
