@@ -1,4 +1,11 @@
-language: generic
+language: python
+fast_finish: true
+
+python:
+  - 3.6
+
+os:
+  - linux
 
 notifications:
   email: false
@@ -6,38 +13,11 @@ notifications:
 git:
   depth: 3
   
-matrix:
-  include:
-    - os: osx
-      env: pyv=2.7
+before_install:
+  - pip -q install coveralls
 
-    - os: linux
-      env: pyv=2.7
-      
-    - os: osx
-      env: pyv=3.5
-
-    - os: linux
-      env: pyv=3.5
-
-install:
-    - if [[ $TRAVIS_OS_NAME == osx ]]; then
-        wget http://repo.continuum.io/miniconda/Miniconda-latest-MacOSX-x86_64.sh -O miniconda.sh;
-      else 
-        wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh;
-      fi
-      
-    - bash miniconda.sh -b -p $HOME/miniconda
-    - export PATH=$HOME/miniconda/bin:$PATH
-    - hash -r
-    
-    - conda config --set always_yes yes --set changeps1 no
-    - conda update -q conda
-    - conda create -n test python=$pyv
-    - source activate test
-    - pip -q install coveralls
-    - python setup.py develop
+install: pip install -e .
  
-script: coverage run Test/test.py
+script: coverage run Test/test.py -v
 
 after_success: coveralls

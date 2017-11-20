@@ -6,6 +6,7 @@
 
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.154533.svg
    :target: https://doi.org/10.5281/zenodo.154533
+   
 =============
 GeoDataPython
 =============
@@ -29,11 +30,11 @@ Installation
 
     git clone https://github.com/jswoboda/GeoDataPython.git
     cd GeoDataPython 
-    python setup.py develop
+    pip install -e .
  
 To install Mayavi, suggest "menpo" conda channel as well as creating a separate Conda Environment::
 
-    conda create -n geodata python=3 pyqt=4
+    conda create -n geodata python=3.5 pyqt=4
     source activate geodata
     
     conda install -c menpo mayavi
@@ -145,7 +146,7 @@ Fast 3-D plotting typically involves OpenGL these days.
 Mayavi/VTK use OpenGL to make highly dense 3-D plots beautiful.
 If you get `an OpenGL error like this <https://gist.github.com/scienceopen/da7f89e22ced7929c09f>`_ try::
 
-	sudo apt-get install mayavi2
+	sudo apt install mayavi2
 
 PyQT
 ----
