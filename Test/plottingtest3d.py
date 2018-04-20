@@ -9,7 +9,8 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 #
-from GeoData.plotting import slice2DGD,plot3Dslice,plotbeamposGD,insertinfo,contourGD
+from GeoData.plotting import slice2DGD, plotbeamposGD, insertinfo, contourGD
+from GeoData.plottingmayavi import plot3Dslice
 #
 from load_isropt import load_risromti
 #
@@ -92,5 +93,5 @@ def plotting(risr_classred,risr_class,omti_class,reglistfinal,odir=None):
                 figcount=figcount+1
 
 if __name__ == "__main__":
-    (risr_classred,risr_class,omti_class,reglistfinal) = make_data('ran120219.004.hdf5','OMTIdata.h5')
+    (risr_classred,risr_class,omti_class,reglistfinal) = make_data('data/ran120219.004.hdf5','data/OMTIdata.h5')
     plotting(risr_classred,risr_class,omti_class,reglistfinal)

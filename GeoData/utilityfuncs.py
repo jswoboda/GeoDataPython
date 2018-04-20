@@ -107,8 +107,8 @@ def readMad_hdf5 (filename, paramstr): #timelims=None
         # filt_data has already been filtered for time and location with the isr parameter(s) riding along.
          #Just reshape it!
             #NOTE: take off the .values to pass the DataFrame
-            data[p] = DataFrame(data=filt_data[p].reshape((dataloc.shape[0],uniq_times.shape[0]),order='F'),
-                                               columns=uniq_times).values
+            d1_in = filt_data[p].reshape((dataloc.shape[0], uniq_times.shape[0]), order='F')
+            data[p] = DataFrame(data=d1_in, columns=uniq_times).values
         else:
             #example with CPython
             vec = filt_data[p].values #list of parameter pulled from all data
@@ -269,7 +269,7 @@ def readIono(iono,coordtype=None):
     if type(pnames) == sp.ndarray:
         if pnames.ndim>1:
             ionkeys = pnames.flatten()
-            Param_List = sp.reshape(Param_List,(nloc,nt,len(ionkeys)))
+            Param_List = Param_List.reshape(nloc,nt,len(ionkeys))
         else:
             ionkeys=pnames
     else:
